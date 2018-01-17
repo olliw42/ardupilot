@@ -18,3 +18,19 @@
 #define FW_MINOR 6
 #define FW_PATCH 0
 #define FW_TYPE FIRMWARE_VERSION_TYPE_DEV
+
+/*
+AP_Mount.h: 3x
+AP_Mount.cpp: 2x
+AP_SerialManager.cpp/.h: 1x each to adopt SerialProtocol_STorM32_Native = 84
+
+AP_Camera.cpp: 2x (no change in AP_Camera.h)
+
+
+
+
+
+
+
+
+*/
