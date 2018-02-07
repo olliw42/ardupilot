@@ -202,14 +202,6 @@ void Rover::Log_Write_Rangefinder()
     DataFlash.WriteBlock(&pkt, sizeof(pkt));
 }
 
-void Rover::Log_Write_Current()
-{
-    DataFlash.Log_Write_Current(battery);
-
-    // also write power status
-    DataFlash.Log_Write_Power();
-}
-
 struct PACKED log_Arm_Disarm {
     LOG_PACKET_HEADER;
     uint64_t time_us;
@@ -339,6 +331,12 @@ void Rover::Log_Write_WheelEncoder()
     DataFlash.WriteBlock(&pkt, sizeof(pkt));
 }
 
+// Write proximity sensor distances
+void Rover::Log_Write_Proximity()
+{
+    DataFlash.Log_Write_Proximity(g2.proximity);
+}
+
 // type and unit information can be found in
 // libraries/DataFlash/Logstructure.h; search for "log_Units" for
 // units and "Format characters" for field type information
@@ -384,7 +382,6 @@ void Rover::Log_Write_Vehicle_Startup_Messages()
 
 // dummy functions
 void Rover::Log_Write_Startup(uint8_t type) {}
-void Rover::Log_Write_Current() {}
 void Rover::Log_Write_Nav_Tuning() {}
 void Rover::Log_Write_Performance() {}
 void Rover::Log_Write_Throttle() {}
@@ -398,5 +395,6 @@ void Rover::Log_Arm_Disarm() {}
 void Rover::Log_Write_Error(uint8_t sub_system, uint8_t error_code) {}
 void Rover::Log_Write_Steering() {}
 void Rover::Log_Write_WheelEncoder() {}
+void Rover::Log_Write_Proximity() {}
 
 #endif  // LOGGING_ENABLED

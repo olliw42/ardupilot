@@ -328,8 +328,7 @@ void Copter::ModeAutoTune::run()
     // if not auto armed or motor interlock not enabled set throttle to zero and exit immediately
     // this should not actually be possible because of the init() checks
     if (!motors->armed() || !ap.auto_armed || !motors->get_interlock()) {
-        motors->set_desired_spool_state(AP_Motors::DESIRED_SPIN_WHEN_ARMED);
-        attitude_control->set_throttle_out_unstabilized(0,true,g.throttle_filt);
+        zero_throttle_and_relax_ac();
         pos_control->relax_alt_hold_controllers(0.0f);
         return;
     }
@@ -602,25 +601,25 @@ void Copter::ModeAutoTune::autotune_attitude_control()
         switch (axis) {
         case ROLL:
             if ((tune_type == SP_DOWN) || (tune_type == SP_UP)) {
-                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().x) * 100.0f), MAIN_LOOP_SECONDS);
+                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().x) * 100.0f), _copter.scheduler.get_loop_period_s());
             } else {
-                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().x) * 100.0f - start_rate), MAIN_LOOP_SECONDS);
+                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().x) * 100.0f - start_rate), _copter.scheduler.get_loop_period_s());
             }
             lean_angle = direction_sign * (ahrs.roll_sensor - (int32_t)start_angle);
             break;
         case PITCH:
             if ((tune_type == SP_DOWN) || (tune_type == SP_UP)) {
-                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().y) * 100.0f), MAIN_LOOP_SECONDS);
+                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().y) * 100.0f), _copter.scheduler.get_loop_period_s());
             } else {
-                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().y) * 100.0f - start_rate), MAIN_LOOP_SECONDS);
+                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().y) * 100.0f - start_rate), _copter.scheduler.get_loop_period_s());
             }
             lean_angle = direction_sign * (ahrs.pitch_sensor - (int32_t)start_angle);
             break;
         case YAW:
             if ((tune_type == SP_DOWN) || (tune_type == SP_UP)) {
-                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().z) * 100.0f), MAIN_LOOP_SECONDS);
+                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().z) * 100.0f), _copter.scheduler.get_loop_period_s());
             } else {
-                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().z) * 100.0f - start_rate), MAIN_LOOP_SECONDS);
+                rotation_rate = rotation_rate_filt.apply(direction_sign * (ToDeg(ahrs.get_gyro().z) * 100.0f - start_rate), _copter.scheduler.get_loop_period_s());
             }
             lean_angle = direction_sign * wrap_180_cd(ahrs.yaw_sensor-(int32_t)start_angle);
             break;

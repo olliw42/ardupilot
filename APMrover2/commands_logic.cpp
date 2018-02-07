@@ -117,6 +117,16 @@ bool Rover::start_command(const AP_Mission::Mission_Command& cmd)
         do_set_reverse(cmd);
         break;
 
+    case MAV_CMD_DO_FENCE_ENABLE:
+        if (cmd.p1 == 0) {  //disable
+            g2.fence.enable(false);
+            gcs().send_text(MAV_SEVERITY_INFO, "Fence Disabled");
+        } else {  //enable fence
+            g2.fence.enable(true);
+            gcs().send_text(MAV_SEVERITY_INFO, "Fence Enabled");
+        }
+        break;
+
     default:
         // return false for unhandled commands
         return false;
@@ -193,6 +203,7 @@ bool Rover::verify_command(const AP_Mission::Mission_Command& cmd)
     case MAV_CMD_DO_SET_CAM_TRIGG_DIST:
     case MAV_CMD_DO_SET_ROI:
     case MAV_CMD_DO_SET_REVERSE:
+    case MAV_CMD_DO_FENCE_ENABLE:
         return true;
 
     default:
@@ -308,7 +319,7 @@ bool Rover::verify_loiter_time(const AP_Mission::Mission_Command& cmd)
 {
     const bool result = verify_nav_wp(cmd);
     if (result) {
-        gcs().send_text(MAV_SEVERITY_WARNING, "Finished active loiter\n");
+        gcs().send_text(MAV_SEVERITY_WARNING, "Finished active loiter");
     }
     return result;
 }

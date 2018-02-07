@@ -152,7 +152,7 @@ const AP_Param::Info Rover::var_info[] = {
     // @Param: FS_ACTION
     // @DisplayName: Failsafe Action
     // @Description: What to do on a failsafe event
-    // @Values: 0:Nothing,1:RTL,2:Hold
+    // @Values: 0:Nothing,1:RTL,2:Hold,3:SmartRTL or RTL,4:SmartRTL or Hold
     // @User: Standard
     GSCALAR(fs_action,    "FS_ACTION",     2),
 
@@ -542,6 +542,18 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("FRAME_CLASS", 16, ParametersG2, frame_class, 1),
 
+    // @Group: FENCE_
+    // @Path: ../libraries/AC_Fence/AC_Fence.cpp
+    AP_SUBGROUPINFO(fence, "FENCE_", 17, ParametersG2, AC_Fence),
+
+    // @Group: PRX
+    // @Path: ../libraries/AP_Proximity/AP_Proximity.cpp
+    AP_SUBGROUPINFO(proximity, "PRX", 18, ParametersG2, AP_Proximity),
+
+    // @Group: AVOID_
+    // @Path: ../libraries/AC_Avoidance/AC_Avoid.cpp
+    AP_SUBGROUPINFO(avoid, "AVOID_", 19, ParametersG2, AC_Avoid),
+
     AP_GROUPEND
 };
 
@@ -554,7 +566,10 @@ ParametersG2::ParametersG2(void)
     beacon(rover.serial_manager),
     motors(rover.ServoRelayEvents),
     attitude_control(rover.ahrs),
-    smart_rtl(rover.ahrs)
+    smart_rtl(rover.ahrs),
+    fence(rover.ahrs),
+    proximity(rover.serial_manager),
+    avoid(rover.ahrs, fence, rover.g2.proximity, &rover.g2.beacon)
 {
     AP_Param::setup_object_defaults(this, var_info);
 }

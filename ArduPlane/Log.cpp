@@ -27,7 +27,7 @@ void Plane::Log_Write_Attitude(void)
         DataFlash.Log_Write_PID(LOG_PIQR_MSG, quadplane.attitude_control->get_rate_roll_pid().get_pid_info());
         DataFlash.Log_Write_PID(LOG_PIQP_MSG, quadplane.attitude_control->get_rate_pitch_pid().get_pid_info());
         DataFlash.Log_Write_PID(LOG_PIQY_MSG, quadplane.attitude_control->get_rate_yaw_pid().get_pid_info());
-        DataFlash.Log_Write_PID(LOG_PIQA_MSG, quadplane.pid_accel_z.get_pid_info() );
+        DataFlash.Log_Write_PID(LOG_PIQA_MSG, quadplane.pos_control->get_accel_z_pid().get_pid_info() );
     }
 
     DataFlash.Log_Write_PID(LOG_PIDR_MSG, rollController.get_pid_info());
@@ -263,14 +263,6 @@ struct PACKED log_Arm_Disarm {
     uint16_t arm_checks;
 };
 
-void Plane::Log_Write_Current()
-{
-    DataFlash.Log_Write_Current(battery);
-
-    // also write power status
-    DataFlash.Log_Write_Power();
-}
-
 void Plane::Log_Arm_Disarm() {
     struct log_Arm_Disarm pkt = {
         LOG_PACKET_HEADER_INIT(LOG_ARM_DISARM_MSG),
@@ -439,7 +431,6 @@ void Plane::Log_Write_Sonar() {}
 void Plane::Log_Write_Optflow() {}
  #endif
 
-void Plane::Log_Write_Current() {}
 void Plane::Log_Arm_Disarm() {}
 void Plane::Log_Write_GPS(uint8_t instance) {}
 void Plane::Log_Write_IMU() {}

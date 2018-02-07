@@ -74,11 +74,15 @@ DataFlash_File::DataFlash_File(DataFlash_Class &front,
     _writebuf_chunk(512),
 #elif defined(CONFIG_ARCH_BOARD_VRBRAIN_V52)
     _writebuf_chunk(512),
+#elif defined(CONFIG_ARCH_BOARD_VRBRAIN_V52E)
+    _writebuf_chunk(512),
 #elif defined(CONFIG_ARCH_BOARD_VRUBRAIN_V51)
     _writebuf_chunk(512),
 #elif defined(CONFIG_ARCH_BOARD_VRUBRAIN_V52)
     _writebuf_chunk(512),
 #elif defined(CONFIG_ARCH_BOARD_VRHERO_V10)
+    _writebuf_chunk(512),
+#elif defined(CONFIG_ARCH_BOARD_VRBRAIN_V54)
     _writebuf_chunk(512),
 #else
     _writebuf_chunk(4096),
@@ -1138,11 +1142,7 @@ void DataFlash_File::flush(void)
     hal.scheduler->resume_timer_procs();
     if (write_fd_semaphore->take(1)) {
         if (_write_fd != -1) {
-#if HAL_OS_POSIX_IO
             ::fsync(_write_fd);
-#else
-            syncfs(_write_fd);
-#endif
         }
         write_fd_semaphore->give();
     } else {
@@ -1231,11 +1231,7 @@ void DataFlash_File::_io_timer(void)
          */
 #if CONFIG_HAL_BOARD != HAL_BOARD_SITL && CONFIG_HAL_BOARD_SUBTYPE != HAL_BOARD_SUBTYPE_LINUX_NONE && CONFIG_HAL_BOARD != HAL_BOARD_QURT
         last_io_operation = "fsync";
-#if HAL_OS_POSIX_IO
         ::fsync(_write_fd);
-#else
-        syncfs(_write_fd);
-#endif
         last_io_operation = "";
 #endif
     }

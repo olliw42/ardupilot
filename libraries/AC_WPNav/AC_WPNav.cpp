@@ -302,7 +302,7 @@ void AC_WPNav::calc_loiter_desired_velocity(float nav_dt, float ekfGndSpdLimit)
 
     // Limit the velocity to prevent fence violations
     if (_avoid != nullptr) {
-        _avoid->adjust_velocity(_pos_control.get_pos_xy_kP(), _loiter_accel_cmss, desired_vel, nav_dt);
+        _avoid->adjust_velocity(_pos_control.get_pos_xy_p().kP(), _loiter_accel_cmss, desired_vel, nav_dt);
     }
 
     // send adjusted feed forward velocity back to position controller
@@ -370,7 +370,7 @@ void AC_WPNav::update_brake(float ekfGndSpdLimit, float ekfNavVelGainScaler)
     if (dt >= _pos_control.get_dt_xy()) {
 
         // send adjusted feed forward velocity back to position controller
-        _pos_control.set_desired_velocity_xy(0,0);
+        _pos_control.set_desired_velocity_xy(0.0f, 0.0f);
         _pos_control.update_xy_controller(AC_PosControl::XY_MODE_POS_LIMITED_AND_VEL_FF, ekfNavVelGainScaler, false);
     }
 }
@@ -631,7 +631,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // calculate point at which velocity switches from linear to sqrt
     float linear_velocity = _wp_speed_cms;
-    float kP = _pos_control.get_pos_xy_kP();
+    float kP = _pos_control.get_pos_xy_p().kP();
     if (kP >= 0.0f) {   // avoid divide by zero
         linear_velocity = _track_accel/kP;
     }

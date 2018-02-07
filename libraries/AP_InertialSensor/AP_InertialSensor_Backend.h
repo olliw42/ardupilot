@@ -89,10 +89,12 @@ public:
         DEVTYPE_ACC_MPU6000  = 0x13,
         DEVTYPE_ACC_MPU9250  = 0x16,
         DEVTYPE_ACC_IIS328DQ = 0x17,
+        DEVTYPE_ACC_LSM9DS1  = 0x18,
         DEVTYPE_GYR_MPU6000  = 0x21,
         DEVTYPE_GYR_L3GD20   = 0x22,
         DEVTYPE_GYR_MPU9250  = 0x24,
         DEVTYPE_GYR_I3G4250D = 0x25,
+        DEVTYPE_GYR_LSM9DS1  = 0x26,
     };
         
 protected:
@@ -144,11 +146,21 @@ protected:
         return _imu._accel_raw_sample_rates[instance];
     }
 
+    // set accelerometer raw sample rate
+    void _set_accel_raw_sample_rate(uint8_t instance, uint16_t rate_hz) {
+        _imu._accel_raw_sample_rates[instance] = rate_hz;
+    }
+    
     // get gyroscope raw sample rate
     uint32_t _gyro_raw_sample_rate(uint8_t instance) const {
         return _imu._gyro_raw_sample_rates[instance];
     }
 
+    // set gyro raw sample rate
+    void _set_gyro_raw_sample_rate(uint8_t instance, uint16_t rate_hz) {
+        _imu._gyro_raw_sample_rates[instance] = rate_hz;
+    }
+    
     // publish a temperature value
     void _publish_temperature(uint8_t instance, float temperature);
 

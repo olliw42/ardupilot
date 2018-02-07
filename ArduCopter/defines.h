@@ -74,6 +74,7 @@ enum aux_sw_func {
     AUXSW_INVERTED  =           43,  // enable inverted flight
     AUXSW_WINCH_ENABLE =        44, // winch enable/disable
     AUXSW_WINCH_CONTROL =       45, // winch control
+    AUXSW_RC_OVERRIDE_ENABLE =  46, // enable RC Override
     AUXSW_SWITCH_MAX,
 };
 
@@ -474,20 +475,26 @@ enum DevOptions {
 #define ERROR_CODE_GPS_GLITCH               2
 
 // Radio failsafe definitions (FS_THR parameter)
-#define FS_THR_DISABLED                    0
-#define FS_THR_ENABLED_ALWAYS_RTL          1
-#define FS_THR_ENABLED_CONTINUE_MISSION    2
-#define FS_THR_ENABLED_ALWAYS_LAND         3
+#define FS_THR_DISABLED                            0
+#define FS_THR_ENABLED_ALWAYS_RTL                  1
+#define FS_THR_ENABLED_CONTINUE_MISSION            2
+#define FS_THR_ENABLED_ALWAYS_LAND                 3
+#define FS_THR_ENABLED_ALWAYS_SMARTRTL_OR_RTL      4
+#define FS_THR_ENABLED_ALWAYS_SMARTRTL_OR_LAND     5
 
 // Battery failsafe definitions (FS_BATT_ENABLE parameter)
 #define FS_BATT_DISABLED                    0       // battery failsafe disabled
 #define FS_BATT_LAND                        1       // switch to LAND mode on battery failsafe
 #define FS_BATT_RTL                         2       // switch to RTL mode on battery failsafe
+#define FS_BATT_SMARTRTL_OR_RTL             3       // switch to SmartRTL, if can't, switch to RTL
+#define FS_BATT_SMARTRTL_OR_LAND            4       // switch to SmartRTL, if can't, swtich to LAND
 
 // GCS failsafe definitions (FS_GCS_ENABLE parameter)
-#define FS_GCS_DISABLED                     0
-#define FS_GCS_ENABLED_ALWAYS_RTL           1
-#define FS_GCS_ENABLED_CONTINUE_MISSION     2
+#define FS_GCS_DISABLED                        0
+#define FS_GCS_ENABLED_ALWAYS_RTL              1
+#define FS_GCS_ENABLED_CONTINUE_MISSION        2
+#define FS_GCS_ENABLED_ALWAYS_SMARTRTL_OR_RTL  3
+#define FS_GCS_ENABLED_ALWAYS_SMARTRTL_OR_LAND 4
 
 // EKF failsafe definitions (FS_EKF_ACTION parameter)
 #define FS_EKF_ACTION_LAND                  1       // switch to LAND mode on EKF failsafe
