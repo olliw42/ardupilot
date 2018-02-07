@@ -822,7 +822,7 @@ void AP_InertialSensor_Invensense::_set_filter_register(void)
     _backend_rate_hz = 1000;
     
     if (enable_fast_sampling(_accel_instance)) {
-        _fast_sampling = (_mpu_type != Invensense_MPU6000 && _dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI);
+        _fast_sampling = (_mpu_type >= Invensense_MPU9250 && _dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI);
         if (_fast_sampling) {
             if (get_sample_rate_hz() <= 1000) {
                 _fifo_downsample_rate = 8;
@@ -966,10 +966,10 @@ bool AP_InertialSensor_Invensense::_hardware_init(void)
     }
 
     _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
-    _dev->get_semaphore()->give();
 
     if (tries == 5) {
         hal.console->printf("Failed to boot Invensense 5 times\n");
+        _dev->get_semaphore()->give();
         return false;
     }
 
@@ -978,6 +978,7 @@ bool AP_InertialSensor_Invensense::_hardware_init(void)
         // this avoids a sensor bug, see description above
 		_register_write(MPUREG_ICM_UNDOC1, MPUREG_ICM_UNDOC1_VALUE, true);
 	}
+    _dev->get_semaphore()->give();
     
     return true;
 }
@@ -1108,6 +1109,10 @@ void AP_Invensense_AuxiliaryBus::_configure_slaves()
 {
     auto &backend = AP_InertialSensor_Invensense::from(_ins_backend);
 
+    if (!backend._dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+        return;
+    }
+    
     /* Enable the I2C master to slaves on the auxiliary I2C bus*/
     if (!(backend._last_stat_user_ctrl & BIT_USER_CTRL_I2C_MST_EN)) {
         backend._last_stat_user_ctrl |= BIT_USER_CTRL_I2C_MST_EN;
@@ -1126,6 +1131,8 @@ void AP_Invensense_AuxiliaryBus::_configure_slaves()
     backend._register_write(MPUREG_I2C_MST_DELAY_CTRL,
                             BIT_I2C_SLV0_DLY_EN | BIT_I2C_SLV1_DLY_EN |
                             BIT_I2C_SLV2_DLY_EN | BIT_I2C_SLV3_DLY_EN);
+
+    backend._dev->get_semaphore()->give();
 }
 
 int AP_Invensense_AuxiliaryBus::_configure_periodic_read(AuxiliaryBusSlave *slave,
