@@ -470,8 +470,8 @@ void AP_Mount::init(const AP_SerialManager& serial_manager)
 //OW
         // check for STorM32 mounts using UAVCAN protocol
         } else if (mount_type == Mount_Type_STorM32_UAVCAN) {
-//XX            _backends[instance] = new BP_Mount_STorM32(*this, state[instance], instance);
-//XX            _num_instances++;
+            _backends[instance] = new BP_Mount_STorM32(*this, state[instance], instance);
+            _num_instances++;
 
         // check for STorM32 mounts using native serial protocol
         } else if (mount_type == Mount_Type_STorM32_Native) {

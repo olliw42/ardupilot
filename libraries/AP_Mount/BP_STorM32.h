@@ -68,7 +68,7 @@ public:
 
 protected:
 
-    struct PACKED tSTorM32Link { //len = 0x15, cmd = 0xD9
+    struct PACKED tSTorM32LinkV2 { //len = 0x21, cmd = 0xDA
         uint8_t stx;
         uint8_t len;
         uint8_t cmd;
@@ -76,10 +76,13 @@ protected:
         uint8_t status;
         uint8_t spare;
         int16_t yawratecmd;
+        float q0;
         float q1;
         float q2;
         float q3;
-        float q4;
+        float vx;
+        float vy;
+        float vz;
         uint16_t crc;
     };
     uint8_t _storm32link_seq;

@@ -24,14 +24,14 @@ BP_STorM32::BP_STorM32() :
 // send stuff
 //------------------------------------------------------
 
-// 26 bytes = 2257us @ 115200bps
+// 33 bytes = 2865us @ 115200bps
 void BP_STorM32::send_attitude(const AP_AHRS_TYPE &ahrs)
 {
     if (!_serial_is_initialised) {
         return;
     }
 
-    if (_serial_txspace() < sizeof(tSTorM32Link) +2) {
+    if (_serial_txspace() < sizeof(tSTorM32LinkV2) +2) {
         return;
     }
 
@@ -47,21 +47,24 @@ void BP_STorM32::send_attitude(const AP_AHRS_TYPE &ahrs)
 //XX    if (copter.letmeget_pream_check()) status |= 0x40;
 //XX    if (copter.letmeget_motors_armed()) status |= 0x80;
 
-    tSTorM32Link t;
+    tSTorM32LinkV2 t;
     t.stx = 0xF9;
-    t.len = 0x15;
-    t.cmd = 0xD9;
+    t.len = 0x21;
+    t.cmd = 0xDA;
     t.seq = _storm32link_seq; _storm32link_seq++;
     t.status = status;
     t.spare = 0;
     t.yawratecmd = 0;
-    t.q1 = quat.q1;
-    t.q2 = quat.q2;
-    t.q3 = quat.q3;
-    t.q4 = quat.q4;
-    t.crc = crc_calculate(&(t.len), sizeof(tSTorM32Link)-3);
+    t.q0 = quat.q1;
+    t.q1 = quat.q2;
+    t.q2 = quat.q3;
+    t.q3 = quat.q4;
+    t.vx = 0.0f;
+    t.vy = 0.0f;
+    t.vz = 0.0f;
+    t.crc = crc_calculate(&(t.len), sizeof(tSTorM32LinkV2)-3);
 
-    _serial_write( (uint8_t*)(&t), sizeof(tSTorM32Link), PRIORITY_HIGHEST );
+    _serial_write( (uint8_t*)(&t), sizeof(tSTorM32LinkV2), PRIORITY_HIGHEST );
 }
 
 
