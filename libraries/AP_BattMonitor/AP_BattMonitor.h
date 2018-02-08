@@ -25,6 +25,9 @@ class AP_BattMonitor_Analog;
 class AP_BattMonitor_SMBus;
 class AP_BattMonitor_SMBus_Solo;
 class AP_BattMonitor_SMBus_Maxell;
+//OW
+class AP_BattMonitor_UAVCAN;
+//OWEND
 
 class AP_BattMonitor
 {
@@ -33,6 +36,9 @@ class AP_BattMonitor
     friend class AP_BattMonitor_SMBus;
     friend class AP_BattMonitor_SMBus_Solo;
     friend class AP_BattMonitor_SMBus_Maxell;
+//OW
+    friend class AP_BattMonitor_UAVCAN;
+//OWEND
 
 public:
     AP_BattMonitor(uint32_t log_battery_bit);

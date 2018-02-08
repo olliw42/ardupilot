@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v006-001"
+#define THISFIRMWARE "BetaCopter V3.6-dev v006-003"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -21,11 +21,20 @@
 
 /*
 v0.06:
- AP_Mount.h: 3x
- AP_Mount.cpp: 2x
- AP_SerialManager.cpp/.h: 1x each to adopt SerialProtocol_STorM32_Native = 84
- AP_Camera.cpp: 2x (no change in AP_Camera.h)
- ArduCopter/Copter.h: 1x
+AP_Mount.h: 3x
+AP_Mount.cpp: 2x
+AP_SerialManager.cpp/.h: 1x each to adopt SerialProtocol_STorM32_Native = 84
+AP_Camera.cpp: 2x (no change in AP_Camera.h)
+ArduCopter/Copter.h: 1x
+
+AP_BattMonitor_Backend.h: 1x
+AP_BattMonitor_Params.h: 1x
+AP_BattMonitor.cpp: 2x
+AP_BattMonitor.h: 2x
+AP_BattMonitor_UAVCAN.h: added
+AP_BattMonitor_UAVCAN.cpp: added
+AP_UAVCAN.cpp: 5x
+AP_UAVCAN.h: 4x
 
 - AP_Mount_STorM32_UAVCAN renamed to BP_Mount_STorM32
 - BP_STorM32.h/cpp: changes to LinkV2
@@ -40,8 +49,28 @@ the normal serial functions should be complete with that
   what is the difference to inertial_nav???
 what is missing a test of the STorM32LinkV2 data
 => accept this as v006-001
+- AP_BattMonitor stuff added, needed some rework since code has changed quite a bit
+- AP_UAVCAN GenericBatteryInfo message handling added
+don't do also the STorM32 UAVCAN messages now, get first the serial uptodate, can gimbal isn't used anyhow by anyone
+- this PR just appeared, https://github.com/ArduPilot/ardupilot/pull/7672, so, don't use inertial_nav but ahrs instead
+  => changes made to Mount stuff
+flight-tested on flamewheel! passed! 2018-02-08
+=> accept this as v006-002
 
 
+
+ap.in_arming_delay instead of motors.armed() ??
+ap.rc_receiver_present for a better "failsafe" handling ??
+ap.initialised can this be used to send a banner at the proper time ??
+how to detect if connected to a GCS ??
+
+TODO: how to autodetect the presence of a STorM32 gimbal, and/or how to get it's UAVCAN node id
+TODO: find_gimbal() also for CAN
+TODO: the flags of CircuitStatus an GenericBatteryInfo should be evaluated
+*/
+
+
+/*
 Comments:
 * struct PACKED log_Esc in LogStructure.h has ints, those units are not clear, use floats as elsewhere
 * this struct is used in DataFlash_Class::Log_Write_ESC() in LogFile.cpp
@@ -75,24 +104,47 @@ LOCAL_POSITION_NED
 GLOBAL_POSITION_INT
 => sends  const Vector3f &vel = inertial_nav.get_velocity();  speed in cm/s
 
+
+this PR just has appeared today: https://github.com/ArduPilot/ardupilot/pull/7672
+important comments
+
+* "inertial-nav library (which we plan to remove and is just a shim on the underlying EKFs)"
+=> don't use inertial-nav
+
+* "The GPS position and velocities are already available through the GPS_RAW_INT message (albeit using ground course and ground speed instead of a 3D vector)"
+=> what does ground speed instead of a 3D vector mean???
+
+
+
 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*
- AP_UAVCAN.h: 3x
- AP_UAVCAN.cpp: 6x
- AP_BattMonitor_Backend.h: 1x
- AP_BattMonitor.h: 1x
- AP_BattMonitor.cpp: 1x
- AP_BattMonitor_UAVCAN.h: 2x
- AP_BattMonitor_UAVCAN.cpp: 2x
+Hey
 
-ap.in_arming_delay instead of motors.armed() ??
-ap.rc_receiver_present for a better "failsafe" handling ??
-ap.initialised can this be used to send a banner at the proper time ??
-how to detect if connected to a GCS ??
+a question on the differences of inertial_nav and ahrs, as used in ArduCopter, please
 
-TODO: how to autodetect the presence of a STorM32 gimbal, and/or how to get it's UAVCAN node id
-TODO: find_gimbal() also for CAN
-TODO: the flags of CircuitStatus an GenericBatteryInfo should be evaluated
+this question is triggered by the recent post
+https://discuss.ardupilot.org/t/velocity-direction-vector-for-the-copter/25330
+where e.g. the velocity can be obtained from two different MAVLink messages, LOCAL_POSITION_NED and GLOBAL_POSITION_INT.
+
+However, LOCAL_POSITION_NED calls ahrs.get_velocity_NED(velocity), while GLOBAL_POSITION_INT calls inertial_nav.get_velocity().
+
+I would like to better understand now what the differences between these two velocities are (besides the obvious difference in units).
+
+Unfortunately, by scanning a bit through the code this didn't became obvious to me. I in fact find it confusing that in some places ahrs is used while in others inertial_nav, and I failed to see the pattern. I also not that they have quite different approaches towards status flags.
 */
+

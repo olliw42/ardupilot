@@ -26,6 +26,14 @@
 #include <uavcan/equipment/actuator/Status.hpp>
 #include <uavcan/equipment/esc/RawCommand.hpp>
 
+//OW
+// 1. place the .dsdl datatype file in \modules\uavcan\dsdl\uavcan
+// 2. delete folder \modules\uavcan\libuavcan\include\dsdl_generated to invoke the dsdl_compiler
+// sadly, only the subfolder \modules\uavcan\dsdl\uavcan is scanned by the build system
+// so vendor-specific messages are not possible, we thus must fake our messages into the standard dataset
+#include <uavcan/equipment/power/GenericBatteryInfo.hpp>
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 #define debug_uavcan(level, fmt, args...) do { if ((level) <= AP_BoardConfig_CAN::get_can_debug()) { hal.console->printf(fmt, ##args); }} while (0)
@@ -274,13 +282,44 @@ static void air_data_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equipmen
 static void (*air_data_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::StaticTemperature>& msg)
         = { air_data_st_cb0, air_data_st_cb1 };
 
+//OW
+//--- GenericBatteryInfo ---
+
+// along the lines of battery_info_st_cb
+static void genericbatteryinfo_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg, uint8_t mgr)
+{
+    if (hal.can_mgr[mgr] != nullptr) {
+        AP_UAVCAN *ap_uavcan = hal.can_mgr[mgr]->get_UAVCAN();
+        if (ap_uavcan != nullptr) {
+            AP_UAVCAN::GenericBatteryInfo_Data *data = ap_uavcan->genericbatteryinfo_getptrto_data((uint16_t) msg.battery_id);
+
+            if (data != nullptr) {
+                data->voltage = msg.voltage;
+                data->current = msg.current;
+                data->charge_consumed_mAh = msg.charge_consumed_mAh;
+                data->status_flags = msg.status_flags;
+
+                ap_uavcan->genericbatteryinfo_update_data((uint16_t) msg.battery_id);
+            }
+        }
+    }
+}
+
+static void genericbatteryinfo_st_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg){ genericbatteryinfo_st_cb_func(msg, 0); }
+static void genericbatteryinfo_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg){ genericbatteryinfo_st_cb_func(msg, 1); }
+static void (*genericbatteryinfo_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg) = { genericbatteryinfo_st_cb0, genericbatteryinfo_st_cb1 };
+//OWEND
+
+
 // publisher interfaces
 static uavcan::Publisher<uavcan::equipment::actuator::ArrayCommand>* act_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
 static uavcan::Publisher<uavcan::equipment::esc::RawCommand>* esc_raw[MAX_NUMBER_OF_CAN_DRIVERS];
 
+
+//--------------   AP_UAVCAN methods  --------------------
+
 AP_UAVCAN::AP_UAVCAN() :
-    _node_allocator(
-        UAVCAN_NODE_POOL_SIZE, UAVCAN_NODE_POOL_SIZE)
+    _node_allocator(UAVCAN_NODE_POOL_SIZE, UAVCAN_NODE_POOL_SIZE)
 {
     AP_Param::setup_object_defaults(this, var_info);
 
@@ -315,6 +354,17 @@ AP_UAVCAN::AP_UAVCAN() :
     }
 
     _rc_out_sem = hal.util->new_semaphore();
+
+//OW
+    for (uint8_t i = 0; i < AP_UAVCAN_MAX_LISTENERS; i++) {
+        _genericbatteryinfo.listener_to_id[i] = UINT8_MAX;
+        _genericbatteryinfo.listeners[i] = nullptr;
+    }
+    for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
+        _genericbatteryinfo.id[i] = UINT8_MAX;
+        _genericbatteryinfo.id_taken[i] = 0;
+    }
+//OWEND
 
     debug_uavcan(2, "AP_UAVCAN constructed\n\r");
 }
@@ -418,6 +468,25 @@ bool AP_UAVCAN::try_init(void)
                     esc_raw[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
                     esc_raw[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);
 
+//OW
+/*
+                    uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *genericbatteryinfo_st;
+                    genericbatteryinfo_st = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
+                    const int genericbatteryinfo_start_res = genericbatteryinfo_st->start(genericbatteryinfo_st_cb[_uavcan_i]);
+                    if (genericbatteryinfo_start_res < 0) {
+                        debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
+                        return false;
+                    }*/
+                    {
+                        uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *st;
+                        st = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
+                        const int start_res = st->start(genericbatteryinfo_st_cb[_uavcan_i]);
+                        if (start_res < 0) {
+                            debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
+                            return false;
+                        }
+                    }
+//OWEND
                     /*
                      * Informing other nodes that we're ready to work.
                      * Default mode is INITIALIZING.
@@ -578,7 +647,7 @@ uavcan::ISystemClock & AP_UAVCAN::get_system_clock()
     return SystemClock::instance();
 }
 
-uavcan::ICanDriver * AP_UAVCAN::get_can_driver()
+uavcan::ICanDriver* AP_UAVCAN::get_can_driver()
 {
     if (_parent_can_mgr != nullptr) {
         if (_parent_can_mgr->is_initialized() == false) {
@@ -590,7 +659,7 @@ uavcan::ICanDriver * AP_UAVCAN::get_can_driver()
     return nullptr;
 }
 
-uavcan::Node<0> *AP_UAVCAN::get_node()
+uavcan::Node<0>* AP_UAVCAN::get_node()
 {
     if (_node == nullptr && get_can_driver() != nullptr) {
         _node = new uavcan::Node<0>(*get_can_driver(), get_system_clock(), _node_allocator);
@@ -731,7 +800,7 @@ void AP_UAVCAN::remove_gps_listener(AP_GPS_Backend* rem_listener)
     }
 }
 
-AP_GPS::GPS_State *AP_UAVCAN::find_gps_node(uint8_t node)
+AP_GPS::GPS_State* AP_UAVCAN::find_gps_node(uint8_t node)
 {
     // Check if such node is already defined
     for (uint8_t i = 0; i < AP_UAVCAN_MAX_GPS_NODES; i++) {
@@ -850,7 +919,7 @@ void AP_UAVCAN::remove_baro_listener(AP_Baro_Backend* rem_listener)
     }
 }
 
-AP_UAVCAN::Baro_Info *AP_UAVCAN::find_baro_node(uint8_t node)
+AP_UAVCAN::Baro_Info* AP_UAVCAN::find_baro_node(uint8_t node)
 {
     // Check if such node is already defined
     for (uint8_t i = 0; i < AP_UAVCAN_MAX_BARO_NODES; i++) {
@@ -984,7 +1053,7 @@ void AP_UAVCAN::remove_mag_listener(AP_Compass_Backend* rem_listener)
     }
 }
 
-AP_UAVCAN::Mag_Info *AP_UAVCAN::find_mag_node(uint8_t node)
+AP_UAVCAN::Mag_Info* AP_UAVCAN::find_mag_node(uint8_t node)
 {
     // Check if such node is already defined
     for (uint8_t i = 0; i < AP_UAVCAN_MAX_MAG_NODES; i++) {
@@ -1034,5 +1103,98 @@ void AP_UAVCAN::update_mag_state(uint8_t node)
         }
     }
 }
+
+
+//OW
+//--- GenericBatteryInfo ---
+
+uint8_t AP_UAVCAN::genericbatteryinfo_register_listener_to_id(AP_BattMonitor_Backend* new_listener, uint8_t id)
+{
+    uint8_t sel_place = UINT8_MAX, ret = 0;
+
+    for (uint8_t i = 0; i < AP_UAVCAN_MAX_LISTENERS; i++) {
+        if (_genericbatteryinfo.listeners[i] == nullptr) {
+            sel_place = i;
+            break;
+        }
+    }
+
+    if (sel_place != UINT8_MAX) {
+        for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
+            if (_genericbatteryinfo.id[i] == id) {
+                _genericbatteryinfo.listeners[sel_place] = new_listener;
+                _genericbatteryinfo.listener_to_id[sel_place] = i;
+                _genericbatteryinfo.id_taken[i]++;
+                ret = i + 1;
+                debug_uavcan(2, "reg_GENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
+                break;
+            }
+        }
+    }
+
+    return ret;
+}
+
+void AP_UAVCAN::genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener)
+{
+    for (uint8_t i = 0; i < AP_UAVCAN_MAX_LISTENERS; i++) {
+       if (_genericbatteryinfo.listeners[i] == rem_listener) {
+           _genericbatteryinfo.listeners[i] = nullptr;
+           if (_genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[i]] > 0) {
+               _genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[i]]--;
+           }
+           _genericbatteryinfo.listener_to_id[i] = UINT8_MAX;
+       }
+    }
+}
+
+uint8_t AP_UAVCAN::genericbatteryinfo_find_smallest_free_id()
+{
+    uint8_t ret = UINT8_MAX;
+
+    for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
+        if (_genericbatteryinfo.id_taken[i] == 0) {
+            ret = MIN(ret, _genericbatteryinfo.id[i]);
+        }
+    }
+
+    return ret;
+}
+
+AP_UAVCAN::GenericBatteryInfo_Data* AP_UAVCAN::genericbatteryinfo_getptrto_data(uint8_t id)
+{
+    for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
+        if (_genericbatteryinfo.id[i] == id) {
+            return &_genericbatteryinfo.data[i];
+        }
+    }
+
+    for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
+        if (_genericbatteryinfo.id[i] == UINT8_MAX) {
+            _genericbatteryinfo.id[i] = id;
+            return &_genericbatteryinfo.data[i];
+        }
+    }
+
+    return nullptr;
+}
+
+void AP_UAVCAN::genericbatteryinfo_update_data(uint8_t id)
+{
+    for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
+        if (_genericbatteryinfo.id[i] == id) {
+            for (uint8_t j = 0; j < AP_UAVCAN_MAX_LISTENERS; j++) {
+                if (_genericbatteryinfo.listener_to_id[j] == i) {
+                    _genericbatteryinfo.listeners[j]->handle_genericbatteryinfo_msg(
+                            _genericbatteryinfo.data[i].voltage,
+                            _genericbatteryinfo.data[i].current,
+                            _genericbatteryinfo.data[i].charge_consumed_mAh);
+                }
+            }
+        }
+    }
+}
+
+//OWEND
 
 #endif // HAL_WITH_UAVCAN

@@ -15,6 +15,9 @@
 #include <AP_GPS/GPS_Backend.h>
 #include <AP_Baro/AP_Baro_Backend.h>
 #include <AP_Compass/AP_Compass.h>
+//OW
+#include <AP_BattMonitor/AP_BattMonitor_Backend.h>
+//OWEND
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 
@@ -34,6 +37,9 @@
 #define AP_UAVCAN_MAX_GPS_NODES 4
 #define AP_UAVCAN_MAX_MAG_NODES 4
 #define AP_UAVCAN_MAX_BARO_NODES 4
+//OW
+#define AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER 4
+//OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
 #define AP_UAVCAN_SW_VERS_MINOR 0
@@ -98,6 +104,21 @@ public:
     bool rc_out_sem_take();
     void rc_out_sem_give();
 
+//OW
+    // --- GenericBatteryInfo ---
+    struct GenericBatteryInfo_Data {
+        float voltage; //float16
+        float current; //float16
+        float charge_consumed_mAh; //float16
+        uint8_t status_flags;
+    };
+    uint8_t genericbatteryinfo_register_listener_to_id(AP_BattMonitor_Backend* new_listener, uint8_t id);
+    void genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
+    uint8_t genericbatteryinfo_find_smallest_free_id();
+    GenericBatteryInfo_Data* genericbatteryinfo_getptrto_data(uint8_t id);
+    void genericbatteryinfo_update_data(uint8_t id);
+//OWEND
+
 private:
     // ------------------------- GPS
     // 255 - means free node
@@ -138,6 +159,22 @@ private:
     uint8_t _rco_safety;
 
     AP_HAL::Semaphore *_rc_out_sem;
+
+//OW
+    // --- GenericBatteryInfo ---
+    //uint16_t _genericbatteryinfo_id[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+    //uint16_t _genericbatteryinfo_id_taken[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+    //GenericBatteryInfo_Data _genericbatteryinfo_data[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+    //uint16_t _genericbatteryinfo_listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+    //AP_BattMonitor_Backend* _genericbatteryinfo_listeners[AP_UAVCAN_MAX_LISTENERS];
+    struct {
+        uint16_t id[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t id_taken[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+        GenericBatteryInfo_Data data[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+        AP_BattMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+    } _genericbatteryinfo;
+//OWEND
 
     class SystemClock: public uavcan::ISystemClock, uavcan::Noncopyable {
         SystemClock()

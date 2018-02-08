@@ -59,12 +59,7 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     quat.from_rotation_matrix( ahrs.get_rotation_body_to_ned() );
 
     Vector3f vel;
-    bool velbool = ahrs.get_velocity_NED(vel);  //this returns a bool, what does it exactly mean ???
-
-//  inertial_nav.get_filter_status()
-//  if (copter.letmeget_ekf_filter_status()) status |= 0x08;
-//  bool letmeget_ekf_filter_status(){ return inertial_nav.get_filter_status().flags.attitude; }
-//  inertial_nav.get_velocity()
+    bool velbool = ahrs.get_velocity_NED(vel); //this returns a bool, what does it exactly mean ???
 
     tSTorM32LinkV2 t;
     t.stx = 0xF9;

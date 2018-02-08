@@ -4,6 +4,11 @@
 #include "AP_BattMonitor_Bebop.h"
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 #include <DataFlash/DataFlash.h>
+//OW
+#if HAL_WITH_UAVCAN
+#include "AP_BattMonitor_UAVCAN.h"
+#endif
+//OWEND
 
 extern const AP_HAL::HAL& hal;
 
@@ -85,6 +90,14 @@ AP_BattMonitor::init()
                 _num_instances++;
 #endif
                 break;
+//OW
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_GenericBatteryInfo:
+#if HAL_WITH_UAVCAN
+                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], _params[instance]);
+                _num_instances++;
+#endif
+                break;
+//OWEND
             case AP_BattMonitor_Params::BattMonitor_TYPE_NONE:
             default:
                 break;
