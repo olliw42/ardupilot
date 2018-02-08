@@ -106,6 +106,10 @@ public:
     bool rc_out_sem_take();
     void rc_out_sem_give();
 
+    // output from do_cyclic
+    void rc_out_send_servos();
+    void rc_out_send_esc();
+
 //OW
     // --- GenericBatteryInfo ---
     struct GenericBatteryInfo_Data {
