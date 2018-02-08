@@ -32,6 +32,7 @@
 // sadly, only the subfolder \modules\uavcan\dsdl\uavcan is scanned by the build system
 // so vendor-specific messages are not possible, we thus must fake our messages into the standard dataset
 #include <uavcan/equipment/power/GenericBatteryInfo.hpp>
+#include <uavcan/equipment/esc/Status.hpp>
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -283,37 +284,72 @@ static void (*air_data_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uavcan:
         = { air_data_st_cb0, air_data_st_cb1 };
 
 //OW
+// along the lines of battery_info_st_cb
+
 //--- GenericBatteryInfo ---
 
-// along the lines of battery_info_st_cb
 static void genericbatteryinfo_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg, uint8_t mgr)
 {
-    if (hal.can_mgr[mgr] != nullptr) {
-        AP_UAVCAN *ap_uavcan = hal.can_mgr[mgr]->get_UAVCAN();
-        if (ap_uavcan != nullptr) {
-            AP_UAVCAN::GenericBatteryInfo_Data *data = ap_uavcan->genericbatteryinfo_getptrto_data((uint16_t) msg.battery_id);
+    if (hal.can_mgr[mgr] == nullptr) {
+        return;
+    }
 
-            if (data != nullptr) {
-                data->voltage = msg.voltage;
-                data->current = msg.current;
-                data->charge_consumed_mAh = msg.charge_consumed_mAh;
-                data->status_flags = msg.status_flags;
+    AP_UAVCAN *ap_uavcan = hal.can_mgr[mgr]->get_UAVCAN();
+    if (ap_uavcan == nullptr) {
+        return;
+    }
 
-                ap_uavcan->genericbatteryinfo_update_data((uint16_t) msg.battery_id);
-            }
-        }
+    AP_UAVCAN::GenericBatteryInfo_Data *data = ap_uavcan->genericbatteryinfo_getptrto_data((uint16_t) msg.battery_id);
+    if (data != nullptr) {
+        data->voltage = msg.voltage;
+        data->current = msg.current;
+        data->charge_consumed_mAh = msg.charge_consumed_mAh;
+        data->status_flags = msg.status_flags;
+
+        ap_uavcan->genericbatteryinfo_update_data((uint16_t) msg.battery_id);
     }
 }
 
 static void genericbatteryinfo_st_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg){ genericbatteryinfo_st_cb_func(msg, 0); }
 static void genericbatteryinfo_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg){ genericbatteryinfo_st_cb_func(msg, 1); }
 static void (*genericbatteryinfo_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg) = { genericbatteryinfo_st_cb0, genericbatteryinfo_st_cb1 };
+
+//--- EscStatus ---
+
+static void escstatus_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg, uint8_t mgr)
+{
+    if (hal.can_mgr[mgr] == nullptr) {
+        return;
+    }
+
+    AP_UAVCAN *ap_uavcan = hal.can_mgr[mgr]->get_UAVCAN();
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data((uint16_t) msg.esc_index);
+    if (data != nullptr) {
+        data->error_count = msg.error_count;
+        data->voltage = msg.voltage;
+        data->current = msg.current;
+        data->temperature = msg.temperature;
+        data->rpm = msg.rpm;
+        data->power_rating_pct = msg.power_rating_pct;
+
+        ap_uavcan->escstatus_update_data((uint16_t) msg.esc_index);
+    }
+}
+
+static void escstatus_st_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_st_cb_func(msg, 0); }
+static void escstatus_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_st_cb_func(msg, 1); }
+static void (*escstatus_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg) = { escstatus_st_cb0, escstatus_st_cb1 };
 //OWEND
 
 
 // publisher interfaces
 static uavcan::Publisher<uavcan::equipment::actuator::ArrayCommand>* act_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
 static uavcan::Publisher<uavcan::equipment::esc::RawCommand>* esc_raw[MAX_NUMBER_OF_CAN_DRIVERS];
+
 
 
 //--------------   AP_UAVCAN methods  --------------------
@@ -356,22 +392,33 @@ AP_UAVCAN::AP_UAVCAN() :
     _rc_out_sem = hal.util->new_semaphore();
 
 //OW
-    for (uint8_t i = 0; i < AP_UAVCAN_MAX_LISTENERS; i++) {
-        _genericbatteryinfo.listener_to_id[i] = UINT8_MAX;
-        _genericbatteryinfo.listeners[i] = nullptr;
-    }
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
         _genericbatteryinfo.id[i] = UINT8_MAX;
         _genericbatteryinfo.id_taken[i] = 0;
+    }
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        _genericbatteryinfo.listener_to_id[li] = UINT8_MAX;
+        _genericbatteryinfo.listeners[li] = nullptr;
+    }
+
+    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
+        _escstatus.id[i] = UINT8_MAX;
+//        _escstatus.id_taken[i] = 0;
+    }
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+//        _escstatus.listener_to_id[li] = UINT8_MAX;
+//        _escstatus.listeners[li] = nullptr;
     }
 //OWEND
 
     debug_uavcan(2, "AP_UAVCAN constructed\n\r");
 }
 
+
 AP_UAVCAN::~AP_UAVCAN()
 {
 }
+
 
 bool AP_UAVCAN::try_init(void)
 {
@@ -469,20 +516,21 @@ bool AP_UAVCAN::try_init(void)
                     esc_raw[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);
 
 //OW
-/*
-                    uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *genericbatteryinfo_st;
-                    genericbatteryinfo_st = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
-                    const int genericbatteryinfo_start_res = genericbatteryinfo_st->start(genericbatteryinfo_st_cb[_uavcan_i]);
-                    if (genericbatteryinfo_start_res < 0) {
-                        debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
-                        return false;
-                    }*/
                     {
                         uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *st;
                         st = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
                         const int start_res = st->start(genericbatteryinfo_st_cb[_uavcan_i]);
                         if (start_res < 0) {
                             debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
+                            return false;
+                        }
+                    }
+                    {
+                        uavcan::Subscriber<uavcan::equipment::esc::Status> *st;
+                        st = new uavcan::Subscriber<uavcan::equipment::esc::Status>(*node);
+                        const int start_res = st->start(escstatus_st_cb[_uavcan_i]);
+                        if (start_res < 0) {
+                            debug_uavcan(1, "UAVCAN EscStatus subscriber start problem\n\r");
                             return false;
                         }
                     }
@@ -1106,48 +1154,53 @@ void AP_UAVCAN::update_mag_state(uint8_t node)
 
 
 //OW
+// convention i for AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
 //--- GenericBatteryInfo ---
 
 uint8_t AP_UAVCAN::genericbatteryinfo_register_listener_to_id(AP_BattMonitor_Backend* new_listener, uint8_t id)
 {
     uint8_t sel_place = UINT8_MAX, ret = 0;
 
-    for (uint8_t i = 0; i < AP_UAVCAN_MAX_LISTENERS; i++) {
-        if (_genericbatteryinfo.listeners[i] == nullptr) {
-            sel_place = i;
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_genericbatteryinfo.listeners[li] == nullptr) {
+            sel_place = li;
             break;
         }
     }
 
-    if (sel_place != UINT8_MAX) {
-        for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
-            if (_genericbatteryinfo.id[i] == id) {
-                _genericbatteryinfo.listeners[sel_place] = new_listener;
-                _genericbatteryinfo.listener_to_id[sel_place] = i;
-                _genericbatteryinfo.id_taken[i]++;
-                ret = i + 1;
-                debug_uavcan(2, "reg_GENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
-                break;
-            }
+    if (sel_place == UINT8_MAX) {
+        return ret;
+    }
+
+    for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
+        if (_genericbatteryinfo.id[i] == id) {
+            _genericbatteryinfo.listeners[sel_place] = new_listener;
+            _genericbatteryinfo.listener_to_id[sel_place] = i;
+            _genericbatteryinfo.id_taken[i]++;
+            ret = i + 1;
+            debug_uavcan(2, "reg_GENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
+            break;
         }
     }
 
     return ret;
 }
 
+/* not used
 void AP_UAVCAN::genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener)
 {
-    for (uint8_t i = 0; i < AP_UAVCAN_MAX_LISTENERS; i++) {
-       if (_genericbatteryinfo.listeners[i] == rem_listener) {
-           _genericbatteryinfo.listeners[i] = nullptr;
-           if (_genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[i]] > 0) {
-               _genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[i]]--;
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+       if (_genericbatteryinfo.listeners[li] == rem_listener) {
+           _genericbatteryinfo.listeners[li] = nullptr;
+           if (_genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[li]] > 0) {
+               _genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[li]]--;
            }
-           _genericbatteryinfo.listener_to_id[i] = UINT8_MAX;
+           _genericbatteryinfo.listener_to_id[li] = UINT8_MAX;
        }
     }
-}
+} */
 
+/* not used
 uint8_t AP_UAVCAN::genericbatteryinfo_find_smallest_free_id()
 {
     uint8_t ret = UINT8_MAX;
@@ -1159,16 +1212,18 @@ uint8_t AP_UAVCAN::genericbatteryinfo_find_smallest_free_id()
     }
 
     return ret;
-}
+} */
 
 AP_UAVCAN::GenericBatteryInfo_Data* AP_UAVCAN::genericbatteryinfo_getptrto_data(uint8_t id)
 {
+    // check if id is already in list, and if it is take it
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
         if (_genericbatteryinfo.id[i] == id) {
             return &_genericbatteryinfo.data[i];
         }
     }
 
+    // if id is not yet in list, find the first free spot, and take that
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
         if (_genericbatteryinfo.id[i] == UINT8_MAX) {
             _genericbatteryinfo.id[i] = id;
@@ -1183,14 +1238,132 @@ void AP_UAVCAN::genericbatteryinfo_update_data(uint8_t id)
 {
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
         if (_genericbatteryinfo.id[i] == id) {
-            for (uint8_t j = 0; j < AP_UAVCAN_MAX_LISTENERS; j++) {
-                if (_genericbatteryinfo.listener_to_id[j] == i) {
-                    _genericbatteryinfo.listeners[j]->handle_genericbatteryinfo_msg(
+            for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+                if (_genericbatteryinfo.listener_to_id[li] == i) {
+                    _genericbatteryinfo.listeners[li]->handle_genericbatteryinfo_msg(
                             _genericbatteryinfo.data[i].voltage,
                             _genericbatteryinfo.data[i].current,
                             _genericbatteryinfo.data[i].charge_consumed_mAh);
                 }
             }
+        }
+    }
+}
+
+//--- EscStatus ---
+
+/* not used
+uint8_t AP_UAVCAN::escstatus_register_listener_to_id(AP_BattMonitor_Backend* new_listener, uint8_t id)
+{
+    uint8_t sel_place = UINT8_MAX, ret = 0;
+
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_escstatus.listeners[li] == nullptr) {
+            sel_place = li;
+            break;
+        }
+    }
+
+    if (sel_place == UINT8_MAX) {
+        return ret;
+    }
+
+    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
+        if (_escstatus.id[i] == id) {
+            _escstatus.listeners[sel_place] = new_listener;
+            _escstatus.listener_to_id[sel_place] = i;
+            _escstatus.id_taken[i]++;
+            ret = i + 1;
+            debug_uavcan(2, "reg_ESCSTATUS place:%d, chan: %d\n\r", sel_place, i);
+            break;
+        }
+    }
+
+    return ret;
+} */
+
+/* not used
+void AP_UAVCAN::escstatus_remove_listener(AP_BattMonitor_Backend* rem_listener)
+{
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+       if (_escstatus.listeners[li] == rem_listener) {
+           _escstatus.listeners[li] = nullptr;
+           if (_escstatus.id_taken[_escstatus.listener_to_id[li]] > 0) {
+               _escstatus.id_taken[_escstatus.listener_to_id[li]]--;
+           }
+           _escstatus.listener_to_id[li] = UINT8_MAX;
+       }
+    }
+} */
+
+/* not used
+uint8_t AP_UAVCAN::escstatus_find_smallest_free_id()
+{
+    uint8_t ret = UINT8_MAX;
+
+    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
+        if (_escstatus.id_taken[i] == 0) {
+            ret = MIN(ret, _escstatus.id[i]);
+        }
+    }
+
+    return ret;
+} */
+
+AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
+{
+    // I think the esc_index are continues, by how ArduPilot works
+    // so we could just directly jump with id into data list, return &_escstatus.data[id] (with overflow protection)
+
+    // check if id is already in list, and if it is take it
+    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
+        if (_escstatus.id[i] == id) {
+            return &_escstatus.data[i];
+        }
+    }
+
+    // if id is not yet in list, find the first free spot, and take that
+    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
+        if (_escstatus.id[i] == UINT8_MAX) {
+            _escstatus.id[i] = id;
+            return &_escstatus.data[i];
+        }
+    }
+
+    return nullptr;
+}
+
+void AP_UAVCAN::escstatus_update_data(uint8_t id)
+{
+    // only 8 LOG_ESC1_MSG are defined, see /libraries/DataFlash/LogStructure.h
+    // technically, it could happen that the esc_index is not continues, and one would need a better handling
+    // however, I think, ArduPilot implicitly enforces continues esc_index, so should be no problem
+    if (id >= 8) return;
+
+    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
+        if (_escstatus.id[i] == id) {
+//            for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+//                if (_escstatus.listener_to_id[li] == i) {
+
+//TODO: do not log packets with error???
+
+                    uint64_t time_us = AP_HAL::micros64();
+                    struct log_Esc pkt = {
+                            LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + id)),
+                            time_us     : time_us,
+                            rpm         : (int16_t)(_escstatus.data[i].rpm),
+                            voltage     : (int16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
+                            current     : (int16_t)(_escstatus.data[i].current*100.0f + 0.5f),
+                            temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f)
+                     };
+                     DataFlash_Class::instance()->WriteBlock(&pkt, sizeof(pkt));
+
+/*                    _escstatus.listeners[j]->handle_escstatus_msg(
+                            _escstatus.data[i].voltage,
+                            _escstatus.data[i].current,
+                            _escstatus.data[i].temperature);*/
+//                }
+//            }
         }
     }
 }

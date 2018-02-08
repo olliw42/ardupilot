@@ -39,6 +39,7 @@
 #define AP_UAVCAN_MAX_BARO_NODES 4
 //OW
 #define AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER 4
+#define AP_UAVCAN_ESCSTATUS_MAX_NUMBER 8
 //OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
@@ -46,6 +47,7 @@
 
 #define AP_UAVCAN_HW_VERS_MAJOR 1
 #define AP_UAVCAN_HW_VERS_MINOR 0
+
 
 class AP_UAVCAN {
 public:
@@ -113,10 +115,30 @@ public:
         uint8_t status_flags;
     };
     uint8_t genericbatteryinfo_register_listener_to_id(AP_BattMonitor_Backend* new_listener, uint8_t id);
-    void genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
-    uint8_t genericbatteryinfo_find_smallest_free_id();
+//    void genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
+//    uint8_t genericbatteryinfo_find_smallest_free_id();
     GenericBatteryInfo_Data* genericbatteryinfo_getptrto_data(uint8_t id);
     void genericbatteryinfo_update_data(uint8_t id);
+
+    // --- EscStatus ---
+    // currently, we do nothing than to write the data to dataflash
+    // => we do not need a listener, we can do it in _update_data()
+    // register_listener would be called from the listener class
+    // => for EscStatus it is never called, and it doesn't harm to leave AP_BattMonitor_Backend
+    // this of course needs to change once we have a proper class which wants to listen to EscStatus
+    struct EscStatus_Data {
+        uint32_t error_count;
+        float voltage;
+        float current;
+        float temperature;
+        int32_t rpm;
+        uint8_t power_rating_pct;
+    };
+//    uint8_t escstatus_register_listener_to_id(AP_EscMonitor_Backend* new_listener, uint8_t id);
+//    void escstatus_remove_listener(AP_EscMonitor_Backend* rem_listener);
+//    uint8_t escstatus_find_smallest_free_id();
+    EscStatus_Data* escstatus_getptrto_data(uint8_t id);
+    void escstatus_update_data(uint8_t id);
 //OWEND
 
 private:
@@ -162,18 +184,22 @@ private:
 
 //OW
     // --- GenericBatteryInfo ---
-    //uint16_t _genericbatteryinfo_id[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
-    //uint16_t _genericbatteryinfo_id_taken[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
-    //GenericBatteryInfo_Data _genericbatteryinfo_data[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
-    //uint16_t _genericbatteryinfo_listener_to_id[AP_UAVCAN_MAX_LISTENERS];
-    //AP_BattMonitor_Backend* _genericbatteryinfo_listeners[AP_UAVCAN_MAX_LISTENERS];
     struct {
         uint16_t id[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
         uint16_t id_taken[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
-        GenericBatteryInfo_Data data[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
         uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
         AP_BattMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+        GenericBatteryInfo_Data data[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
     } _genericbatteryinfo;
+
+    // --- EscStatus ---
+    struct {
+        uint16_t id[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+//        uint16_t id_taken[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+//        uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+//        AP_EscMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+        EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+    } _escstatus;
 //OWEND
 
     class SystemClock: public uavcan::ISystemClock, uavcan::Noncopyable {

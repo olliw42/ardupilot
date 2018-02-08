@@ -56,6 +56,15 @@ don't do also the STorM32 UAVCAN messages now, get first the serial uptodate, ca
   => changes made to Mount stuff
 flight-tested on flamewheel! passed! 2018-02-08
 => accept this as v006-002
+I can't  add or commit the changes in /modules/uavcan,
+this seems to explain it https://stackoverflow.com/questions/7726131/git-add-a-is-not-adding-all-modified-files-in-directories
+who the f.ck has invented git
+- did make some tests to be encapsulate the messages stuff, but *node came in the way, no idea
+- AP_UAVCAN EscStatus message handling added
+  the telemetry data is logged to teh DataFlash
+flight-tested on flamewheel! passed! 2018-02-08 evening
+=> accept this as v006-003
+
 
 
 
@@ -64,6 +73,7 @@ ap.rc_receiver_present for a better "failsafe" handling ??
 ap.initialised can this be used to send a banner at the proper time ??
 how to detect if connected to a GCS ??
 
+TODO: do not log packets with error???
 TODO: how to autodetect the presence of a STorM32 gimbal, and/or how to get it's UAVCAN node id
 TODO: find_gimbal() also for CAN
 TODO: the flags of CircuitStatus an GenericBatteryInfo should be evaluated
@@ -72,17 +82,6 @@ TODO: the flags of CircuitStatus an GenericBatteryInfo should be evaluated
 
 /*
 Comments:
-* struct PACKED log_Esc in LogStructure.h has ints, those units are not clear, use floats as elsewhere
-* this struct is used in DataFlash_Class::Log_Write_ESC() in LogFile.cpp
-  it allows 8 ESCs, LOG_ESC1_MSG...LOG_ESC8_MSG
-  it uses a concept of 'esc_address', which needs to be larger than zero for logging, what is this???
-  it clarifies the units
-                    rpm         : (int16_t)(esc_status.esc[i].esc_rpm/10),
-                    voltage     : (int16_t)(esc_status.esc[i].esc_voltage*100.0f + .5f),
-                    current     : (int16_t)(esc_status.esc[i].esc_current*100.0f + .5f),
-                    temperature : (int16_t)(esc_status.esc[i].esc_temperature*100.0f + .5f)
-
-
 * SerialManager is also a singleton now, AP_SerialManager *AP_SerialManager::_instance;
 
 
