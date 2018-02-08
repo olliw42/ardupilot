@@ -20,6 +20,9 @@
 
 #define FIND_GIMBAL_MAX_SEARCH_TIME_MS  60000
 
+#define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
+
+
 
 class BP_Mount_STorM32 : public AP_Mount_Backend, public BP_STorM32
 {
@@ -46,7 +49,11 @@ public:
     // interface to AP_UAVCAN, receive message
     void handle_storm32status_msg(float pitch_deg, float roll_deg, float yaw_deg);
 
+    // every mount should have this !!!
+    virtual bool is_armed(){ return _armed; }
+
 private:
+    // helper to handle corrupt rcin data
     bool is_failsafe(void);
 
     // interface to BP_STorM32
@@ -57,28 +64,44 @@ private:
     uint16_t _rcin_read(uint8_t ch);
 
     // internal variables
-//XX    AP_UAVCAN *_ap_uavcan[MAX_NUMBER_OF_CAN_DRIVERS];
+    AP_UAVCAN *_ap_uavcan[MAX_NUMBER_OF_CAN_DRIVERS];
     AP_HAL::UARTDriver *_uart;
     AP_Mount::MountType _mount_type;
     bool _initialised;              // true once the driver has been initialised
+    bool _armed;                    // true once the gimbal has reached normal operation state
+
+    enum TASKENUM {
+        TASK_SLOT0 = 0,
+        TASK_SLOT1,
+        TASK_SLOT2,
+        TASK_SLOT3,
+        TASK_SLOT4,
+        TASK_SLOTNUMBER,
+    };
     uint64_t _task_time_last;
     uint16_t _task_counter;
 
-    //we want to keep that info, just in case, the fields are 16 in size, so add one to convert it to string
-    // _initialised also indicates that these fields were set
+    // we want to keep that info, just in case, the fields are 16 in size, so add one to convert it to string
+    //  _initialised also indicates that these fields were set
     char versionstr[16+1];
     char namestr[16+1];
     char boardstr[16+1];
+
+    enum STARTUPBANNERENUM {
+        STARTUPBANNER_IDLE = 0,
+        STARTUPBANNER_SENDINITIALIZED, //STorM32: found and initialized
+        STARTUPBANNER_DONE,
+    };
     uint8_t _startupbanner_status; //0: wait, 1: send, 2: has been sent
     void send_startupbanner(void);
 
-    //discovery functions
-//XX    void find_CAN(void);
+    // discovery functions
+    void find_CAN(void);
     void find_gimbal(void);
 
-    //bit mask
+    // bit mask, allows to enable/disable particular functions/gfeatires
     enum BITMASKENUM {
-        SEND_ATTITUDE = 0x01,
+        SEND_STORM32LINK_V2 = 0x01,
         SEND_CMD_SETINPUTS = 0x02,
         GET_PWM_TARGET_FROM_RADIO = 0x04,
         SEND_CMD_DOCAMERA = 0x08,

@@ -30,6 +30,10 @@ public:
     // interface to read the raw receiver values
     virtual uint16_t _rcin_read(uint8_t ch){ return 0; };
 
+    // various helper functions
+    bool is_normal(uint16_t state);
+
+    // flags for reading live data from the STorM32, requested with cmd GetDataFields
     enum LIVEDATAENUM {
       LIVEDATA_STATUS_V1                      = 0x0001,
       LIVEDATA_TIMES                          = 0x0002,
@@ -49,7 +53,8 @@ public:
       LIVEDATA_IMUACCABS                      = 0x8000,
     };
 
-    void send_attitude(const AP_AHRS_TYPE &ahrs);
+    // functions for sending to the STorM32
+    void send_storm32link_v2(const AP_AHRS_TYPE &ahrs);
     void send_cmd_setangles(float pitch_deg, float roll_deg, float yaw_deg, uint16_t flags);
     void send_cmd_setpitchrollyaw(uint16_t pitch, uint16_t roll, uint16_t yaw);
     void send_cmd_recentercamera(void);
@@ -60,6 +65,7 @@ public:
     void send_cmd_getdatafields(uint16_t flags);
     void send_cmd_getversionstr(void);
 
+    // functions for handling reception of data from the STorM32
     void receive_reset(void);
     void receive_reset_wflush(void);
     void do_receive_singlechar(void);
@@ -67,6 +73,19 @@ public:
     bool message_received(void);
 
 protected:
+    // STorM32 states
+    enum STORM32STATEENUM {
+      STORM32STATE_STARTUP_MOTORS = 0,
+      STORM32STATE_STARTUP_SETTLE,
+      STORM32STATE_STARTUP_CALIBRATE,
+      STORM32STATE_STARTUP_LEVEL,
+      STORM32STATE_STARTUP_MOTORDIRDETECT,
+      STORM32STATE_STARTUP_RELEVEL,
+      STORM32STATE_NORMAL,
+      STORM32STATE_STARTUP_FASTLEVEL,
+    };
+
+    // rrcmd data packets, outgoing to STorM32
 
     struct PACKED tSTorM32LinkV2 { //len = 0x21, cmd = 0xDA
         uint8_t stx;
@@ -157,6 +176,9 @@ protected:
         uint16_t crc;
     };
 
+
+    // rrcmd data packets, outgoing get-cmds to STorM32, and incoming from STorM32
+
     struct PACKED tCmdGetVersionStr { //len = 0x00, cmd = 0x02
         uint8_t stx;
         uint8_t len;
@@ -164,7 +186,7 @@ protected:
         uint16_t crc;
     };
 
-    struct PACKED tCmdGetVersionStrAckPayload { //response to CmdGetVersionStr, let's keep just the payload
+    struct PACKED tCmdGetVersionStrAckPayload { //response to CmdGetVersionStr, let's use just the payload
         char versionstr[16];
         char namestr[16];
         char boardstr[16];
@@ -197,6 +219,7 @@ protected:
         } livedata_attitude;
     };
 
+    // for handling reception of data from the STorM32, received from the serial/UART
 
     enum SERIALSTATEENUM {
         SERIALSTATE_IDLE = 0, //waits for something to come

@@ -3,7 +3,8 @@
 #include "../ArduCopter/Copter.h"
 #include <GCS_MAVLink/GCS_MAVLink.h>
 
-//XX #include <AP_UAVCAN/AP_UAVCAN.h>
+//using #if HAL_WITH_UAVCAN doesn't appear to work here, why ???
+#include <AP_UAVCAN/AP_UAVCAN.h>
 
 
 extern const AP_HAL::HAL& hal;
@@ -12,20 +13,21 @@ extern const AP_HAL::HAL& hal;
 
 BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :
     AP_Mount_Backend(frontend, state, instance),
-    _initialised(false)
+    _initialised(false),
+    _armed(false)
 {
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-//XX        _ap_uavcan[i] = nullptr;
+        _ap_uavcan[i] = nullptr;
     }
     _uart = nullptr;
     _mount_type = AP_Mount::Mount_Type_None; //will be determined in init()
 
-    _startupbanner_status = 0;
+    _startupbanner_status = STARTUPBANNER_IDLE;
 
     _task_time_last = 0;
-    _task_counter = 0;
+    _task_counter = TASK_SLOT0;
 
-    _bitmask = SEND_ATTITUDE | SEND_CMD_SETINPUTS | SEND_CMD_DOCAMERA;
+    _bitmask = SEND_STORM32LINK_V2 | SEND_CMD_SETINPUTS | SEND_CMD_DOCAMERA;
 
     _status.pitch_deg = _status.roll_deg = _status.yaw_deg = 0.0f;
     _status_updated = false;
@@ -38,9 +40,9 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
 // init - performs any required initialisation for this instance
 void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 {
-    //from instance we can determine its type, we keep it here ince that's easier/shorter
+    //from instance we can determine its type, we keep it here since that's easier/shorter
     _mount_type = _frontend.get_mount_type(_instance);
-    // it should never happen to be not one of the two, but let's enforce it, to not depend on the outside
+    // it should never happen that it's not one of the two, but let's enforce it, to not depend on the outside
     if (_mount_type != AP_Mount::Mount_Type_STorM32_Native) {
         _mount_type = AP_Mount::Mount_Type_STorM32_UAVCAN;
     }
@@ -52,12 +54,11 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
             _serial_is_initialised = true; //tell the BP_STorM32 class
         }
     }
-/*//XX
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         // I don't know if hal.can_mgr and get_UAVCAN() is fully done at this point already
         // so we don't do anything here, but do it in the update loop
     }
-*/
+
     set_mode((enum MAV_MOUNT_MODE)_state._default_mode.get()); //set mode to default value set by user via parameter
     _target_mode_last = _state._mode;
 }
@@ -67,7 +68,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 void BP_Mount_STorM32::update()
 {
     if (!_initialised) {
-//XX        find_CAN();
+        find_CAN();
         find_gimbal();
         return;
     }
@@ -77,42 +78,46 @@ void BP_Mount_STorM32::update()
     //we can have a different loop speed, with which we actually send out the target angles
     // this is not totally correct, it seems the loop is slower than 50Hz , more like 47Hz ???
     uint64_t current_time_ms = AP_HAL::millis64();
-    if ((current_time_ms - _task_time_last) > 25) { //each message is send at 10Hz
+    if ((current_time_ms - _task_time_last) > 10) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
         _task_time_last = current_time_ms;
 
         const uint16_t LIVEDATA_FLAGS = LIVEDATA_STATUS_V2|LIVEDATA_ATTITUDE_RELATIVE;
 
         switch (_task_counter) {
-            case 0:
-                if (_bitmask & SEND_ATTITUDE) {
-                    send_attitude(_frontend._ahrs); //2.3ms
+            case TASK_SLOT0:
+                if (_bitmask & SEND_STORM32LINK_V2) {
+                    send_storm32link_v2(_frontend._ahrs); //2.3ms
                 }
 
                 break;
-            case 1:
+            case TASK_SLOT1:
+                // trigger live data
                 if (_mount_type == AP_Mount::Mount_Type_STorM32_Native) {
                     receive_reset_wflush(); //we are brutal and kill all incoming bytes
                     send_cmd_getdatafields(LIVEDATA_FLAGS); //0.6ms
                 }
 
-//XX                if( copter.letmeget_trigger_pic() ){
-//XX                    copter.letmeset_trigger_pic(false);
-//XX                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
-//XX                }
+                if( copter.letmeget_trigger_pic() ){
+                    copter.letmeset_trigger_pic(false);
+                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
+                }
 
                 break;
-            case 2:
+            case TASK_SLOT2:
                 set_target_angles_bymountmode();
                 send_target_angles(); //1.7 ms or 1.0ms
 
                 break;
-            case 3:
+            case TASK_SLOT3:
                 if (_bitmask & SEND_CMD_SETINPUTS) {
                     send_cmd_setinputs(); //2.4ms
                 }
 
+                break;
+            case TASK_SLOT4:
+                // receive live data
                 if (_mount_type == AP_Mount::Mount_Type_STorM32_Native) {
-                    do_receive(); //we had now 2/3*100ms = 66ms time, this should be more than enough
+                    do_receive(); //we had now 4/5*50ms = 40ms time, this should be more than enough
                     if (message_received() && (_serial_in.cmd == 0x06) && (_serial_in.getdatafields.flags == LIVEDATA_FLAGS)) {
                         // attitude angles are in STorM32 convention
                         // convert from STorM32 to ArduPilot convention, this need correction p:-1,r:+1,y:-1
@@ -120,14 +125,16 @@ void BP_Mount_STorM32::update()
                             -_serial_in.getdatafields.livedata_attitude.pitch_deg,
                              _serial_in.getdatafields.livedata_attitude.roll_deg,
                             -_serial_in.getdatafields.livedata_attitude.yaw_deg );
+                        // we also can check if gimbal is in normal operation mode
+                        _armed = is_normal(_serial_in.getdatafields.livedata_status.state);
                     }
                 }
 
                 break;
         }
-        _task_counter++;
-        if( _task_counter >= 4 ) _task_counter = 0;
 
+        _task_counter++;
+        if (_task_counter >= TASK_SLOTNUMBER) _task_counter = 0;
     }
 }
 
@@ -163,7 +170,7 @@ void BP_Mount_STorM32::status_msg(mavlink_channel_t chan)
 
 
 //------------------------------------------------------
-// BP_STorM32_UAVCAN private function
+// BP_Mount_STorM32 private function
 //------------------------------------------------------
 
 void BP_Mount_STorM32::set_target_angles_bymountmode(void)
@@ -226,7 +233,6 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
 
         // point mount to a GPS point given by the mission planner
         case MAV_MOUNT_MODE_GPS_POINT:
-//            if(_frontend._ahrs.get_gps().status() >= AP_GPS::GPS_OK_FIX_2D) {
             if(AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D) {
                 calc_angle_to_location(_state._roi_target, _angle_ef_target_rad, true, true);
                 send_ef_target = true;
@@ -263,8 +269,9 @@ void BP_Mount_STorM32::get_valid_pwm_from_channel(uint8_t rc_in, uint16_t* pwm)
 
     if (rc_in && (rc_ch(rc_in))) {
         *pwm = rc_ch(rc_in)->get_radio_in();
-    } else
+    } else {
         *pwm = 1500;
+    }
 }
 
 
@@ -356,7 +363,7 @@ void BP_Mount_STorM32::get_status_angles_deg(float* pitch_deg, float* roll_deg, 
 
 
 //------------------------------------------------------
-// AP_UAVCAN interface to receive message
+// interface to AP_UAVCAN, for receiving a UAVCAN message
 //------------------------------------------------------
 
 void BP_Mount_STorM32::handle_storm32status_msg(float pitch_deg, float roll_deg, float yaw_deg)
@@ -374,9 +381,10 @@ void BP_Mount_STorM32::handle_storm32status_msg(float pitch_deg, float roll_deg,
 // discovery functions
 //------------------------------------------------------
 
-/*//XX
 void BP_Mount_STorM32::find_CAN(void)
 {
+    return; //XX
+
     if (_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return;
     }
@@ -395,14 +403,12 @@ void BP_Mount_STorM32::find_CAN(void)
                     _initialised = true; //at least one CAN interface is initialized
                     _serial_is_initialised = true; //tell the BP_STorM32 class
 
-                    uint8_t nodeid = 71; //parameter? can't this be autodetected?
-                    ap_uavcan->register_storm32status_listener_to_node(this, nodeid); //register listener
+//XX                    ap_uavcan->register_storm32status_listener_to_node(this, STORM32_UAVCAN_NODEID); //register listener
                 }
             }
         }
     }
 }
-*/
 
 
 //this also could be done for CAN, by expecting e.g. NodeInfo to arrive, or to get a response to asking for the version
@@ -425,16 +431,16 @@ void BP_Mount_STorM32::find_gimbal(void)
         return;
     }
 
-    if ((current_time_ms - _task_time_last) > 100) { //try it every 200ms
+    if ((current_time_ms - _task_time_last) > 100) { //try it every 100ms
         _task_time_last = current_time_ms;
 
         switch (_task_counter) {
-            case 0:
+            case TASK_SLOT0:
                 // send GETVERSIONSTR
                 receive_reset_wflush(); //we are brutal and kill all incoming bytes
                 send_cmd_getversionstr();
                 break;
-            case 1:
+            case TASK_SLOT1:
                 // receive GETVERSIONSTR response
                 do_receive();
                 if (message_received() && (_serial_in.cmd == 0x02)) {
@@ -442,7 +448,8 @@ void BP_Mount_STorM32::find_gimbal(void)
                     versionstr[16] = '\0';
                     for (uint16_t n=0;n<16;n++) boardstr[n] = _serial_in.getversionstr.boardstr[n];
                     boardstr[16] = '\0';
-                    _startupbanner_status = 1; //to trigger a send
+                    _startupbanner_status = STARTUPBANNER_SENDINITIALIZED; //to trigger a send
+                    _task_counter = TASK_SLOT0;
                     _initialised = true;
                 }
                 break;
@@ -455,8 +462,8 @@ void BP_Mount_STorM32::find_gimbal(void)
 
 void BP_Mount_STorM32::send_startupbanner(void)
 {
-    if ((_startupbanner_status == 1) ){//XX&& copter.letmeget_initialised()) {
-        _startupbanner_status = 2;
+    if ((_startupbanner_status == STARTUPBANNER_SENDINITIALIZED) && copter.letmeget_initialised()) {
+        _startupbanner_status = STARTUPBANNER_DONE;
         gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
         char s[64];
         strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );
@@ -466,7 +473,7 @@ void BP_Mount_STorM32::send_startupbanner(void)
 
 
 //------------------------------------------------------
-// BP_STorM32 interface
+// interfaces to BP_STorM32
 //------------------------------------------------------
 
 size_t BP_Mount_STorM32::_serial_txspace(void)
@@ -484,16 +491,15 @@ size_t BP_Mount_STorM32::_serial_txspace(void)
 size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8_t priority)
 {
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
-/*//XX
 
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
             if (_ap_uavcan[i] != nullptr) {
-                _ap_uavcan[i]->storm32_nodespecific_send( (uint8_t*)buffer, size, priority );
+//XX                _ap_uavcan[i]->storm32_nodespecific_send( (uint8_t*)buffer, size, priority );
             }
         }
 
         return size; //technically it should be set to zero if no transmission happened, i == MAX_NUMBER_OF_CAN_DRIVERS
-*/
+
     }
     if (_mount_type == AP_Mount::Mount_Type_STorM32_Native) {
 

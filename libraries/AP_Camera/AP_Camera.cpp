@@ -11,6 +11,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #endif
+//OW
+#include "../ArduCopter/Copter.h"
+//OWEND
 
 // ------------------------------
 #define CAM_DEBUG DISABLED
@@ -149,6 +152,10 @@ void AP_Camera::trigger_pic()
         relay_pic();                    // basic relay activation
         break;
     }
+
+//OW
+    copter.letmeset_trigger_pic(true);
+//OWEND
 
     log_picture();
 }

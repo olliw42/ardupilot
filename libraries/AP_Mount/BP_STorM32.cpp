@@ -2,7 +2,6 @@
 #include <AP_Mount/BP_STorM32.h>
 
 #include "../ArduCopter/Copter.h"
-
 extern Copter copter;
 
 
@@ -20,12 +19,20 @@ BP_STorM32::BP_STorM32() :
 }
 
 
+// determines from the STorM32 state if the gimbal is in a normal operation mode
+bool BP_STorM32::is_normal(uint16_t state)
+{
+    if ((state == STORM32STATE_NORMAL) || (state == STORM32STATE_STARTUP_FASTLEVEL)) return true;
+    return false;
+}
+
+
 //------------------------------------------------------
 // send stuff
 //------------------------------------------------------
 
 // 33 bytes = 2865us @ 115200bps
-void BP_STorM32::send_attitude(const AP_AHRS_TYPE &ahrs)
+void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
 {
     if (!_serial_is_initialised) {
         return;
@@ -35,17 +42,29 @@ void BP_STorM32::send_attitude(const AP_AHRS_TYPE &ahrs)
         return;
     }
 
+    uint8_t status = 0;
+    // no idea what these flags exactly mean, so just forward them here so they can be logged, in order to maybe learn what they exactly do
+    //  it seems these two states are exclusive, see e.g. AP_Module::call_hook_AHRS_update()
+    if (ahrs.initialised())         status |= 0x01;
+    if (ahrs.healthy())             status |= 0x02;
+    if (ahrs.have_inertial_nav())   status |= 0x04;
+    if (ahrs.yaw_initialised())     status |= 0x08;
+
+    if (copter.letmeget_initialised())      status |= 0x10;
+    if (copter.letmeget_pream_check())      status |= 0x20;
+    if (copter.letmeget_in_arming_delay())  status |= 0x40;
+    if (copter.letmeget_motors_armed())     status |= 0x80;
+
     Quaternion quat;
     quat.from_rotation_matrix( ahrs.get_rotation_body_to_ned() );
 
-    uint8_t status = 0;
-    //it seems these two states are exclusive, see e.g. AP_Module::call_hook_AHRS_update()
-    if (!ahrs.initialised()) status |= 0x01; //is initialising
-    if (!ahrs.healthy())     status |= 0x02; //is unhealthy
-//XX    if (!copter.letmeget_ekf_filter_status()) status |= 0x04;
+    Vector3f vel;
+    bool velbool = ahrs.get_velocity_NED(vel);  //this returns a bool, what does it exactly mean ???
 
-//XX    if (copter.letmeget_pream_check()) status |= 0x40;
-//XX    if (copter.letmeget_motors_armed()) status |= 0x80;
+//  inertial_nav.get_filter_status()
+//  if (copter.letmeget_ekf_filter_status()) status |= 0x08;
+//  bool letmeget_ekf_filter_status(){ return inertial_nav.get_filter_status().flags.attitude; }
+//  inertial_nav.get_velocity()
 
     tSTorM32LinkV2 t;
     t.stx = 0xF9;
@@ -59,9 +78,9 @@ void BP_STorM32::send_attitude(const AP_AHRS_TYPE &ahrs)
     t.q1 = quat.q2;
     t.q2 = quat.q3;
     t.q3 = quat.q4;
-    t.vx = 0.0f;
-    t.vy = 0.0f;
-    t.vz = 0.0f;
+    t.vx = vel.x; //0.0f;
+    t.vy = vel.y; //0.0f;
+    t.vz = vel.z; //0.0f;
     t.crc = crc_calculate(&(t.len), sizeof(tSTorM32LinkV2)-3);
 
     _serial_write( (uint8_t*)(&t), sizeof(tSTorM32LinkV2), PRIORITY_HIGHEST );
