@@ -29,9 +29,13 @@
 //OW
 // 1. place the .dsdl datatype file in \modules\uavcan\dsdl\uavcan
 // 2. delete folder \modules\uavcan\libuavcan\include\dsdl_generated to invoke the dsdl_compiler
-// sadly, only the subfolder \modules\uavcan\dsdl\uavcan is scanned by the build system
-// so vendor-specific messages are not possible, we thus must fake our messages into the standard dataset
-#include <uavcan/equipment/power/GenericBatteryInfo.hpp>
+//sadly, only the subfolder \modules\uavcan\dsdl\uavcan is scanned by the build system
+//so vendor-specific messages are not possible, we thus must fake our messages into the standard dataset
+// 3. doing this causes all sorts of issues with git, mainly because I can't add/commit and thus can't checkout to e.g. master
+//the workaround is to "somehow" get the .hpp file generated, without affecting the uavcan submodule in any way, and to place
+//the new .hpp into teh AP_UAVCAN library folder
+//XX#include <uavcan/equipment/power/GenericBatteryInfo.hpp>
+#include "GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
 //OWEND
 

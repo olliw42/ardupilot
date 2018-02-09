@@ -64,7 +64,10 @@ who the f.ck has invented git
   the telemetry data is logged to teh DataFlash
 flight-tested on flamewheel! passed! 2018-02-08 evening
 => accept this as v006-003
-
+tried to rebase, but got all sorts of problems, which I associated to having touched the uavcan submodule
+thus "new" workaround to place the new .hpp in teh AP_UAVCAN library folder
+ATTENTION: it can happen that master doesn't compile, so first check that before merging with betacopter!!!!
+- 2018-02-09: master fetch,rebase,push-ed, but master NOT merged to betacopter
 
 
 
