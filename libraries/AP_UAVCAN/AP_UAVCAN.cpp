@@ -518,7 +518,6 @@ bool AP_UAVCAN::try_init(void)
                     esc_raw[_uavcan_i] = new uavcan::Publisher<uavcan::equipment::esc::RawCommand>(*node);
                     esc_raw[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
                     esc_raw[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);
-
 //OW
                     {
                         uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *st;
