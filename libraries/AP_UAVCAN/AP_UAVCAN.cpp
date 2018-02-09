@@ -31,9 +31,10 @@
 // 2. delete folder \modules\uavcan\libuavcan\include\dsdl_generated to invoke the dsdl_compiler
 //sadly, only the subfolder \modules\uavcan\dsdl\uavcan is scanned by the build system
 //so vendor-specific messages are not possible, we thus must fake our messages into the standard dataset
-// 3. doing this causes all sorts of issues with git, mainly because I can't add/commit and thus can't checkout to e.g. master
-//the workaround is to "somehow" get the .hpp file generated, without affecting the uavcan submodule in any way, and to place
-//the new .hpp into teh AP_UAVCAN library folder
+// 3. doing this causes all sorts of issues with git, which I couldn't work out,
+//    they're mainly because I can't add/commit and thus can't checkout to e.g. master
+//the workaround is to "somehow" get the .hpp file generated, without affecting the uavcan submodule in any way,
+//and to place the new .hpp into the AP_UAVCAN library folder
 //XX#include <uavcan/equipment/power/GenericBatteryInfo.hpp>
 #include "GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
@@ -1329,7 +1330,7 @@ uint8_t AP_UAVCAN::escstatus_find_smallest_free_id()
 AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
 {
     // I think the esc_index are continues, by how ArduPilot works
-    // so we could just directly jump with id into data list, return &_escstatus.data[id] (with overflow protection)
+    // so we could just directly jump with id into the data list, return &_escstatus.data[id], with id<8 overflow protection of course
 
     // check if id is already in list, and if it is take it
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
@@ -1362,6 +1363,7 @@ void AP_UAVCAN::escstatus_update_data(uint8_t id)
 //                if (_escstatus.listener_to_id[li] == i) {
 
 //TODO: do not log packets with error???
+// no, it would be better to extend the ESC log message, and to drop wrong packages on the node side
 
                     uint64_t time_us = AP_HAL::micros64();
                     struct log_Esc pkt = {

@@ -68,6 +68,9 @@ tried to rebase, but got all sorts of problems, which I associated to having tou
 thus "new" workaround to place the new .hpp in teh AP_UAVCAN library folder
 ATTENTION: it can happen that master doesn't compile, so first check that before merging with betacopter!!!!
 - 2018-02-09: master fetch,rebase,push-ed, but master NOT merged to betacopter
+- cherry picked 'AP_UAVCAN: refactor RC Out functions', 'AP_UAVCAN: simply do_cyclic'
+
+
 
 
 
@@ -105,6 +108,8 @@ LOCAL_POSITION_NED
 
 GLOBAL_POSITION_INT
 => sends  const Vector3f &vel = inertial_nav.get_velocity();  speed in cm/s
+in the MAVLink docs it says
+vx,vy,vz = Ground speed in NED in cm/s and int16_t
 
 
 this PR just has appeared today: https://github.com/ArduPilot/ardupilot/pull/7672
@@ -113,9 +118,15 @@ important comments
 * "inertial-nav library (which we plan to remove and is just a shim on the underlying EKFs)"
 => don't use inertial-nav
 
-* "The GPS position and velocities are already available through the GPS_RAW_INT message (albeit using ground course and ground speed instead of a 3D vector)"
-=> what does ground speed instead of a 3D vector mean???
+* "The GPS position and velocities are already available through the GPS_RAW_INT message
+  (albeit using ground course and ground speed instead of a 3D vector)"
 
+=> what does ground speed instead of a 3D vector mean???
+answer:
+GPS_RAW_INT
+it has the field
+vel  vel magnitude over ground
+cog  course over ground (not heading) in degrees
 
 
 */
