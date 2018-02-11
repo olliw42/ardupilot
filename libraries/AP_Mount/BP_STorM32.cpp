@@ -43,23 +43,39 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     }
 
     uint8_t status = 0;
-    // no idea what these flags exactly mean, so just forward them here so they can be logged, in order to maybe learn what they exactly do
-    //  it seems these two states are exclusive, see e.g. AP_Module::call_hook_AHRS_update()
-    if (ahrs.initialised())         status |= 0x01;
-    if (ahrs.healthy())             status |= 0x02;
-    if (ahrs.have_inertial_nav())   status |= 0x04;
-    if (ahrs.yaw_initialised())     status |= 0x08;
+    //from tests, 2018-02-10/11, I concluded
+    // ahrs.healthy():     indicates Q is OK, ca. 15 secs
+    // ahrs.initialised(): indicates vz is OK (vx,vy ate OK very early), ca. 30-35 secs
+    // ekf_filter_status().flags.vert_vel: ca. 60-XXs, few secs after position_ok() and ca 30-XXs after GPS fix
+    //                                     don't know what it really indicates
 
-    if (copter.letmeget_initialised())      status |= 0x10;
-    if (copter.letmeget_pream_check())      status |= 0x20;
-    if (copter.letmeget_in_arming_delay())  status |= 0x40;
-    if (copter.letmeget_motors_armed())     status |= 0x80;
+    //this, I think, works only because AP_AHRS_TYPE = AP_AHRS_NavEKF, AP_AHRS doesn't have get_filter_status() method
+    // AP_InertialNav_NavEKF:get_filter_status() calls _ahrs_ekf.get_filter_status(status)
+    // so I think stat = copter.letmeget_ekf_filter_status() and ahrs.get_filter_status(stat) should be identical !!
+    // in a test flight a check for equal never triggered => I assume these are indeed identical !
+    nav_filter_status nav_status;
+    ahrs.get_filter_status(nav_status);
+
+    if (ahrs.healthy())                     status |= 0x01; //=> Q ok, ca. 15 secs
+    if (ahrs.initialised())                 status |= 0x02; //=> vz ok, ca. 32 secs
+    if (nav_status.flags.horiz_vel)         status |= 0x04; //comes very late, after GPS fix and few secs after position_ok()
+    if( AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D ) status |= 0x08; //ca 60-XXs
+    if (copter.letmeget_motors_armed())     status |= 0x40; //tells when copter is about to take-off
+    status |= 0x80; // permanently set, to indicate that this is ArduPilot, so STorM32 knows about and can act on it
+
+    int16_t yawrate = 0;
+
+//FCStatus does somehow not work in STorM32/NTLoggerTool
+//so missuse yawrate
+    yawrate = status;
 
     Quaternion quat;
     quat.from_rotation_matrix( ahrs.get_rotation_body_to_ned() );
 
     Vector3f vel;
-    bool velbool = ahrs.get_velocity_NED(vel); //this returns a bool, what does it exactly mean ???
+    //ahrs.get_velocity_NED(vel) returns a bool, what does it exactly mean ???
+    // whatever it means it's probably a good idea to consider it
+    if (!ahrs.get_velocity_NED(vel)) { vel.x = vel.y = vel.z = 0.0f; }
 
     tSTorM32LinkV2 t;
     t.stx = 0xF9;
@@ -68,14 +84,14 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     t.seq = _storm32link_seq; _storm32link_seq++;
     t.status = status;
     t.spare = 0;
-    t.yawratecmd = 0;
+    t.yawratecmd = yawrate;
     t.q0 = quat.q1;
     t.q1 = quat.q2;
     t.q2 = quat.q3;
     t.q3 = quat.q4;
-    t.vx = vel.x; //0.0f;
-    t.vy = vel.y; //0.0f;
-    t.vz = vel.z; //0.0f;
+    t.vx = vel.x;
+    t.vy = vel.y;
+    t.vz = vel.z;
     t.crc = crc_calculate(&(t.len), sizeof(tSTorM32LinkV2)-3);
 
     _serial_write( (uint8_t*)(&t), sizeof(tSTorM32LinkV2), PRIORITY_HIGHEST );

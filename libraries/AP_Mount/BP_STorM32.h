@@ -53,7 +53,7 @@ public:
       LIVEDATA_IMUACCABS                      = 0x8000,
     };
 
-    // functions for sending to the STorM32
+    // functions for sending to the STorM32, using rccmds
     void send_storm32link_v2(const AP_AHRS_TYPE &ahrs);
     void send_cmd_setangles(float pitch_deg, float roll_deg, float yaw_deg, uint16_t flags);
     void send_cmd_setpitchrollyaw(uint16_t pitch, uint16_t roll, uint16_t yaw);

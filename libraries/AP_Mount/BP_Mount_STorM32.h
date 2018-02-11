@@ -18,7 +18,7 @@
 #include "BP_STorM32.h"
 
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  60000
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
@@ -36,6 +36,7 @@ public:
 
     // update mount position - should be called periodically
     virtual void update();
+    virtual void update_fast();
 
     // has_pan_control - returns true if this mount can control it's pan (required for multicopters)
     virtual bool has_pan_control() const { return false; }

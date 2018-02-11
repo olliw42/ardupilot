@@ -65,6 +65,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 
 
 // update mount position - should be called periodically
+// this function mutst vbe defined in any case
 void BP_Mount_STorM32::update()
 {
     if (!_initialised) {
@@ -74,11 +75,22 @@ void BP_Mount_STorM32::update()
     }
 
     send_startupbanner();
+}
 
-    //we can have a different loop speed, with which we actually send out the target angles
-    // this is not totally correct, it seems the loop is slower than 50Hz , more like 47Hz ???
+
+// 400 Hz loop
+void BP_Mount_STorM32::update_fast()
+{
+    if (!_initialised) {
+        return;
+    }
+
+    //slow down everything to 100Hz
+    // we can't use update(), since 50 Hz isn't compatible with the desired 20 Hz STorM32Link rate
+    // this is not totally correct, it seems the loop is slower than 100Hz, but just a bit?
+    // should I use 9 ms, or better use micros64(), and something like 9900us? (with 10ms it might be easy to miss a 400Hz tick)
     uint64_t current_time_ms = AP_HAL::millis64();
-    if ((current_time_ms - _task_time_last) > 10) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
+    if ((current_time_ms - _task_time_last) >= 10) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
         _task_time_last = current_time_ms;
 
         const uint16_t LIVEDATA_FLAGS = LIVEDATA_STATUS_V2|LIVEDATA_ATTITUDE_RELATIVE;
@@ -394,17 +406,19 @@ void BP_Mount_STorM32::find_CAN(void)
     //TODO: this is flawed, it stops searching for further CAN interfaces once one has been detected
     // I really would need to know more details of the underlying procedures
 
-    if (hal.can_mgr != nullptr) {
-        for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-            if (hal.can_mgr[i] != nullptr) {
-                AP_UAVCAN *ap_uavcan = hal.can_mgr[i]->get_UAVCAN();
-                if (ap_uavcan != nullptr) {
-                    _ap_uavcan[i] = ap_uavcan;
-                    _initialised = true; //at least one CAN interface is initialized
-                    _serial_is_initialised = true; //tell the BP_STorM32 class
+    if (hal.can_mgr == nullptr) {
+        return;
+    }
 
-//XX                    ap_uavcan->register_storm32status_listener_to_node(this, STORM32_UAVCAN_NODEID); //register listener
-                }
+    for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
+        if (hal.can_mgr[i] != nullptr) {
+            AP_UAVCAN *ap_uavcan = hal.can_mgr[i]->get_UAVCAN();
+            if (ap_uavcan != nullptr) {
+                _ap_uavcan[i] = ap_uavcan;
+                _initialised = true; //at least one CAN interface is initialized
+                _serial_is_initialised = true; //inform the BP_STorM32 class
+
+//XX                ap_uavcan->register_storm32status_listener_to_node(this, STORM32_UAVCAN_NODEID); //register listener
             }
         }
     }
@@ -425,12 +439,14 @@ void BP_Mount_STorM32::find_gimbal(void)
 
     uint64_t current_time_ms = AP_HAL::millis64();
 
+//XX
+/*
     if (current_time_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
         _initialised = false; //should be already false, but it can't hurt to ensure that
-        _serial_is_initialised = false; //switch off finally
+       _serial_is_initialised = false; //switch off finally
         return;
     }
-
+*/
     if ((current_time_ms - _task_time_last) > 100) { //try it every 100ms
         _task_time_last = current_time_ms;
 
