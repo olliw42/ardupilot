@@ -109,6 +109,12 @@ static THD_FUNCTION(main_loop,arg)
 {
     daemon_task = chThdGetSelfX();
 
+#ifdef HAL_I2C_CLEAR_BUS
+    // Clear all I2C Buses. This can be needed on some boards which
+    // can get a stuck I2C peripheral on boot
+    ChibiOS::I2CBus::clear_all();
+#endif
+
     ChibiOS::Shared_DMA::init();
     
     hal.uartA->begin(115200);

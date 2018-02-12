@@ -930,13 +930,21 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_SUBGROUPINFO(visual_odom, "VISO", 18, ParametersG2, AP_VisualOdom),
 #endif
 
-    // ID 19 reserved for TCAL (PR pending)
-    // ID 20 reserved for TX_TYPE (PR pending)
+    // @Group: TCAL
+    // @Path: ../libraries/AP_TempCalibration/AP_TempCalibration.cpp
+    AP_SUBGROUPINFO(temp_calibration, "TCAL", 19, ParametersG2, AP_TempCalibration),
+
+#if TOY_MODE_ENABLED == ENABLED
+    // @Group: TMODE
+    // @Path: toy_mode.cpp
+    AP_SUBGROUPINFO(toy_mode, "TMODE", 20, ParametersG2, ToyMode),
+#endif
 
     // @Group: SRTL_
     // @Path: ../libraries/AP_SmartRTL/AP_SmartRTL.cpp
     AP_SUBGROUPINFO(smart_rtl, "SRTL_", 21, ParametersG2, AP_SmartRTL),
 
+#if WINCH_ENABLED == ENABLED
     // @Group: WENC
     // @Path: ../libraries/AP_WheelEncoder/AP_WheelEncoder.cpp
     AP_SUBGROUPINFO(wheel_encoder, "WENC", 22, ParametersG2, AP_WheelEncoder),
@@ -944,6 +952,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Group: WINCH_
     // @Path: ../libraries/AP_Winch/AP_Winch.cpp
     AP_SUBGROUPINFO(winch, "WINCH", 23, ParametersG2, AP_Winch),
+#endif
 
     // @Param: PILOT_SPEED_DN
     // @DisplayName: Pilot maximum vertical speed descending
@@ -963,6 +972,12 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("LAND_ALT_LOW", 25, ParametersG2, land_alt_low, 1000),
 
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
+    // @Group: FHLD
+    // @Path: mode_flowhold.cpp
+    AP_SUBGROUPPTR(mode_flowhold_ptr, "FHLD", 26, ParametersG2, Copter::ModeFlowHold),
+#endif
+    
     AP_GROUPEND
 };
 
@@ -979,6 +994,10 @@ ParametersG2::ParametersG2(void)
     ,afs(copter.mission, copter.barometer, copter.gps, copter.rcmap)
 #endif
     ,smart_rtl(copter.ahrs)
+    ,temp_calibration(copter.barometer, copter.ins)
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
+    ,mode_flowhold_ptr(&copter.mode_flowhold)
+#endif
 {
     AP_Param::setup_object_defaults(this, var_info);
 }

@@ -37,16 +37,10 @@ void Tracker::update_compass(void)
 {
     if (g.compass_enabled && compass.read()) {
         ahrs.set_compass(&compass);
-        compass.learn_offsets();
         if (should_log(MASK_LOG_COMPASS)) {
             DataFlash.Log_Write_Compass(compass);
         }
     }
-}
-
-void Tracker::update_battery()
-{
-    battery.read();
 }
 
 /*
@@ -57,14 +51,6 @@ void Tracker::compass_accumulate(void)
     if (g.compass_enabled) {
         compass.accumulate();
     }    
-}
-
-/*
-  try to accumulate a baro reading
- */
-void Tracker::barometer_accumulate(void)
-{
-    barometer.accumulate();
 }
 
 /*

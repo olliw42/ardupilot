@@ -366,7 +366,7 @@
  *
  * @note    The default is @p CH_DBG_TRACE_MASK_DISABLED.
  */
-#define CH_DBG_TRACE_MASK                   CH_DBG_TRACE_MASK_NONE
+#define CH_DBG_TRACE_MASK                   CH_DBG_TRACE_MASK_DISABLED
 
 /**
  * @brief   Trace buffer entries.
@@ -507,9 +507,11 @@
  * @details This hook is invoked in case to a system halting error before
  *          the system is halted.
  */
-#define CH_CFG_SYSTEM_HALT_HOOK(reason) {                                   \
-  /* System halt code here.*/                                               \
-}
+
+#define CH_CFG_SYSTEM_HALT_HOOK(reason) do {                               \
+        extern int printf(const char *fmt, ...); \
+        printf(reason); \
+} while(0)
 
 /**
  * @brief   Trace hook.

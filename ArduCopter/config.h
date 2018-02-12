@@ -226,9 +226,9 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
-//  Crop Sprayer
+//  Crop Sprayer - enabled only on larger firmwares
 #ifndef SPRAYER
- # define SPRAYER  ENABLED
+ # define SPRAYER  !HAL_MINIMIZE_FEATURES
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -238,9 +238,15 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
-//	gripper
+// gripper - enabled only on larger firmwares
 #ifndef GRIPPER_ENABLED
- # define GRIPPER_ENABLED ENABLED
+ # define GRIPPER_ENABLED !HAL_MINIMIZE_FEATURES
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// winch support - enabled only on larger firmwares
+#ifndef WINCH_ENABLED
+# define WINCH_ENABLED !HAL_MINIMIZE_FEATURES
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -589,4 +595,8 @@
 
 #ifndef CH_MODE_DEFAULT
  # define CH_MODE_DEFAULT   5
+#endif
+
+#ifndef TOY_MODE_ENABLED
+#define TOY_MODE_ENABLED DISABLED
 #endif

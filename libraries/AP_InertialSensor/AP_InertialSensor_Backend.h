@@ -28,6 +28,13 @@
 
 #include "AP_InertialSensor.h"
 
+#if CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT
+#include <AP_HAL_F4Light/AP_HAL_F4Light.h>
+#include <AP_HAL_F4Light/GPIO.h>
+#include <AP_HAL_F4Light/Scheduler.h>
+using namespace F4Light;
+#endif
+
 class AuxiliaryBus;
 class DataFlash_Class;
 
@@ -95,6 +102,7 @@ public:
         DEVTYPE_GYR_MPU9250  = 0x24,
         DEVTYPE_GYR_I3G4250D = 0x25,
         DEVTYPE_GYR_LSM9DS1  = 0x26,
+        DEVTYPE_INS_ICM20789 = 0x27
     };
         
 protected:

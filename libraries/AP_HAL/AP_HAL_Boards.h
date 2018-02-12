@@ -13,7 +13,8 @@
 #define HAL_BOARD_VRBRAIN  8
 #define HAL_BOARD_QURT     9
 #define HAL_BOARD_CHIBIOS  10
-#define HAL_BOARD_EMPTY   99
+#define HAL_BOARD_F4LIGHT  11
+#define HAL_BOARD_EMPTY    99
 
 /* Default board subtype is -1 */
 #define HAL_BOARD_SUBTYPE_NONE -1
@@ -90,6 +91,7 @@
 #define HAL_INS_EDGE        20
 #define HAL_INS_RST         21
 #define HAL_INS_LSM9DS1     22
+#define HAL_INS_ICM20789_SPI 23
 
 /* Barometer driver types */
 #define HAL_BARO_NONE        0
@@ -106,6 +108,8 @@
 #define HAL_BARO_BMP280_I2C 11
 #define HAL_BARO_BMP280_SPI 12
 #define HAL_BARO_LPS25H     13
+#define HAL_BARO_20789_I2C_I2C  14
+#define HAL_BARO_20789_I2C_SPI  15
 
 /* Compass driver types */
 #define HAL_COMPASS_NONE                0
@@ -128,6 +132,7 @@
 #define HAL_COMPASS_EDGE               18
 #define HAL_COMPASS_LIS3MDL            19
 #define HAL_COMPASS_MAG3110            20
+#define HAL_COMPASS_BMM150_I2C         21
 
 /* Heat Types */
 #define HAL_LINUX_HEAT_PWM 1
@@ -166,6 +171,8 @@
     #include <AP_HAL/board/vrbrain.h>
 #elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
 	#include <AP_HAL/board/chibios.h>
+#elif CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT
+    #include <AP_HAL/board/f4light.h>
 #else
 #error "Unknown CONFIG_HAL_BOARD type"
 #endif
@@ -228,3 +235,10 @@
 #ifndef HAL_INS_DEFAULT
 #define HAL_INS_DEFAULT HAL_INS_NONE
 #endif
+
+#ifdef HAVE_LIBDL
+#define AP_MODULE_SUPPORTED 1
+#else
+#define AP_MODULE_SUPPORTED 0
+#endif
+
