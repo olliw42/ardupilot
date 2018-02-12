@@ -37,14 +37,18 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
 }
 
 
+//------------------------------------------------------
+// BP_Mount_STorM32 interface functions, ArduPilot Mount
+//------------------------------------------------------
+
 // init - performs any required initialisation for this instance
 void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 {
     //from instance we can determine its type, we keep it here since that's easier/shorter
     _mount_type = _frontend.get_mount_type(_instance);
     // it should never happen that it's not one of the two, but let's enforce it, to not depend on the outside
-    if (_mount_type != AP_Mount::Mount_Type_STorM32_Native) {
-        _mount_type = AP_Mount::Mount_Type_STorM32_UAVCAN;
+    if ((_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) && (_mount_type != AP_Mount::Mount_Type_STorM32_Native)) {
+        _mount_type = AP_Mount::Mount_Type_None;
     }
 
     if (_mount_type == AP_Mount::Mount_Type_STorM32_Native) {
@@ -52,6 +56,9 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
         if (_uart) {
             //_initialised = true; //don't do this yet, we first need to pass find_gimbal()
             _serial_is_initialised = true; //tell the BP_STorM32 class
+        } else {
+            _serial_is_initialised = false; //tell the BP_STorM32 class, should not be needed, just to play it safe
+            _mount_type = AP_Mount::Mount_Type_None; //this prevents many things from happening, safety guard
         }
     }
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
@@ -65,12 +72,12 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 
 
 // update mount position - should be called periodically
-// this function mutst vbe defined in any case
+// this function must be defined in any case
 void BP_Mount_STorM32::update()
 {
     if (!_initialised) {
-        find_CAN();
-        find_gimbal();
+        find_CAN(); //this only checks for the CAN to be ok, not if there is a gimbal
+        find_gimbal(); //this searches for a gimbal on serial
         return;
     }
 
@@ -138,7 +145,7 @@ void BP_Mount_STorM32::update_fast()
                              _serial_in.getdatafields.livedata_attitude.roll_deg,
                             -_serial_in.getdatafields.livedata_attitude.yaw_deg );
                         // we also can check if gimbal is in normal operation mode
-                        _armed = is_normal(_serial_in.getdatafields.livedata_status.state);
+                        _armed = is_normal_state(_serial_in.getdatafields.livedata_status.state);
                     }
                 }
 
@@ -433,17 +440,13 @@ void BP_Mount_STorM32::find_gimbal(void)
         return;
     }
 
-    if (!_serial_is_initialised) { //can happen only if the timeout has been passed
-        return;
-    }
-
     uint64_t current_time_ms = AP_HAL::millis64();
-
 //XX
 /*
     if (current_time_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
         _initialised = false; //should be already false, but it can't hurt to ensure that
-       _serial_is_initialised = false; //switch off finally
+       _serial_is_initialised = false; //switch off BP_STorM32
+       _mount_type = AP_Mount::Mount_Type_None; //switch off finally, also makes find_gimbal() to stop searching
         return;
     }
 */

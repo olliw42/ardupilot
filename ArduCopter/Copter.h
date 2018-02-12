@@ -985,6 +985,7 @@ public:
     bool letmeget_pream_check(){ return ap.pre_arm_check; }
     bool letmeget_in_arming_delay(){ return ap.in_arming_delay; }
     bool letmeget_motors_armed(){ return motors->armed(); }
+    nav_filter_status letmeget_ekf_filter_status(){ return inertial_nav.get_filter_status(); }
 
     uint8_t _trigger_pic;
     void letmeset_trigger_pic(bool flag){ _trigger_pic = flag; }

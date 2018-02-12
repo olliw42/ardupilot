@@ -20,7 +20,7 @@ BP_STorM32::BP_STorM32() :
 
 
 // determines from the STorM32 state if the gimbal is in a normal operation mode
-bool BP_STorM32::is_normal_state(uint16_t state)
+bool BP_STorM32::is_normal(uint16_t state)
 {
     if ((state == STORM32STATE_NORMAL) || (state == STORM32STATE_STARTUP_FASTLEVEL)) return true;
     return false;
@@ -42,38 +42,41 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
         return;
     }
 
-    enum STORM32LINKFCSTATUSAPENUM {
-        STORM32LINK_FCSTATUS_AP_AHRSHEALTHY       = 0x01, //=> Q ok, ca. 15 secs
-        STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED   = 0x02, //=> vz ok, ca. 32 secs
-        STORM32LINK_FCSTATUS_AP_GPS3DFIX          = 0x04, //ca 60-XXs
-        STORM32LINK_FCSTATUS_AP_NAVHORIZVEL       = 0x08, //comes very late, after GPS fix and few secs after position_ok()
-        STORM32LINK_FCSTATUS_AP_ARMED             = 0x40, //tells when copter is about to take-off
-        STORM32LINK_FCSTATUS_ISARDUPILOT          = 0x80, // permanently set, to indicate that this is ArduPilot, so STorM32 knows about and can act on it
-    };
-
     uint8_t status = 0;
     //from tests, 2018-02-10/11, I concluded
-    // ahrs.healthy():     indicates Q is OK, ca. 15 secs, Q is doing a square dance before, so must wait for this
+    // ahrs.healthy():     indicates Q is OK, ca. 15 secs
     // ahrs.initialised(): indicates vz is OK (vx,vy ate OK very early), ca. 30-35 secs
     // ekf_filter_status().flags.vert_vel: ca. 60-XXs, few secs after position_ok() and ca 30-XXs after GPS fix
     //                                     don't know what it really indicates
-
-    //ahrs.get_filter_status(), I think, works only because AP_AHRS_TYPE = AP_AHRS_NavEKF
-    // AP_AHRS doesn't have a get_filter_status() method
-    // AP_InertialNav_NavEKF:get_filter_status() calls _ahrs_ekf.get_filter_status(status)
-    // so I think s = copter.letmeget_ekf_filter_status() and ahrs.get_filter_status(s) should be identical !
-    // in a test flight a check for equal never triggered => I assume these are indeed identical !
     nav_filter_status nav_status = copter.letmeget_ekf_filter_status();
-    //ahrs.get_filter_status(nav_status);
 
-    if (ahrs.healthy()) status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY;
-    if (ahrs.initialised()) status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED;
-    if (nav_status.flags.horiz_vel) status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL;
-    if( AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D ) status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX;
-    if (copter.letmeget_motors_armed()) status |= STORM32LINK_FCSTATUS_AP_ARMED;
-    status |= STORM32LINK_FCSTATUS_ISARDUPILOT;
+    //this, I think, works only because AP_AHRS_TYPE = AP_AHRS_NavEKF, AP_AHRS doesn't have get_filter_status() method
+    // AP_InertialNav_NavEKF:get_filter_status() calls _ahrs_ekf.get_filter_status(status)
+    // so I think nav_status and nav_status2 should be identical !!
+    // in a test flight a check for equal never triggered !!!
+    // => I assume these are indeed identical !
+    nav_filter_status nav_status2;
+    ahrs.get_filter_status(nav_status2);
+
+    if (ahrs.healthy())                     status |= 0x01; //=> Q ok, ca. 15 secs
+    if (ahrs.initialised())                 status |= 0x02; //=> vz ok, ca. 32 secs
+    if (nav_status.flags.horiz_vel)         status |= 0x04; //comes very late, after GPS fix and few secs after position_ok()
+    if( AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D ) status |= 0x08; //ca 60-XXs
+
+    //in a test flight this never triggered !!!
+    //=> I assume these are identical !
+    if (nav_status.value != nav_status2.value)        status |= 0x10;
+
+    if (copter.letmeget_motors_armed())     status |= 0x40; //tells when copter is about to take-off
+
+    // we have a flag set permanently, to indicate that this is ArduPilot, so STorM32 knows about and can act on it
+    status |= 0x80;
 
     int16_t yawrate = 0;
+
+//FCStatus does somehow not work in STorM32/NTLoggerTool
+//so missuse yawrate
+    yawrate = status;
 
     Quaternion quat;
     quat.from_rotation_matrix( ahrs.get_rotation_body_to_ned() );
@@ -87,7 +90,7 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     t.stx = 0xF9;
     t.len = 0x21;
     t.cmd = 0xDA;
-    t.seq = _storm32link_seq; _storm32link_seq++;  //this is not really used
+    t.seq = _storm32link_seq; _storm32link_seq++;
     t.status = status;
     t.spare = 0;
     t.yawratecmd = yawrate;
@@ -398,13 +401,13 @@ void BP_STorM32::do_receive_singlechar(void)
             if (_serial_in.payload_cnt >= _serial_in.len + 2) { //do expect always a crc
               uint16_t crc = 0; //XX ignore crc for the moment
               if (crc == 0) {
-                  _serial_in.state = SERIALSTATE_MESSAGE_RECEIVED;
+                  _serial_in.state = SERIALSTATE_MESSAGERECEIVED;
               }
             }
             break;
 
-        case SERIALSTATE_MESSAGE_RECEIVED:
-        case SERIALSTATE_MESSAGE_RECEIVEDANDDIGESTED:
+        case SERIALSTATE_MESSAGERECEIVED:
+        case SERIALSTATE_MESSAGERECEIVEDANDDIGESTED:
             c = _serial_read();
             break;
     }
@@ -424,8 +427,8 @@ void BP_STorM32::do_receive(void)
 
 bool BP_STorM32::message_received(void)
 {
-    if (_serial_in.state == SERIALSTATE_MESSAGE_RECEIVED) {
-        _serial_in.state = SERIALSTATE_MESSAGE_RECEIVEDANDDIGESTED;
+    if (_serial_in.state == SERIALSTATE_MESSAGERECEIVED) {
+        _serial_in.state = SERIALSTATE_MESSAGERECEIVEDANDDIGESTED;
         return true;
     }
     return false;

@@ -91,6 +91,13 @@ flight-tested on flamewheel! passed! 2018-02-10
 many flight-tests on flamewheel! passed! 2018-02-10 and 2018-02-11
 double-checked with a last short flight
 => accept this as v006-004
+- first attempt for final choice of flags
+- shutoff protections a bit improved
+- STORM32LINKAPFCSTATUSENUM
+flight test with flamewheel! storm32link with hdc worked great! 2018-02-12, storm32 firmware v2.36d
+issues with v3, v4 ground speed diverges ????
+
+
 
 ap.rc_receiver_present for a better "failsafe" handling ??
 ap.initialised can this be used to send a banner at the proper time ??

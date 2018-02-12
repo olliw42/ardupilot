@@ -31,7 +31,7 @@ public:
     virtual uint16_t _rcin_read(uint8_t ch){ return 0; };
 
     // various helper functions
-    bool is_normal(uint16_t state);
+    bool is_normal_state(uint16_t state);
 
     // flags for reading live data from the STorM32, requested with cmd GetDataFields
     enum LIVEDATAENUM {
@@ -226,8 +226,8 @@ protected:
         SERIALSTATE_RECEIVE_PAYLOAD_LEN,
         SERIALSTATE_RECEIVE_CMD,
         SERIALSTATE_RECEIVE_PAYLOAD,
-        SERIALSTATE_MESSAGERECEIVED,
-        SERIALSTATE_MESSAGERECEIVEDANDDIGESTED,
+        SERIALSTATE_MESSAGE_RECEIVED,
+        SERIALSTATE_MESSAGE_RECEIVEDANDDIGESTED,
     };
 
     typedef struct { //structure to process incoming serial data
