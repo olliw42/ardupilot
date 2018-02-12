@@ -1155,11 +1155,7 @@ void AP_UAVCAN::remove_mag_listener(AP_Compass_Backend* rem_listener)
     }
 }
 
-<<<<<<< HEAD
-AP_UAVCAN::Mag_Info* AP_UAVCAN::find_mag_node(uint8_t node)
-=======
 AP_UAVCAN::Mag_Info *AP_UAVCAN::find_mag_node(uint8_t node, uint8_t sensor_id)
->>>>>>> master
 {
     // Check if such node is already defined
     for (uint8_t i = 0; i < AP_UAVCAN_MAX_MAG_NODES; i++) {

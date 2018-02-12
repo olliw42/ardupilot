@@ -42,7 +42,7 @@ AP_UAVCAN.h: 4x
 - AP_Mount_STorM32_UAVCAN renamed to BP_Mount_STorM32
 - BP_STorM32.h/cpp: changes to LinkV2
 - _frontend._ahrs.get_gps().status() changed to AP::gps().status()
-- 2018-02-07: master rebased, master merged to betacopter
+* 2018-02-07: master rebased, master merged to betacopter
 - task frequency increased to 20 Hz, with 5 task slots, => 10ms per slot
 - letmeget_trigger_pic(),letmeset_trigger_pic(),letmeget_initialised()
 - AP_Camera stuff added
@@ -52,6 +52,7 @@ the normal serial functions should be complete with that
   what is the difference to inertial_nav???
 what is missing a test of the STorM32LinkV2 data
 => accept this as v006-001
+
 - AP_BattMonitor stuff added, needed some rework since code has changed quite a bit
 - AP_UAVCAN GenericBatteryInfo message handling added
 don't do also the STorM32 UAVCAN messages now, get first the serial up-to-date, can gimbal isn't used anyhow by anyone
@@ -59,18 +60,20 @@ don't do also the STorM32 UAVCAN messages now, get first the serial up-to-date, 
   => changes made to Mount stuff
 flight-tested on flamewheel! passed! 2018-02-08
 => accept this as v006-002
-I can't  add or commit the changes in /modules/uavcan,
-this seems to explain it https://stackoverflow.com/questions/7726131/git-add-a-is-not-adding-all-modified-files-in-directories
+
+I can't add or commit the changes in /modules/uavcan,
+this seems to explain it: https://stackoverflow.com/questions/7726131/git-add-a-is-not-adding-all-modified-files-in-directories
 who the f.ck has invented git
 - did make some tests to be encapsulate the messages stuff, but *node came in the way, no idea
 - AP_UAVCAN EscStatus message handling added
   the telemetry data is logged to the DataFlash
 flight-tested on flamewheel! passed! 2018-02-08 evening
 => accept this as v006-003
+
 tried to rebase, but got all sorts of problems, which I associated to having touched the uavcan submodule
 thus "new" workaround to place the new .hpp in teh AP_UAVCAN library folder
 ATTENTION: it can happen that master doesn't compile, so first check that before merging with betacopter!!!!
-- 2018-02-09: master fetch,rebase,push-ed, but master NOT merged to betacopter
+* 2018-02-09: master fetch,rebase,push-ed, but master NOT merged to betacopter
 - cherry picked 'AP_UAVCAN: refactor RC Out functions', 'AP_UAVCAN: simply do_cyclic'
 - increase gimbal find time to 90 secs, startup of ArduPilot is quite slow
 - misuse yawrate to send all sorts of ahrs flags for testing, letmeget_ekf_filter_status() reintroduced
@@ -91,17 +94,26 @@ flight-tested on flamewheel! passed! 2018-02-10
 many flight-tests on flamewheel! passed! 2018-02-10 and 2018-02-11
 double-checked with a last short flight
 => accept this as v006-004
+
 - first attempt for final choice of flags
 - shutoff protections a bit improved
 - STORM32LINKAPFCSTATUSENUM
 flight test with flamewheel! storm32link with hdc worked great! 2018-02-12, storm32 firmware v2.36d
-issues with v3, v4 ground speed diverges ????
+  issues with v3, v4, ground speed diverges quickly ????
+* 2018-02-12: master fetch,rebase,push,submodule-ed, branch betacoptermerge, master merged to betacoptermerge
+  this seems to have resolved the v3,v4 issue
 
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??
 ap.initialised can this be used to send a banner at the proper time ??
 how to detect if connected to a GCS ??
+
+can we use
+notify_flags_and_values_type
+        uint32_t initialising       : 1;    // 1 if initialising and copter should not be moved
+        uint32_t armed              : 1;    // 0 = disarmed, 1 = armed
+
 
 TODO: do not log packets with error???
 TODO: how to autodetect the presence of a CAN STorM32 gimbal, and/or how to get it's UAVCAN node id
