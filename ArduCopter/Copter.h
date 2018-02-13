@@ -983,16 +983,21 @@ public:
 //OW
     //we allow to get&set some copter flags and variables
     // this breaks ArduPilot rules, as vehicle code enters libraries, but IDNK better
-    bool letmeget_failsafe_radio(void){ return (failsafe.radio) ? true : false; } //not used as not useful
-    bool letmeget_initialised(){ return ap.initialised; }
-    bool letmeget_pream_check(){ return ap.pre_arm_check; }
-    bool letmeget_in_arming_delay(){ return ap.in_arming_delay; }
-    bool letmeget_motors_armed(){ return motors->armed(); }
-    nav_filter_status letmeget_ekf_filter_status(){ return inertial_nav.get_filter_status(); }
+    // I guess we want an AP_Flags class or such
+    bool letmeget_failsafe_radio(void){ return (failsafe.radio) ? true : false; } //not used, as not useful
+    bool letmeget_initialised(){ return ap.initialised; } //important, no replacement yet found, should IMHO be added to AP_Notify
+    bool letmeget_pream_check(){ return ap.pre_arm_check; }  //not used, probably replaceable by AP_Notify pre_arm_check
+    bool letmeget_in_arming_delay(){ return ap.in_arming_delay; } //not used
+    bool letmeget_motors_armed(){ return motors->armed(); } //probably replaceable by AP_Notify armed
+    nav_filter_status letmeget_ekf_filter_status(){ return inertial_nav.get_filter_status(); } //tested, replaceable by ahrs.get_filter_status()
 
+    //we misuse copter here as a container which everyone has easy access to
+    // a AP_Flags singleton would work too, or to pass also Camera to the Mount class, this here is least intrusive though
+    // we could put into AP_Camera, and call it from copter.camera !!!
+    // I note AP_Camera is also handled kind of dirty by ArduPilot
     uint8_t _trigger_pic;
-    void letmeset_trigger_pic(bool flag){ _trigger_pic = flag; }
-    uint8_t letmeget_trigger_pic(void){ return _trigger_pic; }
+    void letmeset_trigger_pic(bool flag){ _trigger_pic = flag; } //no replacement yet found
+    uint8_t letmeget_trigger_pic(void){ return _trigger_pic; } //no replacement yet found
 //OWEND
 };
 

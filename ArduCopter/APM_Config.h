@@ -22,6 +22,22 @@
 //#define PRECISION_LANDING     DISABLED            // disable precision landing using companion computer or IRLock sensor
 //#define SPRAYER               DISABLED            // disable the crop sprayer feature (two ESC controlled pumps the speed of which depends upon the vehicle's horizontal velocity)
 
+//OW
+//#if HAL_MINIMIZE_FEATURES
+/*    #define RANGEFINDER_ENABLED     DISABLED
+    #define PROXIMITY_ENABLED       DISABLED
+    #define OPTFLOW                 DISABLED
+    #define VISUAL_ODOMETRY_ENABLED DISABLED
+    #define PRECISION_LANDING       DISABLED
+    #define PARACHUTE               DISABLED
+    #define ADSB_ENABLED            DISABLED
+    //AC_FENCE
+    #define AC_RALLY                DISABLED
+    #define AC_TERRAIN              DISABLED
+    #define AC_AVOID_ENABLED        DISABLED */
+//#endif
+//OWEND
+
 // features below are disabled by default on all boards
 //#define CAL_ALWAYS_REBOOT                         // flight controller will reboot after compass or accelerometer calibration completes
 //#define DISALLOW_GCS_MODE_CHANGE_DURING_RC_FAILSAFE   // disable mode changes from GCS during Radio failsafes.  Avoids a race condition for vehicle like Solo in which the RC and telemetry travel along the same link

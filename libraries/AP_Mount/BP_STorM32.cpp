@@ -63,8 +63,14 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     // AP_InertialNav_NavEKF:get_filter_status() calls _ahrs_ekf.get_filter_status(status)
     // so I think s = copter.letmeget_ekf_filter_status() and ahrs.get_filter_status(s) should be identical !
     // in a test flight a check for equal never triggered => I assume these are indeed identical !
-    nav_filter_status nav_status = copter.letmeget_ekf_filter_status();
-    //ahrs.get_filter_status(nav_status);
+
+    // nav_filter_status nav_status = copter.letmeget_ekf_filter_status(); can be replaced
+    nav_filter_status nav_status;
+    ahrs.get_filter_status(nav_status); //works identically
+
+    // copter.letmeget_motors_armed(); can be replaced
+    //AP_Notify *notify = AP_Notify::instance();
+    //if (notify && (notify->flags.armed)) status |= 0x20;
 
     if (ahrs.healthy()) status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY;
     if (ahrs.initialised()) status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED;
@@ -72,6 +78,17 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     if( AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D ) status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX;
     if (copter.letmeget_motors_armed()) status |= STORM32LINK_FCSTATUS_AP_ARMED;
     status |= STORM32LINK_FCSTATUS_ISARDUPILOT;
+
+    //for checking these out, 0x10, 0x20 are still free
+    AP_Notify *notify = AP_Notify::instance();
+    if (notify) {
+        if( notify->flags.initialising ) status |= 0x10; // 1 if initialising and copter should not be moved
+        if( notify->flags.armed ) status |= 0x20;        // 0 = disarmed, 1 = armed
+    }
+    //indoor test:
+    // => AP_Notify::instance()->flags.initialising: if at all when it is only very briefly at startup true
+    // => AP_Notify::instance()->armed seems to be identical to copter.letmeget_motors_armed() !!!
+    // => copter.letmeget_motors_armed() can be avoided
 
     int16_t yawrate = 0;
 

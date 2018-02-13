@@ -20,7 +20,7 @@
 #define FW_TYPE FIRMWARE_VERSION_TYPE_DEV
 
 
-//finite find_gimbal time DISABLED!!!!
+//XX finite find_gimbal time DISABLED!!!!
 
 /*
 v0.06:
@@ -38,6 +38,8 @@ AP_BattMonitor_UAVCAN.h: added
 AP_BattMonitor_UAVCAN.cpp: added
 AP_UAVCAN.cpp: 5x
 AP_UAVCAN.h: 4x
+
+APM_Config.h: 1x
 
 - AP_Mount_STorM32_UAVCAN renamed to BP_Mount_STorM32
 - BP_STorM32.h/cpp: changes to LinkV2
@@ -96,23 +98,25 @@ double-checked with a last short flight
 => accept this as v006-004
 
 - first attempt for final choice of flags
-- shutoff protections a bit improved
+- shut-off protections a bit improved
 - STORM32LINKAPFCSTATUSENUM
 flight test with flamewheel! storm32link with hdc worked great! 2018-02-12, storm32 firmware v2.36d
   issues with v3, v4, ground speed diverges quickly ????
 * 2018-02-12: master fetch,rebase,push,submodule-ed, branch betacoptermerge, master merged to betacoptermerge
-  this seems to have resolved the v3,v4 issue
+  this seems to have resolved the v3,v4 ground speed runaway issue
+- for v2 the flash is too small, hence disable nearly everything in APM_Config.h
+
+PAINPOINT: I need to manually switch it off/on, which requires a px4-clean to work !!!!!!!
+
+- test out AP_Notify::instance() flags
+test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
+=> accept this as v006-005
 
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??
 ap.initialised can this be used to send a banner at the proper time ??
 how to detect if connected to a GCS ??
-
-can we use
-notify_flags_and_values_type
-        uint32_t initialising       : 1;    // 1 if initialising and copter should not be moved
-        uint32_t armed              : 1;    // 0 = disarmed, 1 = armed
 
 
 TODO: do not log packets with error???
@@ -127,9 +131,28 @@ Comments:
 */
 
 
+/*
+config.h:
+---------
 
+RANGEFINDER_ENABLED     1k
+PROXIMITY_ENABLED
+OPTFLOW             5k
+VISUAL_ODOMETRY_ENABLED     2k
+PRECISION_LANDING
+PARACHUTE           1k
+ADSB_ENABLED
 
+AC_FENCE            2k
+AC_RALLY
+AC_TERRAIN
+AC_AVOID_ENABLED
 
+should be disabled for v2
+SPRAYER
+GRIPPER_ENABLED
+WINCH_ENABLED
+*/
 
 
 /*
