@@ -94,7 +94,7 @@ private:
     void find_CAN(void);
     void find_gimbal(void);
 
-    // bit mask, allows to enable/disable particular functions/gfeatires
+    // bit mask, allows to enable/disable particular functions/features
     enum BITMASKENUM {
         SEND_STORM32LINK_V2 = 0x01,
         SEND_CMD_SETINPUTS = 0x02,
