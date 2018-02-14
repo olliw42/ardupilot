@@ -984,12 +984,13 @@ public:
     //we allow to get&set some copter flags and variables
     // this breaks ArduPilot rules, as vehicle code enters libraries, but IDNK better
     // I guess we want an AP_Flags class or such
-    bool letmeget_failsafe_radio(void){ return (failsafe.radio) ? true : false; } //not used, as not useful
-    bool letmeget_initialised(){ return ap.initialised; } //important, no replacement yet found, should IMHO be added to AP_Notify
-    bool letmeget_pream_check(){ return ap.pre_arm_check; }  //not used, probably replaceable by AP_Notify pre_arm_check
-    bool letmeget_in_arming_delay(){ return ap.in_arming_delay; } //not used
-    bool letmeget_motors_armed(){ return motors->armed(); } //probably replaceable by AP_Notify armed
-    nav_filter_status letmeget_ekf_filter_status(){ return inertial_nav.get_filter_status(); } //tested, replaceable by ahrs.get_filter_status()
+    bool letmeget_initialised(){ return ap.initialised; } //no replacement yet found, should IMHO be added to AP_Notify
+
+//    bool letmeget_motors_armed(){ return motors->armed(); } //tested, replaceable by AP_Notify armed
+//    nav_filter_status letmeget_ekf_filter_status(){ return inertial_nav.get_filter_status(); } //tested, replaceable by ahrs.get_filter_status()
+//    bool letmeget_failsafe_radio(void){ return (failsafe.radio) ? true : false; } //not used, as not useful
+//    bool letmeget_pream_check(){ return ap.pre_arm_check; }  //not used, probably replaceable by AP_Notify pre_arm_check
+//    bool letmeget_in_arming_delay(){ return ap.in_arming_delay; } //not used
 
     //we misuse copter here as a container which everyone has easy access to
     // a AP_Flags singleton would work too, or to pass also Camera to the Mount class, this here is least intrusive though

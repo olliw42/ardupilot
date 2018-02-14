@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v006-005"
+#define THISFIRMWARE "BetaCopter V3.6-dev v006-006"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -105,12 +105,14 @@ flight test with flamewheel! storm32link with hdc worked great! 2018-02-12, stor
 * 2018-02-12: master fetch,rebase,push,submodule-ed, branch betacoptermerge, master merged to betacoptermerge
   this seems to have resolved the v3,v4 ground speed runaway issue
 - for v2 the flash is too small, hence disable nearly everything in APM_Config.h
-
 PAINPOINT: I need to manually switch it off/on, which requires a px4-clean to work !!!!!!!
-
 - test out AP_Notify::instance() flags
 test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
 => accept this as v006-005
+
+- use  AP_Notify::instance()->flags.arms instead of letmeget_motors_armed()
+- tried to introduce BP_Flags singleton class (following AP_Notify) to reduce polluting Copter.h,
+  but didn't got this to work, no idea why not
 
 
 
@@ -148,7 +150,7 @@ AC_RALLY
 AC_TERRAIN
 AC_AVOID_ENABLED
 
-should be disabled for v2
+should already be disabled for v2
 SPRAYER
 GRIPPER_ENABLED
 WINCH_ENABLED
