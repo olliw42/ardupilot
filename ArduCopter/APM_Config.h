@@ -23,8 +23,8 @@
 //#define SPRAYER               DISABLED            // disable the crop sprayer feature (two ESC controlled pumps the speed of which depends upon the vehicle's horizontal velocity)
 
 //OW
-//#if HAL_MINIMIZE_FEATURES
-/*    #define RANGEFINDER_ENABLED     DISABLED
+#if HAL_MINIMIZE_FEATURES
+    #define RANGEFINDER_ENABLED     DISABLED
     #define PROXIMITY_ENABLED       DISABLED
     #define OPTFLOW                 DISABLED
     #define VISUAL_ODOMETRY_ENABLED DISABLED
@@ -34,8 +34,8 @@
     //AC_FENCE
     #define AC_RALLY                DISABLED
     #define AC_TERRAIN              DISABLED
-    #define AC_AVOID_ENABLED        DISABLED */
-//#endif
+    #define AC_AVOID_ENABLED        DISABLED
+#endif
 //OWEND
 
 // features below are disabled by default on all boards

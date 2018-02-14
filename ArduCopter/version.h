@@ -21,6 +21,13 @@
 
 
 //XX finite find_gimbal time DISABLED!!!!
+//XX CAN gimbal DISABLED!!!!
+
+/*
+PAINPOINT:
+in order for HAL_MINIMIZE_FEATURES to be respected,
+a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
+*/
 
 /*
 v0.06:
@@ -121,6 +128,11 @@ test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
   allows to remove letmeget_initialised(), and is better anyhow
   _startupbanner_status not needed anymore and removed
 - => all stuff from Copter.h is now removed !
+- added HAL_MINIMIZE_FEATURES to either APM_Config.h or config.h
+  tested extensively what happens with APM_Config flags in compiles for different targets
+  => in order for HAL_MINIMIZE_FEATURES to be respected, a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
+  => go with changing APM_Config.h, as it is less polluting
+
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??

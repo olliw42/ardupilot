@@ -480,7 +480,7 @@ void BP_Mount_STorM32::find_gimbal(void)
 void BP_Mount_STorM32::send_startupbanner(void)
 {
     // if no gimbal was found yet, we skip
-    //  a set gcs_send_banner flag will not be cleared, so that the banner is send in any case at some point
+    //  if the gcs_send_banner flag is set, it will not be cleared, so that the banner is send in any case at some later point
     if( !_initialised ) {
         return;
     }
