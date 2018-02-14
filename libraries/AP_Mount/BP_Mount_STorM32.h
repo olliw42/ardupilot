@@ -88,12 +88,6 @@ private:
     char namestr[16+1];
     char boardstr[16+1];
 
-    enum STARTUPBANNERENUM {
-        STARTUPBANNER_IDLE = 0,
-        STARTUPBANNER_SENDINITIALIZED, //STorM32: found and initialized
-        STARTUPBANNER_DONE,
-    };
-    uint8_t _startupbanner_status; //0: wait, 1: send, 2: has been sent
     void send_startupbanner(void);
 
     // discovery functions

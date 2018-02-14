@@ -22,8 +22,6 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
     _uart = nullptr;
     _mount_type = AP_Mount::Mount_Type_None; //will be determined in init()
 
-    _startupbanner_status = STARTUPBANNER_IDLE;
-
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
 
@@ -109,19 +107,20 @@ void BP_Mount_STorM32::update_fast()
                 }
 
                 break;
-            case TASK_SLOT1:
+            case TASK_SLOT1: { //bracket to avoid compile error: jump to case label
                 // trigger live data
                 if (_mount_type == AP_Mount::Mount_Type_STorM32_Native) {
                     receive_reset_wflush(); //we are brutal and kill all incoming bytes
                     send_cmd_getdatafields(LIVEDATA_FLAGS); //0.6ms
                 }
 
-                if( copter.letmeget_trigger_pic() ){
-                    copter.letmeset_trigger_pic(false);
+                AP_Notify *notify = AP_Notify::instance();
+                if (notify && (notify->flags.camera_trigger_pic)) {
+                    notify->flags.camera_trigger_pic = false;
                     if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
                 }
 
-                break;
+                }break;
             case TASK_SLOT2:
                 set_target_angles_bymountmode();
                 send_target_angles(); //1.7 ms or 1.0ms
@@ -467,7 +466,6 @@ void BP_Mount_STorM32::find_gimbal(void)
                     versionstr[16] = '\0';
                     for (uint16_t n=0;n<16;n++) boardstr[n] = _serial_in.getversionstr.boardstr[n];
                     boardstr[16] = '\0';
-                    _startupbanner_status = STARTUPBANNER_SENDINITIALIZED; //to trigger a send
                     _task_counter = TASK_SLOT0;
                     _initialised = true;
                 }
@@ -481,8 +479,16 @@ void BP_Mount_STorM32::find_gimbal(void)
 
 void BP_Mount_STorM32::send_startupbanner(void)
 {
-    if ((_startupbanner_status == STARTUPBANNER_SENDINITIALIZED) && copter.letmeget_initialised()) {
-        _startupbanner_status = STARTUPBANNER_DONE;
+    // if no gimbal was found yet, we skip
+    //  a set gcs_send_banner flag will not be cleared, so that the banner is send in any case at some point
+    if( !_initialised ) {
+        return;
+    }
+
+    AP_Notify *notify = AP_Notify::instance();
+
+    if (notify && notify->flags.gcs_send_banner) {
+        notify->flags.gcs_send_banner = false;
         gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
         char s[64];
         strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );

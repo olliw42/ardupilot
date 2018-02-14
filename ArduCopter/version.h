@@ -24,11 +24,14 @@
 
 /*
 v0.06:
+APM_Config.h: 1x
+GCS_Mavlink.cpp: 1x
+
 AP_Mount.h: 3x
 AP_Mount.cpp: 2x
 AP_SerialManager.cpp/.h: 1x each to adopt SerialProtocol_STorM32_Native = 84
 AP_Camera.cpp: 2x (no change in AP_Camera.h)
-ArduCopter/Copter.h: 1x
+AP_Notify: 1x
 
 AP_BattMonitor_Backend.h: 1x
 AP_BattMonitor_Params.h: 1x
@@ -39,7 +42,6 @@ AP_BattMonitor_UAVCAN.cpp: added
 AP_UAVCAN.cpp: 5x
 AP_UAVCAN.h: 4x
 
-APM_Config.h: 1x
 
 - AP_Mount_STorM32_UAVCAN renamed to BP_Mount_STorM32
 - BP_STorM32.h/cpp: changes to LinkV2
@@ -111,14 +113,23 @@ test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
 => accept this as v006-005
 
 - use  AP_Notify::instance()->flags.arms instead of letmeget_motors_armed()
-- tried to introduce BP_Flags singleton class (following AP_Notify) to reduce polluting Copter.h,
-  but didn't got this to work, no idea why not
-
+- tried to introduce BP_Flags singleton class (following AP_Notify or AP_GPS) to reduce polluting Copter.h,
+  but didn't got this to work, no idea why not => init() in system.cpp ???
+  thus added a flag to AP_Notify, which works nicely
+- AP_Notify flag camera_trigger_pic, changes in AP_Camera
+- AP_Notify flag gcs_send_banner, hook into GCS_MAVLINK_Copter::send_banner() in ArduCopter/GCS_Mavlink.cpp
+  allows to remove letmeget_initialised(), and is better anyhow
+  _startupbanner_status not needed anymore and removed
+- => all stuff from Copter.h is now removed !
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??
-ap.initialised can this be used to send a banner at the proper time ??
 how to detect if connected to a GCS ??
+copter.ap.initialised_params can this be used to send a banner at the proper time ??
+gcs().initialised ???
+hook into GCS_MAVLINK_Copter::send_banner() in ArduCopter/GCS_Mavlink.cpp or
+hook into GCS_MAVLINK::send_banner() in librariesGCS_MAvlink/GCS_Common.cpp
+
 
 
 TODO: do not log packets with error???
@@ -132,6 +143,12 @@ Comments:
 
 */
 
+
+/*
+
+ap.initialised:        means that Copter::init_ardupilot() in system.cpp has run through
+
+*/
 
 /*
 config.h:
