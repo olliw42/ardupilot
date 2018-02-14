@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v006-006"
+#define THISFIRMWARE "BetaCopter V3.6-dev v006-007"
 //OWEND
 
 // the following line is parsed by the autotest scripts
