@@ -132,6 +132,7 @@ test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
   tested extensively what happens with APM_Config flags in compiles for different targets
   => in order for HAL_MINIMIZE_FEATURES to be respected, a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
   => go with changing APM_Config.h, as it is less polluting
+=> accept this as v006-006
 
 
 
