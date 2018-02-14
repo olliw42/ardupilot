@@ -18,7 +18,7 @@
 #include "BP_STorM32.h"
 
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //the startup has become quite slow, giving it plenty of time helps with testing
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
@@ -88,12 +88,6 @@ private:
     char namestr[16+1];
     char boardstr[16+1];
 
-    enum STARTUPBANNERENUM {
-        STARTUPBANNER_IDLE = 0,
-        STARTUPBANNER_SENDINITIALIZED, //STorM32: found and initialized
-        STARTUPBANNER_DONE,
-    };
-    uint8_t _startupbanner_status; //0: wait, 1: send, 2: has been sent
     void send_startupbanner(void);
 
     // discovery functions

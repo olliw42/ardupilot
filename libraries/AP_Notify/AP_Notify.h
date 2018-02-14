@@ -88,6 +88,13 @@ public:
         uint32_t waiting_for_throw  : 1;    // 1 when copter is in THROW mode and waiting to detect the user hand launch
         uint32_t powering_off       : 1;    // 1 when the vehicle is powering off
         uint32_t video_recording    : 1;    // 1 when the vehicle is recording video
+
+//OW
+        //I misuse AP_Notify as container which everyone has easy access to
+        // I tried my own singleton class, but failed
+        uint32_t gcs_send_banner    : 1;
+        uint32_t camera_trigger_pic : 1;
+//OWEND
     };
 
     /// notify_events_type - bitmask of active events.

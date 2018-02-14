@@ -154,7 +154,8 @@ void AP_Camera::trigger_pic()
     }
 
 //OW
-    copter.letmeset_trigger_pic(true);
+    AP_Notify *notify = AP_Notify::instance();
+    if (notify) notify->flags.camera_trigger_pic = true;
 //OWEND
 
     log_picture();
