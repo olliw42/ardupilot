@@ -24,7 +24,6 @@
 *.o
 *.obj
 *.px4
-!/ArduCopter/*.px4
 *.pyc
 *.tlog
 *.tlog.raw
