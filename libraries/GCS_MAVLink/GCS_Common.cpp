@@ -2054,6 +2054,14 @@ void GCS_MAVLINK::send_banner()
     if (hal.util->get_system_id(sysid)) {
         send_text(MAV_SEVERITY_INFO, sysid);
     }
+
+//OW
+    AP_Notify *notify = AP_Notify::instance();
+    if (notify) {
+        notify->bpactions.gcs_connection_detected = true;
+        notify->bpactions.gcs_send_banner = true;
+    }
+//OWEND
 }
 
 

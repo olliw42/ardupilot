@@ -141,6 +141,10 @@ test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
   I like the approach using AP_Notify better though, since notifiers might want to use the info, it also doesn't pollute the vehicle code
   "my" flags should however probably go into a separate struct
 - AP_Notiy approach reworked, uses a  separate struct bpactions now
+- move setting bpactions.gcs_connection_detected, bpactions.gcs_send_banner from GCS_MAVLINK_Copter::send_banner() to GCS_MAVLINK::send_banner()
+=> the code is totally vehicle independent, zero pollution of vehicle code !!!
+I've tested that it compiles fine for ArduPlane
+=> should go to BetaPilot ???
 
 
 
