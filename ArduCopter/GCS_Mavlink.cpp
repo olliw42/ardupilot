@@ -717,7 +717,8 @@ void GCS_MAVLINK_Copter::send_banner()
     send_text(MAV_SEVERITY_INFO, "Frame: %s", copter.get_frame_string());
 
 //OW
-    copter.notify.flags.gcs_send_banner = true;
+    copter.notify.bpactions.gcs_connection_detected = true;
+    copter.notify.bpactions.gcs_send_banner = true;
 //OWEND
 }
 
