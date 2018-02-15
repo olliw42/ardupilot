@@ -155,7 +155,7 @@ void AP_Camera::trigger_pic()
 
 //OW
     AP_Notify *notify = AP_Notify::instance();
-    if (notify) notify->flags.camera_trigger_pic = true;
+    if (notify) notify->bpactions.camera_trigger_pic = true;
 //OWEND
 
     log_picture();

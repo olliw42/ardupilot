@@ -8,13 +8,13 @@
 
 
 extern const AP_HAL::HAL& hal;
-//extern Copter copter; //not needed then Copter.h is included
 
 
 BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :
     AP_Mount_Backend(frontend, state, instance),
     _initialised(false),
-    _armed(false)
+    _armed(false),
+    _send_armeddisarmed(false)
 {
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
         _ap_uavcan[i] = nullptr;
@@ -79,7 +79,7 @@ void BP_Mount_STorM32::update()
         return;
     }
 
-    send_startupbanner();
+    send_text_to_gcs();
 }
 
 
@@ -115,8 +115,8 @@ void BP_Mount_STorM32::update_fast()
                 }
 
                 AP_Notify *notify = AP_Notify::instance();
-                if (notify && (notify->flags.camera_trigger_pic)) {
-                    notify->flags.camera_trigger_pic = false;
+                if (notify && (notify->bpactions.camera_trigger_pic)) {
+                    notify->bpactions.camera_trigger_pic = false;
                     if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
                 }
 
@@ -143,8 +143,12 @@ void BP_Mount_STorM32::update_fast()
                             -_serial_in.getdatafields.livedata_attitude.pitch_deg,
                              _serial_in.getdatafields.livedata_attitude.roll_deg,
                             -_serial_in.getdatafields.livedata_attitude.yaw_deg );
-                        // we also can check if gimbal is in normal operation mode
-                        _armed = is_normal_state(_serial_in.getdatafields.livedata_status.state);
+                        // we also can check if gimbal is in normal mode
+                        bool _armed_new = is_normal_state(_serial_in.getdatafields.livedata_status.state);
+                        if (_armed_new != _armed) _send_armeddisarmed = true;
+                        _armed = _armed_new;
+                        AP_Notify *notify = AP_Notify::instance();
+                        if (notify) notify->bpactions.mount0_armed = _armed;
                     }
                 }
 
@@ -440,15 +444,16 @@ void BP_Mount_STorM32::find_gimbal(void)
     }
 
     uint64_t current_time_ms = AP_HAL::millis64();
-//XX
-/*
+
+#if FIND_GIMBAL_MAX_SEARCH_TIME_MS
     if (current_time_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
         _initialised = false; //should be already false, but it can't hurt to ensure that
        _serial_is_initialised = false; //switch off BP_STorM32
        _mount_type = AP_Mount::Mount_Type_None; //switch off finally, also makes find_gimbal() to stop searching
         return;
     }
-*/
+#endif
+
     if ((current_time_ms - _task_time_last) > 100) { //try it every 100ms
         _task_time_last = current_time_ms;
 
@@ -477,7 +482,7 @@ void BP_Mount_STorM32::find_gimbal(void)
 }
 
 
-void BP_Mount_STorM32::send_startupbanner(void)
+void BP_Mount_STorM32::send_text_to_gcs(void)
 {
     // if no gimbal was found yet, we skip
     //  if the gcs_send_banner flag is set, it will not be cleared, so that the banner is send in any case at some later point
@@ -487,14 +492,30 @@ void BP_Mount_STorM32::send_startupbanner(void)
 
     AP_Notify *notify = AP_Notify::instance();
 
-    if (notify && notify->flags.gcs_send_banner) {
-        notify->flags.gcs_send_banner = false;
+    if (!notify) { //since AP_Notify is instantiated before mount, this shouldn't happen, right?
+        return;
+    }
+
+    if (notify->bpactions.gcs_send_banner) {
+        notify->bpactions.gcs_send_banner = false;
         gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
         char s[64];
         strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );
         gcs().send_text(MAV_SEVERITY_INFO, s);
+        _send_armeddisarmed = true; //also send gimbal state
+    }
+
+    if (!notify->bpactions.gcs_connection_detected) { //postpone all further sends until a gcs has been detected
+        return;
+    }
+
+    if (_send_armeddisarmed) {
+        _send_armeddisarmed = false;
+        gcs().send_text(MAV_SEVERITY_INFO, (_armed) ? "  STorM32: ARMED" : "  STorM32: DISARMED" );
     }
 }
+
+
 
 
 //------------------------------------------------------

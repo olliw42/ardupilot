@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v006-006"
+#define THISFIRMWARE "BetaCopter V3.6-dev v006-007"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -133,6 +133,20 @@ test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
   => in order for HAL_MINIMIZE_FEATURES to be respected, a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
   => go with changing APM_Config.h, as it is less polluting
 => accept this as v006-006
+
+- STORM32RCCMDENUM added
+- armed/disarmed message
+- retried BP_Flags approach, and now, for some unclear reason, it works ????
+  .init() is not needed, but would probably be better
+  I like the approach using AP_Notify better though, since notifiers might want to use the info, it also doesn't pollute the vehicle code
+  "my" flags should however probably go into a separate struct
+- AP_Notiy approach reworked, uses a  separate struct bpactions now
+- move setting bpactions.gcs_connection_detected, bpactions.gcs_send_banner from GCS_MAVLINK_Copter::send_banner() to GCS_MAVLINK::send_banner()
+=> the code is totally vehicle independent, zero pollution of vehicle code !!!
+I've tested that it compiles fine for ArduPlane
+=> should go to BetaPilot ???
+the only thing missing now is UAVCAN for STorM32
+=> accept this as v006-007
 
 
 
