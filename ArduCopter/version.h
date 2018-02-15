@@ -134,6 +134,9 @@ test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
   => go with changing APM_Config.h, as it is less polluting
 => accept this as v006-006
 
+- STORM32RCCMDENUM added
+- armed/disarmed message
+
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??

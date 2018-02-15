@@ -18,7 +18,7 @@
 #include "BP_STorM32.h"
 
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //the startup has become quite slow, giving it plenty of time helps with testing
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //90000 //the startup has become quite slow, giving it plenty of time helps with testing, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
@@ -88,11 +88,13 @@ private:
     char namestr[16+1];
     char boardstr[16+1];
 
-    void send_startupbanner(void);
-
     // discovery functions
     void find_CAN(void);
     void find_gimbal(void);
+
+    // send info to gcs functions
+    bool _send_armeddisarmed;       // event: true when a armed/disarmed message should be send out
+    void send_text_to_gcs(void);
 
     // bit mask, allows to enable/disable particular functions/features
     enum BITMASKENUM {

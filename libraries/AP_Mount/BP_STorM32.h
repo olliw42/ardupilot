@@ -86,6 +86,17 @@ protected:
     };
 
     // rrcmd data packets, outgoing to STorM32
+    enum STORM32RCCMDENUM {
+        STORM32RCCMD_GET_VERSIONSTR = 0x02,
+        STORM32RCCMD_GET_DATAFIELDS = 0x06,
+        STORM32RCCMD_DO_CAMERA = 0x0F,
+        STORM32RCCMD_SET_ANGLES = 0x11,
+        STORM32RCCMD_SET_PITCHROLLYAW = 0x12,
+        STORM32RCCMD_SET_INPUTS = 0x16,
+        STORM32RCCMD_SET_HOMELOCATION= 0x17,
+        STORM32RCCMD_SET_TARGETLOCATION= 0x18,
+        STORM32RCCMD_STORM32LINKV2 = 0xDA,
+    };
 
     struct PACKED tSTorM32LinkV2 { //len = 0x21, cmd = 0xDA
         uint8_t stx;
