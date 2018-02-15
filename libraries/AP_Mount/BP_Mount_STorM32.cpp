@@ -8,7 +8,6 @@
 
 
 extern const AP_HAL::HAL& hal;
-//extern Copter copter; //not needed then Copter.h is included
 
 
 BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :

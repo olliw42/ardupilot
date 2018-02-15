@@ -2,7 +2,6 @@
 #include <AP_Mount/BP_STorM32.h>
 
 #include "../ArduCopter/Copter.h"
-extern Copter copter;
 
 
 //******************************************************
