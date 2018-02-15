@@ -116,8 +116,8 @@ void BP_Mount_STorM32::update_fast()
                 }
 
                 AP_Notify *notify = AP_Notify::instance();
-                if (notify && (notify->flags.camera_trigger_pic)) {
-                    notify->flags.camera_trigger_pic = false;
+                if (notify && (notify->bpactions.camera_trigger_pic)) {
+                    notify->bpactions.camera_trigger_pic = false;
                     if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
                 }
 
@@ -148,6 +148,8 @@ void BP_Mount_STorM32::update_fast()
                         bool _armed_new = is_normal_state(_serial_in.getdatafields.livedata_status.state);
                         if (_armed_new != _armed) _send_armeddisarmed = true;
                         _armed = _armed_new;
+                        AP_Notify *notify = AP_Notify::instance();
+                        if (notify) notify->bpactions.mount0_armed = _armed;
                     }
                 }
 
@@ -491,13 +493,21 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
 
     AP_Notify *notify = AP_Notify::instance();
 
-    if (notify && notify->flags.gcs_send_banner) {
-        notify->flags.gcs_send_banner = false;
+    if (!notify) { //since AP_Notify is instantiated before mount, this shouldn't happen, right?
+        return;
+    }
+
+    if (notify->bpactions.gcs_send_banner) {
+        notify->bpactions.gcs_send_banner = false;
         gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
         char s[64];
         strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );
         gcs().send_text(MAV_SEVERITY_INFO, s);
         _send_armeddisarmed = true; //also send gimbal state
+    }
+
+    if (!notify->bpactions.gcs_connection_detected) { //postpone all further sends until a gcs has been detected
+        return;
     }
 
     if (_send_armeddisarmed) {

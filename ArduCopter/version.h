@@ -140,6 +140,7 @@ test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
   .init() is not needed, but would probably be better
   I like the approach using AP_Notify better though, since notifiers might want to use the info, it also doesn't pollute the vehicle code
   "my" flags should however probably go into a separate struct
+- AP_Notiy approach reworked, uses a  separate struct bpactions now
 
 
 
