@@ -145,6 +145,8 @@ test flights with flamewheel (v2) and solo (v3)! all passed! 2018-02-13
 => the code is totally vehicle independent, zero pollution of vehicle code !!!
 I've tested that it compiles fine for ArduPlane
 => should go to BetaPilot ???
+the only thing missing now is UAVCAN for STorM32
+=> accept this as v006-007
 
 
 
