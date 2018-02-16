@@ -148,6 +148,15 @@ I've tested that it compiles fine for ArduPlane
 the only thing missing now is UAVCAN for STorM32
 => accept this as v006-007
 
+- new STorM32 uavcan dsdl's compiled:
+  (i) copy into modules/uavcan/dsdl/uavcan
+  (ii) delete folder modules/uavcan/libuavcan/include/dsdlc_generated
+  (iii) px4-clean and px4-vX
+  (iv) copy .hpp's from dsdlc_generated to AP_UAVCAN folder
+  (v) delete folder modules/uavcan/libuavcan/include/dsdlc_generated
+  (vi) px4-clean and px4-vX
+
+
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??

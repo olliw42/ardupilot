@@ -39,6 +39,7 @@
 //XX#include <uavcan/equipment/power/GenericBatteryInfo.hpp>
 #include "GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
+#include "Status.hpp"
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -318,6 +319,7 @@ static void (*air_data_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uavcan:
 // along the lines of battery_info_st_cb
 
 //--- GenericBatteryInfo ---
+// incoming message, by id
 
 static void genericbatteryinfo_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg, uint8_t mgr)
 {
@@ -330,14 +332,16 @@ static void genericbatteryinfo_st_cb_func(const uavcan::ReceivedDataStructure<ua
         return;
     }
 
-    AP_UAVCAN::GenericBatteryInfo_Data *data = ap_uavcan->genericbatteryinfo_getptrto_data((uint16_t) msg.battery_id);
+    uint8_t id = msg.battery_id; //by device id
+
+    AP_UAVCAN::GenericBatteryInfo_Data *data = ap_uavcan->genericbatteryinfo_getptrto_data(id);
     if (data != nullptr) {
         data->voltage = msg.voltage;
         data->current = msg.current;
         data->charge_consumed_mAh = msg.charge_consumed_mAh;
         data->status_flags = msg.status_flags;
 
-        ap_uavcan->genericbatteryinfo_update_data((uint16_t) msg.battery_id);
+        ap_uavcan->genericbatteryinfo_update_data(id);
     }
 }
 
@@ -346,6 +350,7 @@ static void genericbatteryinfo_st_cb1(const uavcan::ReceivedDataStructure<uavcan
 static void (*genericbatteryinfo_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg) = { genericbatteryinfo_st_cb0, genericbatteryinfo_st_cb1 };
 
 //--- EscStatus ---
+// incoming message, by id
 
 static void escstatus_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg, uint8_t mgr)
 {
@@ -358,7 +363,9 @@ static void escstatus_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equ
         return;
     }
 
-    AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data((uint16_t) msg.esc_index);
+    uint8_t id = msg.esc_index; //by device id
+
+    AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data(id);
     if (data != nullptr) {
         data->error_count = msg.error_count;
         data->voltage = msg.voltage;
@@ -367,13 +374,65 @@ static void escstatus_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equ
         data->rpm = msg.rpm;
         data->power_rating_pct = msg.power_rating_pct;
 
-        ap_uavcan->escstatus_update_data((uint16_t) msg.esc_index);
+        ap_uavcan->escstatus_update_data(id);
     }
 }
 
 static void escstatus_st_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_st_cb_func(msg, 0); }
 static void escstatus_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_st_cb_func(msg, 1); }
 static void (*escstatus_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg) = { escstatus_st_cb0, escstatus_st_cb1 };
+
+//--- STorM32Status ---
+// incoming message, by nodeid
+
+static void storm32status_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg, uint8_t mgr)
+{
+    if (hal.can_mgr[mgr] == nullptr) {
+        return;
+    }
+
+    AP_UAVCAN *ap_uavcan = hal.can_mgr[mgr]->get_UAVCAN();
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    uint8_t id = msg.getSrcNodeID().get(); //by node id
+
+    AP_UAVCAN::STorM32Status_Data *data = ap_uavcan->storm32status_getptrto_data(id);
+    if (data != nullptr) {
+        data->mode = msg.mode;
+        data->frame = msg.frame;
+        data->anglequaternion_tag = msg.anglequaternion_tag;
+        if (data->anglequaternion_tag) {
+            data->orientation_q[0] = msg.orientation[0];
+            data->orientation_q[1] = msg.orientation[1];
+            data->orientation_q[2] = msg.orientation[2];
+            data->orientation_q[3] = msg.orientation[3];
+        } else {
+            data->orientation_angles_rad[0] = msg.orientation[0];
+            data->orientation_angles_rad[1] = msg.orientation[1];
+            data->orientation_angles_rad[2] = msg.orientation[2];
+        }
+        //XX for the moment we ignore velocities, is determined by the length of the message
+        //XX how to get the length ????
+        data->angular_velocity_available = false;
+        if (data->angular_velocity_available) {
+            data->angular_velocity[0] = msg.angular_velocity[0];
+            data->angular_velocity[1] = msg.angular_velocity[1];
+            data->angular_velocity[2] = msg.angular_velocity[2];
+        } else {
+            data->angular_velocity[0] = 0.0f;
+            data->angular_velocity[1] = 0.0f;
+            data->angular_velocity[2] = 0.0f;
+        }
+
+        ap_uavcan->storm32status_update_data(id);
+    }
+}
+
+static void storm32status_st_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg){ storm32status_st_cb_func(msg, 0); }
+static void storm32status_st_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg){ storm32status_st_cb_func(msg, 1); }
+static void (*storm32status_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg) = { storm32status_st_cb0, storm32status_st_cb1 };
 //OWEND
 
 
@@ -425,6 +484,7 @@ AP_UAVCAN::AP_UAVCAN() :
     _rc_out_sem = hal.util->new_semaphore();
 
 //OW
+    // --- GenericBatteryInfo ---
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
         _genericbatteryinfo.id[i] = UINT8_MAX;
         _genericbatteryinfo.id_taken[i] = 0;
@@ -434,6 +494,7 @@ AP_UAVCAN::AP_UAVCAN() :
         _genericbatteryinfo.listeners[li] = nullptr;
     }
 
+    // --- EscStatus ---
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
         _escstatus.id[i] = UINT8_MAX;
 //        _escstatus.id_taken[i] = 0;
@@ -441,6 +502,16 @@ AP_UAVCAN::AP_UAVCAN() :
     for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
 //        _escstatus.listener_to_id[li] = UINT8_MAX;
 //        _escstatus.listeners[li] = nullptr;
+    }
+
+    // --- STorM32Status ---
+    for (uint8_t i = 0; i < AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER; i++) {
+        _storm32status.id[i] = UINT8_MAX;
+        _storm32status.id_taken[i] = 0;
+    }
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        _storm32status.listener_to_id[li] = UINT8_MAX;
+        _storm32status.listeners[li] = nullptr;
     }
 //OWEND
 
@@ -571,6 +642,15 @@ bool AP_UAVCAN::try_init(void)
                         const int start_res = st->start(escstatus_st_cb[_uavcan_i]);
                         if (start_res < 0) {
                             debug_uavcan(1, "UAVCAN EscStatus subscriber start problem\n\r");
+                            return false;
+                        }
+                    }
+                    {
+                        uavcan::Subscriber<uavcan::olliw::storm32::Status> *st;
+                        st = new uavcan::Subscriber<uavcan::olliw::storm32::Status>(*node);
+                        const int start_res = st->start(storm32status_st_cb[_uavcan_i]);
+                        if (start_res < 0) {
+                            debug_uavcan(1, "UAVCAN Storm32Status subscriber start problem\n\r");
                             return false;
                         }
                     }
@@ -1240,12 +1320,15 @@ void AP_UAVCAN::update_mag_state(uint8_t node, uint8_t sensor_id)
 
 //OW
 // convention i for AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
-//--- GenericBatteryInfo ---
 
-uint8_t AP_UAVCAN::genericbatteryinfo_register_listener_to_id(AP_BattMonitor_Backend* new_listener, uint8_t id)
+//--- GenericBatteryInfo ---
+// incoming message, by device id
+
+uint8_t AP_UAVCAN::genericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id)
 {
     uint8_t sel_place = UINT8_MAX, ret = 0;
 
+    //find first free place in listeners list
     for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
         if (_genericbatteryinfo.listeners[li] == nullptr) {
             sel_place = li;
@@ -1253,10 +1336,12 @@ uint8_t AP_UAVCAN::genericbatteryinfo_register_listener_to_id(AP_BattMonitor_Bac
         }
     }
 
+    //no free place, abort
     if (sel_place == UINT8_MAX) {
         return ret;
     }
 
+    //insert listener
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
         if (_genericbatteryinfo.id[i] == id) {
             _genericbatteryinfo.listeners[sel_place] = new_listener;
@@ -1325,10 +1410,12 @@ void AP_UAVCAN::genericbatteryinfo_update_data(uint8_t id)
         if (_genericbatteryinfo.id[i] == id) {
             for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
                 if (_genericbatteryinfo.listener_to_id[li] == i) {
+
                     _genericbatteryinfo.listeners[li]->handle_genericbatteryinfo_msg(
                             _genericbatteryinfo.data[i].voltage,
                             _genericbatteryinfo.data[i].current,
                             _genericbatteryinfo.data[i].charge_consumed_mAh);
+
                 }
             }
         }
@@ -1336,6 +1423,7 @@ void AP_UAVCAN::genericbatteryinfo_update_data(uint8_t id)
 }
 
 //--- EscStatus ---
+// incoming message, by device id
 
 /* not used
 uint8_t AP_UAVCAN::escstatus_register_listener_to_id(AP_BattMonitor_Backend* new_listener, uint8_t id)
@@ -1450,6 +1538,99 @@ void AP_UAVCAN::escstatus_update_data(uint8_t id)
                             _escstatus.data[i].temperature);*/
 //                }
 //            }
+        }
+    }
+}
+
+
+// --- STorM32Status ---
+// incoming message, by node id
+
+uint8_t AP_UAVCAN::storm32status_register_listener(BP_Mount_STorM32* new_listener, uint8_t id)
+{
+    uint8_t sel_place = UINT8_MAX, ret = 0;
+
+    //find first free place in listeners list
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_storm32status.listeners[li] == nullptr) {
+            sel_place = li;
+            break;
+        }
+    }
+
+    //no free place, abort
+    if (sel_place == UINT8_MAX) {
+        return ret;
+    }
+
+    //insert listener
+    for (uint8_t i = 0; i < AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER; i++) {
+        if (_storm32status.id[i] == id) {
+            _storm32status.listeners[sel_place] = new_listener;
+            _storm32status.listener_to_id[sel_place] = i;
+            _storm32status.id_taken[i]++;
+            ret = i + 1;
+            debug_uavcan(2, "reg_STORM32STATUS place:%d, chan: %d\n\r", sel_place, i);
+            break;
+        }
+    }
+
+    return ret;
+}
+
+
+//    void storm32status_remove_listener(BP_Mount_STorM32* rem_listener);
+//    uint8_t storm32status_find_smallest_free_id();
+
+
+AP_UAVCAN::STorM32Status_Data* AP_UAVCAN::storm32status_getptrto_data(uint8_t id)
+{
+    // check if id is already in list, and if it is take it
+    for (uint8_t i = 0; i < AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER; i++) {
+        if (_storm32status.id[i] == id) {
+            return &_storm32status.data[i];
+        }
+    }
+
+    // if id is not yet in list, find the first free spot, and take that
+    for (uint8_t i = 0; i < AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER; i++) {
+        if (_storm32status.id[i] == UINT8_MAX) {
+            _storm32status.id[i] = id;
+            return &_storm32status.data[i];
+        }
+    }
+
+    return nullptr;
+}
+
+
+void AP_UAVCAN::storm32status_update_data(uint8_t id)
+{
+    for (uint8_t i = 0; i < AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER; i++) {
+        if (_storm32status.id[i] == id) {
+            for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+                if (_storm32status.listener_to_id[li] == i) {
+
+                    _storm32status.listeners[li]->handle_storm32status_uavcanmsg_mode(_storm32status.data[i].mode);
+                    if (_storm32status.data[i].anglequaternion_tag) { //quaternion
+                        //we only allow frame = 0 for quaternion
+                        //we do not handle angular velocities
+                        if (_storm32status.data[i].frame == 0) {
+                            _storm32status.listeners[li]->handle_storm32status_uavcanmsg_quaternion_frame0(
+                                    _storm32status.data[i].orientation_q[0],
+                                    _storm32status.data[i].orientation_q[1],
+                                    _storm32status.data[i].orientation_q[2],
+                                    _storm32status.data[i].orientation_q[3]);
+                        }
+                    } else { //angles
+                        _storm32status.listeners[li]->handle_storm32status_uavcanmsg_angles_rad(
+                            _storm32status.data[i].orientation_angles_rad[0],
+                            _storm32status.data[i].orientation_angles_rad[1],
+                            _storm32status.data[i].orientation_angles_rad[2]);
+                    }
+
+                }
+            }
         }
     }
 }
