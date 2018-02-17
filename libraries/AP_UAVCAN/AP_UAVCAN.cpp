@@ -1730,12 +1730,14 @@ void AP_UAVCAN::uc4hnotify_sem_give()
 
 // I don't like the current procedure in this library
 // the msg is copied into two fields, so, double work for nothing, "performance killer"
-void AP_UAVCAN::uc4hnotify_send(uint8_t* payload, uint8_t payload_len, uint8_t priority)
+void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len)
 {
     if( _uc4hnotify.sem->take(1) ){
 
-        _uc4hnotify.msg.payload.resize(payload_len);
+        _uc4hnotify.msg.type = type;
+        _uc4hnotify.msg.subtype = subtype;
 
+        _uc4hnotify.msg.payload.resize(payload_len);
         for(uint8_t i = 0; i < payload_len; i++){
             _uc4hnotify.msg.payload[i] = payload[i];
         }

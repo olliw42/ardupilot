@@ -33,6 +33,10 @@
 #include "DiscoLED.h"
 #include "Led_Sysfs.h"
 #include <stdio.h>
+//OW
+#include "Uc4hNotifyDevice.h"
+//OWEND
+
 
 extern const AP_HAL::HAL& hal;
 
@@ -138,6 +142,10 @@ void AP_Notify::add_backends(void)
     ADD_BACKEND(new ToneAlarm_PX4());
     ADD_BACKEND(new Display());
   #endif
+
+//OW
+    ADD_BACKEND(new Uc4hNotifyDevice());
+//OWEND
 
 // Notify devices for ChibiOS boards
 #elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
