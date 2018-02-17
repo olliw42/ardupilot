@@ -343,7 +343,7 @@ private:
 public:
     bool uc4hnotify_sem_take();
     void uc4hnotify_sem_give();
-    void uc4hnotify_send(uint8_t* payload, uint8_t payload_len, uint8_t priority);
+    void uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len);
 
 private:
     struct {
