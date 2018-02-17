@@ -160,7 +160,7 @@ the only thing missing now is UAVCAN for STorM32
 - storm32.NodeSpecific added, seems to work on the pix side, but not the gimbal side ????
 - new olliw.uc4h.Notify uavcan dsdl compiled, and placed in AP_UAVCAN
 - uc4h.Notify stuff added to AP_UAVCAN, not functional yet, needs an AP_Notify_UAVCAN class
-
+- Uc4HNotifyDevice added, and integrated into Notify as backup, works :)
 
 
 

@@ -38,9 +38,14 @@ public:
 
     enum UC4HNOTIFYTYPEENUM {
         UC4HNOTIFYTYPE_FLAGS = 0,
-        UC4HNOTIFYTYPE_3RGBLEDS,
+        UC4HNOTIFYTYPE_RGBLEDS, //subtype is the number of leds
     };
-    uint16_t uc4h_notify_type;
+
+    enum UC4HNOTIFYMODEENUM {
+        UC4HNOTIFYMODE_FLAGS = 0,
+        UC4HNOTIFYMODE_3RGBLEDS,
+    };
+    uint16_t notify_mode; //this tells in which mode the notify device is
 
 private:
 
@@ -48,6 +53,11 @@ private:
     bool _healthy;
     uint64_t _task_time_last; //to slow down
     bool _updated;
+
+    void find_CAN(void);
+    void send_CAN_notify_message(void);
+
+    void update_slow(void);
 
     struct {
         union {
@@ -58,10 +68,7 @@ private:
         };
     } _notify_data;
 
-    void find_CAN(void);
-    void update_slow(void);
-    void send_CAN_notify_message(void);
-
+    void set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b);
     uint16_t _led_task_count;
-
+    void update_mode_3rgbleds(void);
 };
