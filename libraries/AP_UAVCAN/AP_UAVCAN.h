@@ -19,6 +19,7 @@
 #include <AP_BattMonitor/AP_BattMonitor_Backend.h>
 #include <AP_Mount/BP_Mount_STorM32.h>
 #include "NodeSpecific.hpp"
+#include "Notify.hpp"
 //OWEND
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
@@ -330,16 +331,31 @@ public:
     void storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, uint8_t priority);
 
 private:
-    AP_HAL::Semaphore* _storm32nodespecific_sem;
-
-    //this is to handle them all
     struct {
-        uavcan::TransferPriority nodespecific_priority;
-        uavcan::olliw::storm32::NodeSpecific nodespecific_msg;
-        bool nodespecific_to_send;
-    } _storm32out;
+        uavcan::olliw::storm32::NodeSpecific msg;
+        uavcan::TransferPriority priority;
+        bool to_send;
+        AP_HAL::Semaphore* sem;
+    } _storm32nodespecific;
 
+    // --- Uc4hNotify ---
+    // outgoing message
+public:
+    bool uc4hnotify_sem_take();
+    void uc4hnotify_sem_give();
+    void uc4hnotify_send(uint8_t* payload, uint8_t payload_len, uint8_t priority);
+
+private:
+    struct {
+        uavcan::olliw::uc4h::Notify msg;
+        uavcan::TransferPriority priority;
+        bool to_send;
+        AP_HAL::Semaphore* sem;
+    } _uc4hnotify;
+
+    // --- outgoing message handler ---
     void storm32_do_cyclic(uint64_t current_time_ms);
+    void uc4h_do_cyclic(uint64_t current_time_ms);
 //OWEND
 };
 

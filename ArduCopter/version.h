@@ -154,10 +154,14 @@ the only thing missing now is UAVCAN for STorM32
   (iii) px4-clean and px4-vX
   (iv) copy .hpp's from dsdlc_generated to AP_UAVCAN folder
   (v) delete folder modules/uavcan/libuavcan/include/dsdlc_generated
-  (vi) px4-clean and px4-vX
+  (vi) px4-clean (not required!) and px4-vX
 - storm32.Status added
 - find_gimbal_uavcan() added, looks for storm32.Status, would be better to look for nodeStatus
 - storm32.NodeSpecific added, seems to work on the pix side, but not the gimbal side ????
+- new olliw.uc4h.Notify uavcan dsdl compiled, and placed in AP_UAVCAN
+- uc4h.Notify stuff added to AP_UAVCAN, not functional yet, needs an AP_Notify_UAVCAN class
+
+
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??
