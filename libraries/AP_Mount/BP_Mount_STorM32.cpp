@@ -74,8 +74,9 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 void BP_Mount_STorM32::update()
 {
     if (!_initialised) {
-        find_CAN(); //this only checks for the CAN to be ok, not if there is a gimbal
-        find_gimbal(); //this searches for a gimbal on serial
+        find_CAN(); //this only checks for the CAN to be ok, not if there is a gimbal, sets _serial_is_initialised
+        find_gimbal_uavcan(); //this searches for a gimbal on CAN
+        find_gimbal_native(); //this searches for a gimbal on serial
         return;
     }
 
@@ -95,7 +96,8 @@ void BP_Mount_STorM32::update_fast()
     // this is not totally correct, it seems the loop is slower than 100Hz, but just a bit?
     // should I use 9 ms, or better use micros64(), and something like 9900us? (with 10ms it might be easy to miss a 400Hz tick)
     uint64_t current_time_ms = AP_HAL::millis64();
-    if ((current_time_ms - _task_time_last) >= 10) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
+//XX    if ((current_time_ms - _task_time_last) >= 10) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
+    if ((current_time_ms - _task_time_last) >= 100) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
         _task_time_last = current_time_ms;
 
         const uint16_t LIVEDATA_FLAGS = LIVEDATA_STATUS_V2|LIVEDATA_ATTITUDE_RELATIVE;
@@ -103,7 +105,7 @@ void BP_Mount_STorM32::update_fast()
         switch (_task_counter) {
             case TASK_SLOT0:
                 if (_bitmask & SEND_STORM32LINK_V2) {
-                    send_storm32link_v2(_frontend._ahrs); //2.3ms
+//XX                    send_storm32link_v2(_frontend._ahrs); //2.3ms
                 }
 
                 break;
@@ -117,13 +119,13 @@ void BP_Mount_STorM32::update_fast()
                 AP_Notify *notify = AP_Notify::instance();
                 if (notify && (notify->bpactions.camera_trigger_pic)) {
                     notify->bpactions.camera_trigger_pic = false;
-                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
+//XX                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
                 }
 
                 }break;
             case TASK_SLOT2:
                 set_target_angles_bymountmode();
-                send_target_angles(); //1.7 ms or 1.0ms
+//XX                send_target_angles(); //1.7 ms or 1.0ms
 
                 break;
             case TASK_SLOT3:
@@ -139,7 +141,7 @@ void BP_Mount_STorM32::update_fast()
                     if (message_received() && (_serial_in.cmd == 0x06) && (_serial_in.getdatafields.flags == LIVEDATA_FLAGS)) {
                         // attitude angles are in STorM32 convention
                         // convert from STorM32 to ArduPilot convention, this need correction p:-1,r:+1,y:-1
-                        handle_storm32status_msg(
+                        set_status_angles_deg(
                             -_serial_in.getdatafields.livedata_attitude.pitch_deg,
                              _serial_in.getdatafields.livedata_attitude.roll_deg,
                             -_serial_in.getdatafields.livedata_attitude.yaw_deg );
@@ -376,6 +378,21 @@ void BP_Mount_STorM32::send_target_angles(void)
 }
 
 
+
+//------------------------------------------------------
+// status angles handlers, angles are in ArduPilot convention
+//------------------------------------------------------
+
+void BP_Mount_STorM32::set_status_angles_deg(float pitch_deg, float roll_deg, float yaw_deg)
+{
+    _status.pitch_deg = pitch_deg;
+    _status.roll_deg = roll_deg;
+    _status.yaw_deg = yaw_deg;
+
+    _status_updated = true;
+}
+
+
 void BP_Mount_STorM32::get_status_angles_deg(float* pitch_deg, float* roll_deg, float* yaw_deg)
 {
     *pitch_deg = _status.pitch_deg;
@@ -388,12 +405,23 @@ void BP_Mount_STorM32::get_status_angles_deg(float* pitch_deg, float* roll_deg, 
 // interface to AP_UAVCAN, for receiving a UAVCAN message
 //------------------------------------------------------
 
-void BP_Mount_STorM32::handle_storm32status_msg(float pitch_deg, float roll_deg, float yaw_deg)
+void BP_Mount_STorM32::handle_storm32status_uavcanmsg_mode(uint8_t mode)
 {
-    //the storm32.Status message sends angles in ArduPilot convention, no conversion needed
-    _status.pitch_deg = pitch_deg;
-    _status.roll_deg = roll_deg;
-    _status.yaw_deg = yaw_deg;
+    //doesn't do anything currently
+}
+
+
+void BP_Mount_STorM32::handle_storm32status_uavcanmsg_quaternion_frame0(float x, float y, float z, float w)
+{
+    //doesn't do anything currently
+}
+
+
+void BP_Mount_STorM32::handle_storm32status_uavcanmsg_angles_rad(float roll_rad, float pitch_rad, float yaw_rad)
+{
+    _status.pitch_deg = ToDeg(pitch_rad);
+    _status.roll_deg = ToDeg(roll_rad);
+    _status.yaw_deg = ToDeg(yaw_rad);
 
     _status_updated = true;
 }
@@ -405,8 +433,6 @@ void BP_Mount_STorM32::handle_storm32status_msg(float pitch_deg, float roll_deg,
 
 void BP_Mount_STorM32::find_CAN(void)
 {
-    return; //XX
-
     if (_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return;
     }
@@ -415,6 +441,7 @@ void BP_Mount_STorM32::find_CAN(void)
     // exit if not initialised, but check for validity of CAN interfaces
     //TODO: this is flawed, it stops searching for further CAN interfaces once one has been detected
     // I really would need to know more details of the underlying procedures
+    //TODO: we probably want a timeout, so that it stops searching after a reasonable time
 
     if (hal.can_mgr == nullptr) {
         return;
@@ -425,19 +452,39 @@ void BP_Mount_STorM32::find_CAN(void)
             AP_UAVCAN *ap_uavcan = hal.can_mgr[i]->get_UAVCAN();
             if (ap_uavcan != nullptr) {
                 _ap_uavcan[i] = ap_uavcan;
-                _initialised = true; //at least one CAN interface is initialized
                 _serial_is_initialised = true; //inform the BP_STorM32 class
 
-//XX                ap_uavcan->register_storm32status_listener_to_node(this, STORM32_UAVCAN_NODEID); //register listener
+                ap_uavcan->storm32status_register_listener(this, STORM32_UAVCAN_NODEID); //register listener
             }
         }
     }
 }
 
 
-//this also could be done for CAN, by expecting e.g. NodeInfo to arrive, or to get a response to asking for the version
+//this does it also for CAN, by expecting e.g. NodeInfo to arrive, or to get a response to asking for the version
 // this would need an storm32nodespecificack listener
-void BP_Mount_STorM32::find_gimbal(void)
+// we simply listen to Status messages, easy since we have them already !!
+// this doesn't give us info such as firmware and armed state!!!
+void BP_Mount_STorM32::find_gimbal_uavcan(void)
+{
+    if (_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) {
+        return;
+    }
+
+//XX    uint64_t current_time_ms = AP_HAL::millis64();
+
+    if (_status_updated) { //this is a bit dirty, but tells that a storm32.Status was received
+        for (uint16_t n=0;n<16;n++) versionstr[n] = _serial_in.getversionstr.versionstr[n];
+        versionstr[16] = '\0';
+        for (uint16_t n=0;n<16;n++) boardstr[n] = _serial_in.getversionstr.boardstr[n];
+        boardstr[16] = '\0';
+        _task_counter = TASK_SLOT0;
+        _initialised = true;
+    }
+}
+
+
+void BP_Mount_STorM32::find_gimbal_native(void)
 {
     if (_mount_type != AP_Mount::Mount_Type_STorM32_Native) {
         return;
@@ -540,7 +587,7 @@ size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8
 
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
             if (_ap_uavcan[i] != nullptr) {
-//XX                _ap_uavcan[i]->storm32_nodespecific_send( (uint8_t*)buffer, size, priority );
+                _ap_uavcan[i]->storm32nodespecific_send( (uint8_t*)buffer, size, priority );
             }
         }
 
