@@ -155,8 +155,9 @@ the only thing missing now is UAVCAN for STorM32
   (iv) copy .hpp's from dsdlc_generated to AP_UAVCAN folder
   (v) delete folder modules/uavcan/libuavcan/include/dsdlc_generated
   (vi) px4-clean and px4-vX
-
-
+- storm32.Status added
+- find_gimbal_uavcan() added, looks for storm32.Status, would be better to look for nodeStatus
+- storm32.NodeSpecific added, seems to work on the pix side, but not the gimbal side ????
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??
@@ -170,7 +171,6 @@ hook into GCS_MAVLINK::send_banner() in librariesGCS_MAvlink/GCS_Common.cpp
 
 TODO: do not log packets with error???
 TODO: how to autodetect the presence of a CAN STorM32 gimbal, and/or how to get it's UAVCAN node id
-TODO: find_gimbal() also for CAN
 TODO: the flags of GenericBatteryInfo should be evaluated
 TODO: _rcin_read(), seems to be zero from startup without transmitter, detect failsafe, but how?
 

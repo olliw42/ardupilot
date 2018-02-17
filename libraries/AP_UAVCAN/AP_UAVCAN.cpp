@@ -40,6 +40,7 @@
 #include "GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
 #include "Status.hpp"
+#include "NodeSpecific.hpp"
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -440,6 +441,15 @@ static void (*storm32status_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan
 static uavcan::Publisher<uavcan::equipment::actuator::ArrayCommand>* act_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
 static uavcan::Publisher<uavcan::equipment::esc::RawCommand>* esc_raw[MAX_NUMBER_OF_CAN_DRIVERS];
 
+//OW
+//--- STorM32NodeSpecific ---
+// outgoing message
+static uavcan::Publisher<uavcan::olliw::storm32::NodeSpecific>* storm32out_nodespecific_array[MAX_NUMBER_OF_CAN_DRIVERS];
+
+// further stuff for outgoing messages
+const uavcan::TransferPriority TwoLowerThanHighest(uavcan::TransferPriority::NumericallyMin + 2);
+const uavcan::TransferPriority OneHigherThanDefault((1U << uavcan::TransferPriority::BitLen) / 2 - 1);
+//OWEND
 
 
 //--------------   AP_UAVCAN methods  --------------------
@@ -513,6 +523,10 @@ AP_UAVCAN::AP_UAVCAN() :
         _storm32status.listener_to_id[li] = UINT8_MAX;
         _storm32status.listeners[li] = nullptr;
     }
+
+    // --- STorM32NodeSpecific ---
+    _storm32out.nodespecific_to_send = false;
+    _storm32nodespecific_sem = hal.util->new_semaphore();
 //OWEND
 
     debug_uavcan(2, "AP_UAVCAN constructed\n\r");
@@ -654,6 +668,10 @@ bool AP_UAVCAN::try_init(void)
                             return false;
                         }
                     }
+
+                    storm32out_nodespecific_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::storm32::NodeSpecific>(*node);
+                    storm32out_nodespecific_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+                    storm32out_nodespecific_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower); //this will be overwritten later
 //OWEND
                     /*
                      * Informing other nodes that we're ready to work.
@@ -821,6 +839,10 @@ void AP_UAVCAN::do_cyclic(void)
 
 		rc_out_sem_give();
 	}
+//OW
+    uint64_t current_time_ms = AP_HAL::millis64();
+    storm32_do_cyclic(current_time_ms);
+//OWEND
 }
 
 uavcan::ISystemClock & AP_UAVCAN::get_system_clock()
@@ -1542,7 +1564,6 @@ void AP_UAVCAN::escstatus_update_data(uint8_t id)
     }
 }
 
-
 // --- STorM32Status ---
 // incoming message, by node id
 
@@ -1578,10 +1599,8 @@ uint8_t AP_UAVCAN::storm32status_register_listener(BP_Mount_STorM32* new_listene
     return ret;
 }
 
-
 //    void storm32status_remove_listener(BP_Mount_STorM32* rem_listener);
 //    uint8_t storm32status_find_smallest_free_id();
-
 
 AP_UAVCAN::STorM32Status_Data* AP_UAVCAN::storm32status_getptrto_data(uint8_t id)
 {
@@ -1602,7 +1621,6 @@ AP_UAVCAN::STorM32Status_Data* AP_UAVCAN::storm32status_getptrto_data(uint8_t id
 
     return nullptr;
 }
-
 
 void AP_UAVCAN::storm32status_update_data(uint8_t id)
 {
@@ -1635,6 +1653,69 @@ void AP_UAVCAN::storm32status_update_data(uint8_t id)
     }
 }
 
+//--- STorM32.NodeSpecific ---
+// outgoing message
+
+bool AP_UAVCAN::storm32nodespecific_sem_take()
+{
+    bool sem_ret = _storm32nodespecific_sem->take(10);
+    if (!sem_ret) {
+        debug_uavcan(1, "AP_UAVCAN STorM32 Out semaphore fail\n\r");
+    }
+    return sem_ret;
+}
+
+
+void AP_UAVCAN::storm32nodespecific_sem_give()
+{
+    _storm32nodespecific_sem->give();
+}
+
+
+// I don't like the current procedure in this library
+// the msg is copied into two fields, so, double work for nothing, "performance killer"
+void AP_UAVCAN::storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, uint8_t priority)
+{
+    if( _storm32nodespecific_sem->take(1) ){
+
+        _storm32out.nodespecific_msg.payload.resize(payload_len);
+
+        for(uint8_t i = 0; i < payload_len; i++){
+            _storm32out.nodespecific_msg.payload[i] = payload[i];
+        }
+
+        // BP_STorM32 priority 0 is the lowest priority
+        // from spying the CAN ID in the UAVCAN Gui Tool it seems that this has indeed the intended effect :)
+        if( priority > BP_STorM32::PRIORITY_DEFAULT ){
+          _storm32out.nodespecific_priority = OneHigherThanDefault;
+        } else {
+          _storm32out.nodespecific_priority = uavcan::TransferPriority::MiddleLower;
+        }
+
+        _storm32out.nodespecific_to_send = true;
+        storm32nodespecific_sem_give();
+    }
+}
+
+
+//--- STorM32 do cyclic handler ---
+
+void AP_UAVCAN::storm32_do_cyclic(uint64_t current_time_ms)
+{
+    if (storm32out_nodespecific_array[_uavcan_i] == nullptr) {
+        return;
+    }
+
+    if (_storm32out.nodespecific_to_send && storm32nodespecific_sem_take()) {
+
+        storm32out_nodespecific_array[_uavcan_i]->setPriority(_storm32out.nodespecific_priority);
+        storm32out_nodespecific_array[_uavcan_i]->broadcast(_storm32out.nodespecific_msg);
+
+        _storm32out.nodespecific_to_send = false;
+        storm32nodespecific_sem_give();
+        return; //always send only one message per cycle, the STorM32 mount never will emit that many, so this should be a perfect guard
+    }
+}
 //OWEND
 
 #endif // HAL_WITH_UAVCAN

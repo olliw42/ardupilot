@@ -96,7 +96,8 @@ void BP_Mount_STorM32::update_fast()
     // this is not totally correct, it seems the loop is slower than 100Hz, but just a bit?
     // should I use 9 ms, or better use micros64(), and something like 9900us? (with 10ms it might be easy to miss a 400Hz tick)
     uint64_t current_time_ms = AP_HAL::millis64();
-    if ((current_time_ms - _task_time_last) >= 10) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
+//XX    if ((current_time_ms - _task_time_last) >= 10) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
+    if ((current_time_ms - _task_time_last) >= 100) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
         _task_time_last = current_time_ms;
 
         const uint16_t LIVEDATA_FLAGS = LIVEDATA_STATUS_V2|LIVEDATA_ATTITUDE_RELATIVE;
@@ -104,7 +105,7 @@ void BP_Mount_STorM32::update_fast()
         switch (_task_counter) {
             case TASK_SLOT0:
                 if (_bitmask & SEND_STORM32LINK_V2) {
-                    send_storm32link_v2(_frontend._ahrs); //2.3ms
+//XX                    send_storm32link_v2(_frontend._ahrs); //2.3ms
                 }
 
                 break;
@@ -118,13 +119,13 @@ void BP_Mount_STorM32::update_fast()
                 AP_Notify *notify = AP_Notify::instance();
                 if (notify && (notify->bpactions.camera_trigger_pic)) {
                     notify->bpactions.camera_trigger_pic = false;
-                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
+//XX                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
                 }
 
                 }break;
             case TASK_SLOT2:
                 set_target_angles_bymountmode();
-                send_target_angles(); //1.7 ms or 1.0ms
+//XX                send_target_angles(); //1.7 ms or 1.0ms
 
                 break;
             case TASK_SLOT3:
@@ -586,7 +587,7 @@ size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8
 
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
             if (_ap_uavcan[i] != nullptr) {
-//XX                _ap_uavcan[i]->storm32_nodespecific_send( (uint8_t*)buffer, size, priority );
+                _ap_uavcan[i]->storm32nodespecific_send( (uint8_t*)buffer, size, priority );
             }
         }
 

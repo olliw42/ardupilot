@@ -18,6 +18,7 @@
 //OW
 #include <AP_BattMonitor/AP_BattMonitor_Backend.h>
 #include <AP_Mount/BP_Mount_STorM32.h>
+#include "NodeSpecific.hpp"
 //OWEND
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
@@ -320,6 +321,25 @@ private:
         STorM32Status_Data data[AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER];
     } _storm32status;
 
+
+    // --- STorM32NodeSpecific ---
+    // outgoing message
+public:
+    bool storm32nodespecific_sem_take();
+    void storm32nodespecific_sem_give();
+    void storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, uint8_t priority);
+
+private:
+    AP_HAL::Semaphore* _storm32nodespecific_sem;
+
+    //this is to handle them all
+    struct {
+        uavcan::TransferPriority nodespecific_priority;
+        uavcan::olliw::storm32::NodeSpecific nodespecific_msg;
+        bool nodespecific_to_send;
+    } _storm32out;
+
+    void storm32_do_cyclic(uint64_t current_time_ms);
 //OWEND
 };
 
