@@ -148,6 +148,23 @@ I've tested that it compiles fine for ArduPlane
 the only thing missing now is UAVCAN for STorM32
 => accept this as v006-007
 
+- new STorM32 uavcan dsdl's compiled:
+  (i) copy into modules/uavcan/dsdl/uavcan
+  (ii) delete folder modules/uavcan/libuavcan/include/dsdlc_generated
+  (iii) px4-clean and px4-vX
+  (iv) copy .hpp's from dsdlc_generated to AP_UAVCAN folder
+  (v) delete folder modules/uavcan/libuavcan/include/dsdlc_generated
+  (vi) px4-clean (not required!) and px4-vX
+- storm32.Status added
+- find_gimbal_uavcan() added, looks for storm32.Status, would be better to look for nodeStatus
+- storm32.NodeSpecific added, seems to work on the pix side
+- new olliw.uc4h.Notify uavcan dsdl compiled, and placed in AP_UAVCAN
+- uc4h.Notify stuff added to AP_UAVCAN, not functional yet, needs an AP_Notify_UAVCAN class
+- Uc4HNotifyDevice added, and integrated into Notify as backup, works :)
+- uavcan gimbal disabled in mount
+I'm not totally happy with the behavior of the 3rd LED
+flight-tested several times on 2018-02-18
+=> accept this as v006-008
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??
@@ -161,7 +178,6 @@ hook into GCS_MAVLINK::send_banner() in librariesGCS_MAvlink/GCS_Common.cpp
 
 TODO: do not log packets with error???
 TODO: how to autodetect the presence of a CAN STorM32 gimbal, and/or how to get it's UAVCAN node id
-TODO: find_gimbal() also for CAN
 TODO: the flags of GenericBatteryInfo should be evaluated
 TODO: _rcin_read(), seems to be zero from startup without transmitter, detect failsafe, but how?
 
