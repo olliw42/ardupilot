@@ -157,11 +157,14 @@ the only thing missing now is UAVCAN for STorM32
   (vi) px4-clean (not required!) and px4-vX
 - storm32.Status added
 - find_gimbal_uavcan() added, looks for storm32.Status, would be better to look for nodeStatus
-- storm32.NodeSpecific added, seems to work on the pix side, but not the gimbal side ????
+- storm32.NodeSpecific added, seems to work on the pix side
 - new olliw.uc4h.Notify uavcan dsdl compiled, and placed in AP_UAVCAN
 - uc4h.Notify stuff added to AP_UAVCAN, not functional yet, needs an AP_Notify_UAVCAN class
 - Uc4HNotifyDevice added, and integrated into Notify as backup, works :)
-
+- uavcan gimbal disabled in mount
+I'm not totally happy with the behavior of the 3rd LED
+flight-tested several times on 2018-02-18
+=> accept this as v006-008
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??

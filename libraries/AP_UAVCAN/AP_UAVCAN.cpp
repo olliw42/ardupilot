@@ -1687,6 +1687,7 @@ void AP_UAVCAN::storm32nodespecific_sem_give()
 // the msg is copied into two fields, so, double work for nothing, "performance killer"
 void AP_UAVCAN::storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, uint8_t priority)
 {
+/*//XX
     if( _storm32nodespecific.sem->take(1) ){
 
         _storm32nodespecific.msg.payload.resize(payload_len);
@@ -1706,6 +1707,7 @@ void AP_UAVCAN::storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, 
         _storm32nodespecific.to_send = true;
         storm32nodespecific_sem_give();
     }
+*/
 }
 
 
@@ -1753,6 +1755,7 @@ void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload,
 
 void AP_UAVCAN::storm32_do_cyclic(uint64_t current_time_ms)
 {
+/*//XX
     if (storm32nodespecific_array[_uavcan_i] == nullptr) {
         return;
     }
@@ -1766,6 +1769,7 @@ void AP_UAVCAN::storm32_do_cyclic(uint64_t current_time_ms)
         storm32nodespecific_sem_give();
         return; //always send only one message per cycle, the STorM32 mount never will emit that many, so this should be a perfect guard
     }
+*/
 }
 
 void AP_UAVCAN::uc4h_do_cyclic(uint64_t current_time_ms)
