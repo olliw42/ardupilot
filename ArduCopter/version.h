@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v006-009"
+#define THISFIRMWARE "BetaCopter V3.6-dev v006"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -33,11 +33,13 @@ v0.06:
 APM_Config.h: 1x
 GCS_Mavlink.cpp: 1x
 
-AP_Mount.h: 3x
 AP_Mount.cpp: 2x
+AP_Mount.h: 3x
 AP_SerialManager.cpp/.h: 1x each to adopt SerialProtocol_STorM32_Native = 84
 AP_Camera.cpp: 2x (no change in AP_Camera.h)
-AP_Notify: 1x
+AP_Notify.cpp: 3x
+AP_Notify.h: 1x
+GCS_Common.cpp: 1x
 
 AP_BattMonitor_Backend.h: 1x
 AP_BattMonitor_Params.h: 1x
@@ -45,8 +47,8 @@ AP_BattMonitor.cpp: 2x
 AP_BattMonitor.h: 2x
 AP_BattMonitor_UAVCAN.h: added
 AP_BattMonitor_UAVCAN.cpp: added
-AP_UAVCAN.cpp: 5x
-AP_UAVCAN.h: 4x
+AP_UAVCAN.cpp: 7x
+AP_UAVCAN.h: 3x
 
 
 - AP_Mount_STorM32_UAVCAN renamed to BP_Mount_STorM32
@@ -174,6 +176,9 @@ merge master into betacopter-develop
 - storm32nodespecific_send() priorities settled
 flight test 2018-02-24, flamewheel with uavcan gimbal, passed (needs extra power on CAN 5V!!)
 => accept this as v006-009
+- send firmware version only if length>0, i.e., only for serial Mount, not UAVCAN mount
+
+=> accept this as v006
 
 
 
