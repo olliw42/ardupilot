@@ -36,7 +36,6 @@
 //    they're mainly because I can't add/commit and thus can't checkout to e.g. master
 //the workaround is to "somehow" get the .hpp file generated, without affecting the uavcan submodule in any way,
 //and to place the new .hpp into the AP_UAVCAN library folder
-//XX#include <uavcan/equipment/power/GenericBatteryInfo.hpp>
 #include "GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
 #include "Status.hpp"
@@ -681,7 +680,7 @@ bool AP_UAVCAN::try_init(void)
 
                     uc4hnotify_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::uc4h::Notify>(*node);
                     uc4hnotify_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
-                    uc4hnotify_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower); //this will be overwritten later
+                    uc4hnotify_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower);
 //OWEND
                     /*
                      * Informing other nodes that we're ready to work.
@@ -1389,34 +1388,6 @@ uint8_t AP_UAVCAN::genericbatteryinfo_register_listener(AP_BattMonitor_Backend* 
     return ret;
 }
 
-/* not used
-void AP_UAVCAN::genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener)
-{
-    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-       if (_genericbatteryinfo.listeners[li] == rem_listener) {
-           _genericbatteryinfo.listeners[li] = nullptr;
-           if (_genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[li]] > 0) {
-               _genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[li]]--;
-           }
-           _genericbatteryinfo.listener_to_id[li] = UINT8_MAX;
-       }
-    }
-} */
-
-/* not used
-uint8_t AP_UAVCAN::genericbatteryinfo_find_smallest_free_id()
-{
-    uint8_t ret = UINT8_MAX;
-
-    for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
-        if (_genericbatteryinfo.id_taken[i] == 0) {
-            ret = MIN(ret, _genericbatteryinfo.id[i]);
-        }
-    }
-
-    return ret;
-} */
-
 AP_UAVCAN::GenericBatteryInfo_Data* AP_UAVCAN::genericbatteryinfo_getptrto_data(uint8_t id)
 {
     // check if id is already in list, and if it is take it
@@ -1482,34 +1453,6 @@ uint8_t AP_UAVCAN::escstatus_register_listener_to_id(AP_BattMonitor_Backend* new
             ret = i + 1;
             debug_uavcan(2, "reg_ESCSTATUS place:%d, chan: %d\n\r", sel_place, i);
             break;
-        }
-    }
-
-    return ret;
-} */
-
-/* not used
-void AP_UAVCAN::escstatus_remove_listener(AP_BattMonitor_Backend* rem_listener)
-{
-    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-       if (_escstatus.listeners[li] == rem_listener) {
-           _escstatus.listeners[li] = nullptr;
-           if (_escstatus.id_taken[_escstatus.listener_to_id[li]] > 0) {
-               _escstatus.id_taken[_escstatus.listener_to_id[li]]--;
-           }
-           _escstatus.listener_to_id[li] = UINT8_MAX;
-       }
-    }
-} */
-
-/* not used
-uint8_t AP_UAVCAN::escstatus_find_smallest_free_id()
-{
-    uint8_t ret = UINT8_MAX;
-
-    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
-        if (_escstatus.id_taken[i] == 0) {
-            ret = MIN(ret, _escstatus.id[i]);
         }
     }
 
@@ -1610,9 +1553,6 @@ uint8_t AP_UAVCAN::storm32status_register_listener(BP_Mount_STorM32* new_listene
     return ret;
 }
 
-//    void storm32status_remove_listener(BP_Mount_STorM32* rem_listener);
-//    uint8_t storm32status_find_smallest_free_id();
-
 AP_UAVCAN::STorM32Status_Data* AP_UAVCAN::storm32status_getptrto_data(uint8_t id)
 {
     // check if id is already in list, and if it is take it
@@ -1687,7 +1627,6 @@ void AP_UAVCAN::storm32nodespecific_sem_give()
 // the msg is copied into two fields, so, double work for nothing, "performance killer"
 void AP_UAVCAN::storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, uint8_t priority)
 {
-/*//XX
     if( _storm32nodespecific.sem->take(1) ){
 
         _storm32nodespecific.msg.payload.resize(payload_len);
@@ -1696,18 +1635,23 @@ void AP_UAVCAN::storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, 
             _storm32nodespecific.msg.payload[i] = payload[i];
         }
 
-        // BP_STorM32 priority 0 is the lowest priority
+        // BP_STorM32 priorities are PRIORITY_DEFAULT = 0, PRIORITY_HIGHER = 1, PRIORITY_HIGHEST = 2
         // from spying the CAN ID in the UAVCAN Gui Tool it seems that this has indeed the intended effect :)
-        if( priority > BP_STorM32::PRIORITY_DEFAULT ){
+        if( priority == BP_STorM32::PRIORITY_HIGHEST ){
+          //ensure that this is lower than what is used for escRaw !!! which uses OneLowerThanHighest
+          _storm32nodespecific.priority = TwoLowerThanHighest;
+        } else
+        if( priority == BP_STorM32::PRIORITY_HIGHER ){
+          // give it a bit of an advantage over default
           _storm32nodespecific.priority = OneHigherThanDefault;
         } else {
+          // that's fairly low, shouldn't block anything
           _storm32nodespecific.priority = uavcan::TransferPriority::MiddleLower;
         }
 
         _storm32nodespecific.to_send = true;
         storm32nodespecific_sem_give();
     }
-*/
 }
 
 
@@ -1755,7 +1699,6 @@ void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload,
 
 void AP_UAVCAN::storm32_do_cyclic(uint64_t current_time_ms)
 {
-/*//XX
     if (storm32nodespecific_array[_uavcan_i] == nullptr) {
         return;
     }
@@ -1769,7 +1712,6 @@ void AP_UAVCAN::storm32_do_cyclic(uint64_t current_time_ms)
         storm32nodespecific_sem_give();
         return; //always send only one message per cycle, the STorM32 mount never will emit that many, so this should be a perfect guard
     }
-*/
 }
 
 void AP_UAVCAN::uc4h_do_cyclic(uint64_t current_time_ms)

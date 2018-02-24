@@ -21,7 +21,6 @@
 
 
 //XX finite find_gimbal time DISABLED!!!!
-//XX CAN gimbal DISABLED!!!!
 
 /*
 PAINPOINT:
@@ -165,6 +164,16 @@ the only thing missing now is UAVCAN for STorM32
 I'm not totally happy with the behavior of the 3rd LED
 flight-tested several times on 2018-02-18
 => accept this as v006-008
+
+master rebased, 2018-02-21
+master-copy compiled, seems to work for v4, so accept
+bc-dev-master-merge compiled, seems to work for v4, so accept
+merge master into betacopter-develop
+- uavcan gimbal enabled
+- some improvements in the find_XX() functions
+- storm32nodespecific_send() priorities settled
+
+
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??

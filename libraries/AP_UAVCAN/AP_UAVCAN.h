@@ -249,8 +249,6 @@ public:
     };
 
     uint8_t genericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
-    //void genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
-    //uint8_t genericbatteryinfo_find_smallest_free_id();
     GenericBatteryInfo_Data* genericbatteryinfo_getptrto_data(uint8_t id);
     void genericbatteryinfo_update_data(uint8_t id);
 
@@ -280,8 +278,6 @@ public:
         uint8_t power_rating_pct;
     };
     //uint8_t escstatus_register_listener(AP_EscMonitor_Backend* new_listener, uint8_t id);
-    //void escstatus_remove_listener(AP_EscMonitor_Backend* rem_listener);
-    //uint8_t escstatus_find_smallest_free_id();
     EscStatus_Data* escstatus_getptrto_data(uint8_t id);
     void escstatus_update_data(uint8_t id);
 
@@ -308,8 +304,6 @@ public:
         bool angular_velocity_available; //tells if velocity has been sent
     };
     uint8_t storm32status_register_listener(BP_Mount_STorM32* new_listener, uint8_t id);
-    //void storm32status_remove_listener(BP_Mount_STorM32* rem_listener);
-    //uint8_t storm32status_find_smallest_free_nodeid();
     STorM32Status_Data* storm32status_getptrto_data(uint8_t id);
     void storm32status_update_data(uint8_t id);
 

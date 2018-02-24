@@ -45,8 +45,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
     //from instance we can determine its type, we keep it here since that's easier/shorter
     _mount_type = _frontend.get_mount_type(_instance);
     // it should never happen that it's not one of the two, but let's enforce it, to not depend on the outside
-//XX    if ((_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) && (_mount_type != AP_Mount::Mount_Type_STorM32_Native)) {
-    if (_mount_type != AP_Mount::Mount_Type_STorM32_Native) {
+    if ((_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) && (_mount_type != AP_Mount::Mount_Type_STorM32_Native)) {
         _mount_type = AP_Mount::Mount_Type_None;
     }
 
@@ -63,6 +62,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         // I don't know if hal.can_mgr and get_UAVCAN() is fully done at this point already
         // so we don't do anything here, but do it in the update loop
+        _serial_is_initialised = false; //tell the BP_STorM32 class, should not be needed, just to play it safe
     }
 
     set_mode((enum MAV_MOUNT_MODE)_state._default_mode.get()); //set mode to default value set by user via parameter
@@ -419,11 +419,7 @@ void BP_Mount_STorM32::handle_storm32status_uavcanmsg_quaternion_frame0(float x,
 
 void BP_Mount_STorM32::handle_storm32status_uavcanmsg_angles_rad(float roll_rad, float pitch_rad, float yaw_rad)
 {
-    _status.pitch_deg = ToDeg(pitch_rad);
-    _status.roll_deg = ToDeg(roll_rad);
-    _status.yaw_deg = ToDeg(yaw_rad);
-
-    _status_updated = true;
+    set_status_angles_deg(ToDeg(pitch_rad), ToDeg(roll_rad), ToDeg(yaw_rad));
 }
 
 
@@ -434,6 +430,10 @@ void BP_Mount_STorM32::handle_storm32status_uavcanmsg_angles_rad(float roll_rad,
 void BP_Mount_STorM32::find_CAN(void)
 {
     if (_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) {
+        return;
+    }
+
+    if (_serial_is_initialised) { //try only if it hasn't yet been registered
         return;
     }
 
@@ -454,7 +454,7 @@ void BP_Mount_STorM32::find_CAN(void)
                 _ap_uavcan[i] = ap_uavcan;
                 _serial_is_initialised = true; //inform the BP_STorM32 class
 
-//XX                ap_uavcan->storm32status_register_listener(this, STORM32_UAVCAN_NODEID); //register listener
+                ap_uavcan->storm32status_register_listener(this, STORM32_UAVCAN_NODEID); //register listener
             }
         }
     }
@@ -471,12 +471,27 @@ void BP_Mount_STorM32::find_gimbal_uavcan(void)
         return;
     }
 
-//XX    uint64_t current_time_ms = AP_HAL::millis64();
+    if (!_serial_is_initialised) {
+        return;
+    }
+
+#if FIND_GIMBAL_MAX_SEARCH_TIME_MS
+    uint64_t current_time_ms = AP_HAL::millis64();
+
+    if (current_time_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
+        _initialised = false; //should be already false, but it can't hurt to ensure that
+       _serial_is_initialised = false; //switch off BP_STorM32
+       _mount_type = AP_Mount::Mount_Type_None; //switch off finally, also makes find_gimbal() to stop searching
+        return;
+    }
+#endif
 
     if (_status_updated) { //this is a bit dirty, but tells that a storm32.Status was received
-        for (uint16_t n=0;n<16;n++) versionstr[n] = _serial_in.getversionstr.versionstr[n];
+        //sadly, there seems not yet to be a general mechanism to build a table of available nodes, with their NodeInfo
+        // so
+        for (uint16_t n=0;n<16;n++) versionstr[n] = '\0';
         versionstr[16] = '\0';
-        for (uint16_t n=0;n<16;n++) boardstr[n] = _serial_in.getversionstr.boardstr[n];
+        for (uint16_t n=0;n<16;n++) boardstr[n] = '\0';
         boardstr[16] = '\0';
         _task_counter = TASK_SLOT0;
         _initialised = true;
@@ -487,6 +502,10 @@ void BP_Mount_STorM32::find_gimbal_uavcan(void)
 void BP_Mount_STorM32::find_gimbal_native(void)
 {
     if (_mount_type != AP_Mount::Mount_Type_STorM32_Native) {
+        return;
+    }
+
+    if (!_serial_is_initialised) {
         return;
     }
 
@@ -533,12 +552,11 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
 {
     // if no gimbal was found yet, we skip
     //  if the gcs_send_banner flag is set, it will not be cleared, so that the banner is send in any case at some later point
-    if( !_initialised ) {
+    if (!_initialised) {
         return;
     }
 
     AP_Notify *notify = AP_Notify::instance();
-
     if (!notify) { //since AP_Notify is instantiated before mount, this shouldn't happen, right?
         return;
     }
@@ -587,7 +605,7 @@ size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8
 
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
             if (_ap_uavcan[i] != nullptr) {
-//XX                _ap_uavcan[i]->storm32nodespecific_send( (uint8_t*)buffer, size, priority );
+                _ap_uavcan[i]->storm32nodespecific_send( (uint8_t*)buffer, size, priority );
             }
         }
 
