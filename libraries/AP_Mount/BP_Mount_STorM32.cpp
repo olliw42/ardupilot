@@ -488,7 +488,7 @@ void BP_Mount_STorM32::find_gimbal_uavcan(void)
 
     if (_status_updated) { //this is a bit dirty, but tells that a storm32.Status was received
         //sadly, there seems not yet to be a general mechanism to build a table of available nodes, with their NodeInfo
-        // so
+        // so, we do not know the firmware version, or state
         for (uint16_t n=0;n<16;n++) versionstr[n] = '\0';
         versionstr[16] = '\0';
         for (uint16_t n=0;n<16;n++) boardstr[n] = '\0';
@@ -564,9 +564,11 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
     if (notify->bpactions.gcs_send_banner) {
         notify->bpactions.gcs_send_banner = false;
         gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
-        char s[64];
-        strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );
-        gcs().send_text(MAV_SEVERITY_INFO, s);
+        if (strlen(versionstr)) {
+            char s[64];
+            strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );
+            gcs().send_text(MAV_SEVERITY_INFO, s);
+        }
         _send_armeddisarmed = true; //also send gimbal state
     }
 
