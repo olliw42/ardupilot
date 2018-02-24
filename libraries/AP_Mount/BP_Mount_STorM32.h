@@ -18,7 +18,7 @@
 #include "BP_STorM32.h"
 
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //90000 //the startup has become quite slow, giving it plenty of time helps with testing, set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //the startup has become quite slow, giving it plenty of time helps with testing, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 

@@ -20,8 +20,6 @@
 #define FW_TYPE FIRMWARE_VERSION_TYPE_DEV
 
 
-//XX finite find_gimbal time DISABLED!!!!
-
 /*
 PAINPOINT:
 in order for HAL_MINIMIZE_FEATURES to be respected,
