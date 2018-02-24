@@ -172,7 +172,8 @@ merge master into betacopter-develop
 - uavcan gimbal enabled
 - some improvements in the find_XX() functions
 - storm32nodespecific_send() priorities settled
-
+flight test 2018-02-24, flamewheel with uavcan gimbal, passed (needs extra power on CAN 5V!!)
+=> accept this as v006-009
 
 
 
