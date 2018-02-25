@@ -177,6 +177,9 @@ flight test 2018-02-24, flamewheel with uavcan gimbal, passed (needs extra power
 - send firmware version only if length>0, i.e., only for serial Mount, not UAVCAN mount
 
 => accept this as v006
+flight-tested 2018-02-24, v2, flame wheel with uavcan gimbal
+flight-tested 2018-02-24, v3, solo, without gimbal, with uart gimbal
+=> release, 2018.02.25
 
 
 
