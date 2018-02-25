@@ -33,6 +33,10 @@
 #include "DiscoLED.h"
 #include "Led_Sysfs.h"
 #include <stdio.h>
+//OW
+#include "Uc4hNotifyDevice.h"
+//OWEND
+
 
 extern const AP_HAL::HAL& hal;
 
@@ -139,6 +143,10 @@ void AP_Notify::add_backends(void)
     ADD_BACKEND(new Display());
   #endif
 
+//OW
+    ADD_BACKEND(new Uc4hNotifyDevice());
+//OWEND
+
 // Notify devices for ChibiOS boards
 #elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
     ADD_BACKEND(new ToneAlarm_ChibiOS());
@@ -220,7 +228,16 @@ void AP_Notify::add_backends(void)
     ADD_BACKEND(new ToneAlarm_Linux());
   #endif
 
+#elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#ifdef HAL_HAVE_PIXRACER_LED
+    ADD_BACKEND(new PixRacerLED());
 #else
+    ADD_BACKEND(new AP_BoardLED());
+#endif
+    ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_EXTERNAL));
+    ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_INTERNAL));
+    ADD_BACKEND(new Display());
+#lese
     ADD_BACKEND(new AP_BoardLED());
     ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_EXTERNAL));
     ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_INTERNAL));

@@ -1,0 +1,13 @@
+#
+# Gimbal Status 
+#
+
+uint8 mode                    
+
+uint7 frame                     # the frame may be different from the control frame !!!
+
+bool anglequaternion_tag        #that's instead of using a union, which is a bit clumsy
+float32[4] orientation          #anglequaternion_tag = 0: roll, pitch, yaw in rad, 1: orientation quaternion in xyzw
+
+float32[<=3] angular_velocity   #roll, pitch, yaw rates in rad/s, can be NAN if unknown
+

@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v006-007"
+#define THISFIRMWARE "BetaCopter V3.6-dev v006"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -19,9 +19,6 @@
 #define FW_PATCH 0
 #define FW_TYPE FIRMWARE_VERSION_TYPE_DEV
 
-
-//XX finite find_gimbal time DISABLED!!!!
-//XX CAN gimbal DISABLED!!!!
 
 /*
 PAINPOINT:
@@ -34,11 +31,13 @@ v0.06:
 APM_Config.h: 1x
 GCS_Mavlink.cpp: 1x
 
-AP_Mount.h: 3x
 AP_Mount.cpp: 2x
+AP_Mount.h: 3x
 AP_SerialManager.cpp/.h: 1x each to adopt SerialProtocol_STorM32_Native = 84
 AP_Camera.cpp: 2x (no change in AP_Camera.h)
-AP_Notify: 1x
+AP_Notify.cpp: 3x
+AP_Notify.h: 1x
+GCS_Common.cpp: 1x
 
 AP_BattMonitor_Backend.h: 1x
 AP_BattMonitor_Params.h: 1x
@@ -46,8 +45,8 @@ AP_BattMonitor.cpp: 2x
 AP_BattMonitor.h: 2x
 AP_BattMonitor_UAVCAN.h: added
 AP_BattMonitor_UAVCAN.cpp: added
-AP_UAVCAN.cpp: 5x
-AP_UAVCAN.h: 4x
+AP_UAVCAN.cpp: 7x
+AP_UAVCAN.h: 3x
 
 
 - AP_Mount_STorM32_UAVCAN renamed to BP_Mount_STorM32
@@ -148,6 +147,40 @@ I've tested that it compiles fine for ArduPlane
 the only thing missing now is UAVCAN for STorM32
 => accept this as v006-007
 
+- new STorM32 uavcan dsdl's compiled:
+  (i) copy into modules/uavcan/dsdl/uavcan
+  (ii) delete folder modules/uavcan/libuavcan/include/dsdlc_generated
+  (iii) px4-clean and px4-vX
+  (iv) copy .hpp's from dsdlc_generated to AP_UAVCAN folder
+  (v) delete folder modules/uavcan/libuavcan/include/dsdlc_generated
+  (vi) px4-clean (not required!) and px4-vX
+- storm32.Status added
+- find_gimbal_uavcan() added, looks for storm32.Status, would be better to look for nodeStatus
+- storm32.NodeSpecific added, seems to work on the pix side
+- new olliw.uc4h.Notify uavcan dsdl compiled, and placed in AP_UAVCAN
+- uc4h.Notify stuff added to AP_UAVCAN, not functional yet, needs an AP_Notify_UAVCAN class
+- Uc4HNotifyDevice added, and integrated into Notify as backup, works :)
+- uavcan gimbal disabled in mount
+I'm not totally happy with the behavior of the 3rd LED
+flight-tested several times on 2018-02-18
+=> accept this as v006-008
+
+master rebased, 2018-02-21
+master-copy compiled, seems to work for v4, so accept
+bc-dev-master-merge compiled, seems to work for v4, so accept
+merge master into betacopter-develop
+- uavcan gimbal enabled
+- some improvements in the find_XX() functions
+- storm32nodespecific_send() priorities settled
+flight test 2018-02-24, flamewheel with uavcan gimbal, passed (needs extra power on CAN 5V!!)
+=> accept this as v006-009
+- send firmware version only if length>0, i.e., only for serial Mount, not UAVCAN mount
+
+=> accept this as v006
+flight-tested 2018-02-24, v2, flame wheel with uavcan gimbal
+flight-tested 2018-02-24, v3, solo, without gimbal, with uart gimbal
+=> release, 2018.02.25
+
 
 
 ap.rc_receiver_present for a better "failsafe" handling ??
@@ -161,7 +194,6 @@ hook into GCS_MAVLINK::send_banner() in librariesGCS_MAvlink/GCS_Common.cpp
 
 TODO: do not log packets with error???
 TODO: how to autodetect the presence of a CAN STorM32 gimbal, and/or how to get it's UAVCAN node id
-TODO: find_gimbal() also for CAN
 TODO: the flags of GenericBatteryInfo should be evaluated
 TODO: _rcin_read(), seems to be zero from startup without transmitter, detect failsafe, but how?
 

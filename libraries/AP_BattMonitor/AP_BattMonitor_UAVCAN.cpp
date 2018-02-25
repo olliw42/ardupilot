@@ -38,7 +38,7 @@ void AP_BattMonitor_UAVCAN::init()
                     switch (_params.type()) {
 //OW
                         case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_GenericBatteryInfo:
-                            if (uavcan->genericbatteryinfo_register_listener_to_id(this, _params._serial_number)) {
+                            if (uavcan->genericbatteryinfo_register_listener(this, _params._serial_number)) {
                                 debug_bm_uavcan(2, "UAVCAN BattMonitor[?] GenericBatteryInfo registered id: %d\n\r", _params._serial_number);
                             }
                             break;

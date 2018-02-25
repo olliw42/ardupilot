@@ -18,7 +18,7 @@
 #include "BP_STorM32.h"
 
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //90000 //the startup has become quite slow, giving it plenty of time helps with testing, set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //the startup has become quite slow, giving it plenty of time helps with testing, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
@@ -48,7 +48,9 @@ public:
     virtual void status_msg(mavlink_channel_t chan);
 
     // interface to AP_UAVCAN, receive message
-    void handle_storm32status_msg(float pitch_deg, float roll_deg, float yaw_deg);
+    void handle_storm32status_uavcanmsg_mode(uint8_t mode);
+    void handle_storm32status_uavcanmsg_quaternion_frame0(float x, float y, float z, float w);
+    void handle_storm32status_uavcanmsg_angles_rad(float roll_rad, float pitch_rad, float yaw_rad);
 
     // every mount should have this !!!
     virtual bool is_armed(){ return _armed; }
@@ -90,7 +92,8 @@ private:
 
     // discovery functions
     void find_CAN(void);
-    void find_gimbal(void);
+    void find_gimbal_uavcan(void);
+    void find_gimbal_native(void);
 
     // send info to gcs functions
     bool _send_armeddisarmed;       // event: true when a armed/disarmed message should be send out
@@ -113,6 +116,7 @@ private:
     } _status;
     bool _status_updated;
 
+    void set_status_angles_deg(float pitch_deg, float roll_deg, float yaw_deg);
     void get_status_angles_deg(float* pitch_deg, float* roll_deg, float* yaw_deg);
 
     // target out
