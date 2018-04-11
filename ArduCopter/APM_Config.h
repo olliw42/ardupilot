@@ -37,6 +37,12 @@
     #define AC_RALLY                DISABLED
     #define AC_TERRAIN              DISABLED
     #define AC_AVOID_ENABLED        DISABLED
+
+//#define AUTOTUNE_ENABLED      DISABLED
+//#define AC_FENCE              DISABLED
+//#define FRSKY_TELEM_ENABLED   DISABLED
+//#define SPRAYER               DISABLED
+//#define WINCH_ENABLED         DISABLED
 #endif
 //OWEND
 

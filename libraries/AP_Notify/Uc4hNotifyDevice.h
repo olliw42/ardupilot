@@ -77,6 +77,7 @@ private:
     AP_UAVCAN *_ap_uavcan[MAX_NUMBER_OF_CAN_DRIVERS];
     bool _healthy;
     uint64_t _task_time_last; //to slow down
+    bool _flags_updated;
     bool _3rgbleds_updated;
     bool _oreoleds_updated;
     uint64_t _sync_time_last;
@@ -87,7 +88,16 @@ private:
 
     void update_slow(void);
 
+    const uint8_t FLAGS_SIZE = sizeof(struct AP_Notify::notify_flags_and_values_type)+sizeof(struct AP_Notify::notify_events_type);
+    const uint8_t RGB3LEDS_SIZE = 9;
+    const uint8_t OREO_SIZE = 4*6;
+    const uint8_t SYNC_SIZE = sizeof(uint64_t);
+
     struct {
+        struct {
+            struct AP_Notify::notify_flags_and_values_type flags;
+            struct AP_Notify::notify_events_type events;
+        } flags;
         struct {
             uint8_t rgb[3][3]; //3x rgb
         } rgb3leds;
@@ -98,6 +108,8 @@ private:
             uint64_t current_time_ms;
         } sync;
     } _notify_message_data;
+
+    void update_flags(void);
 
     void set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b);
     void update_3rgbleds(void);
