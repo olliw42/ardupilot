@@ -40,36 +40,9 @@ public:
     enum UC4HNOTIFYTYPEENUM {
         UC4HNOTIFYTYPE_FLAGS = 0,
         UC4HNOTIFYTYPE_RGBLEDS, //subtype is the number of leds
-        UC4HNOTIFYTYPE_OREOLEDS, //subtype is the number of legs (not number of motors)
+
+        UC4HNOTIFYTYPE_TEXT = 254,
         UC4HNOTIFYTYPE_SYNC = 255, //send ArduPilots current us time, to allow the nodes to synchronize
-    };
-
-    enum UC4HOREOLOEDTYPEENUM {
-        UC4HOREOLOEDTYPE_CLEAR = 0,
-        UC4HOREOLOEDTYPE_SOLID,
-        UC4HOREOLOEDTYPE_STROBE_INPHASE,
-        UC4HOREOLOEDTYPE_STROBE_OUTOFPHASE,
-        UC4HOREOLOEDTYPE_STROBE, //phase determined by phase
-    };
-
-    //from here: https://github.com/rmackay9/oreo-led
-    // I suspect that the OreoLED period is in ms, which means that
-    // PERIOD_SLOW = 800 ms
-    // PERIOD_FAST = 500 ms
-    // PERIOD_SUPER = 150 ms
-    //since the UC4H Oreo lead period is in units of 25ms, we get
-    enum UC4HOREOLOEDPERIODENUM {
-        UC4HOREOLOEDPERIOD_NONE = 0,  //is equal to SOLID
-        UC4HOREOLOEDPERIOD_SLOW = 32, // 800 ms / 25 ms = 32
-        UC4HOREOLOEDPERIOD_FAST = 20, // 500 ms / 25 ms = 20
-        UC4HOREOLOEDPERIOD_SUPER = 6, // 150 ms / 25 ms =  6
-    };
-
-    enum UC4HQUADPOSITIONENUM {
-        UC4HQUAD_FRONTLEFT  = 2, //match to the esc indices of the respective arm
-        UC4HQUAD_FRONTRIGHT = 0,
-        UC4HQUAD_BACKLEFT   = 1,
-        UC4HQUAD_BACKRIGHT  = 3,
     };
 
 private:
@@ -79,7 +52,7 @@ private:
     uint64_t _task_time_last; //to slow down
     bool _flags_updated;
     bool _3rgbleds_updated;
-    bool _oreoleds_updated;
+    bool _text_updated;
     uint64_t _sync_time_last;
     bool _sync_updated;
 
@@ -88,35 +61,26 @@ private:
 
     void update_slow(void);
 
-    const uint8_t FLAGS_SIZE = sizeof(struct AP_Notify::notify_flags_and_values_type)+sizeof(struct AP_Notify::notify_events_type);
-    const uint8_t RGB3LEDS_SIZE = 9;
-    const uint8_t OREO_SIZE = 4*6;
-    const uint8_t SYNC_SIZE = sizeof(uint64_t);
+    struct __attribute__((packed)) {
+        uint8_t number_of_arms;
+        struct AP_Notify::notify_flags_and_values_type flags;
+        struct AP_Notify::notify_events_type events;
+    } _flags_data;
 
     struct {
-        struct {
-            struct AP_Notify::notify_flags_and_values_type flags;
-            struct AP_Notify::notify_events_type events;
-        } flags;
-        struct {
-            uint8_t rgb[3][3]; //3x rgb
-        } rgb3leds;
-        struct {
-            uint8_t oreo[4][6]; //4x type, period in 25ms, phase, rgb //XX only QUAD supported currently
-        } oreoleds;
-        struct {
-            uint64_t current_time_ms;
-        } sync;
-    } _notify_message_data;
+        uint8_t rgb[3][3]; //3x rgb
+    } _rgb3leds_data;
+
+    struct {
+        uint64_t current_time_ms;
+    } _sync_data;
+
+    char _text_data[NOTIFY_TEXT_BUFFER_SIZE];
 
     void update_flags(void);
 
     void set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b);
     void update_3rgbleds(void);
-
-    void set_oreoled(uint8_t lednr, uint8_t type, uint8_t period, uint8_t r, uint8_t g, uint8_t b);
-    void set_oreoled(uint8_t lednr, uint8_t type, uint8_t period, uint8_t phase, uint8_t r, uint8_t g, uint8_t b);
-    void update_oreoleds(void);
 
     void update_sync(void);
 

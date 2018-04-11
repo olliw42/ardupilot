@@ -28,8 +28,9 @@ extern const AP_HAL::HAL& hal;
 Uc4hNotifyDevice::Uc4hNotifyDevice():
     _healthy(false),
     _task_time_last(0),
+    _flags_updated(false),
     _3rgbleds_updated(false),
-    _oreoleds_updated(false),
+    _text_updated(false),
     _sync_time_last(0),
     _sync_updated(false)
 {
@@ -37,11 +38,7 @@ Uc4hNotifyDevice::Uc4hNotifyDevice():
         _ap_uavcan[i] = nullptr;
     }
 
-    memset(&_notify_message_data, 0, sizeof(_notify_message_data));
-
-    //clear the oreoleds
-    set_oreoled(0, UC4HOREOLOEDTYPE_CLEAR, 0, 0,0,0);
-    _oreoleds_updated = true;
+//    memset(&_notify_message_data, 0, sizeof(_notify_message_data));
 }    
 
 
@@ -105,7 +102,7 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
             if (_ap_uavcan[i] != nullptr) {
 
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_SYNC, 0, (uint8_t*)(&_notify_message_data.sync), SYNC_SIZE );
+                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_SYNC, 0, (uint8_t*)(&_sync_data), sizeof(_sync_data) );
 
             }
         }
@@ -118,7 +115,7 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
             if (_ap_uavcan[i] != nullptr) {
 
                 //subtype is the version of the FLAGS field
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_FLAGS, 0, (uint8_t*)(&_notify_message_data.flags), FLAGS_SIZE );
+                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_FLAGS, 0, (uint8_t*)(&_flags_data), sizeof(_flags_data) );
 
             }
         }
@@ -131,24 +128,11 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
             if (_ap_uavcan[i] != nullptr) {
 
                 //subtype is the number of leds
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_RGBLEDS, 3, (uint8_t*)(&_notify_message_data.rgb3leds), RGB3LEDS_SIZE );
+                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_RGBLEDS, 3, (uint8_t*)(&_rgb3leds_data), sizeof(_rgb3leds_data) );
 
             }
         }
 
-    } else
-    if (_oreoleds_updated) {
-        _oreoleds_updated = false;
-/*
-        for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-            if (_ap_uavcan[i] != nullptr) {
-
-                //subtype is the number of arms //XX only QUAD supported currently
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_OREOLEDS, 4, (uint8_t*)(&_notify_message_data.oreoleds), OREO_SIZE );
-
-            }
-        }
-*/
     }
 }
 
@@ -170,21 +154,21 @@ void Uc4hNotifyDevice::update_slow(void)
 
     update_flags();
     update_3rgbleds();
-    update_oreoleds();
 }
 
 
 void Uc4hNotifyDevice::update_sync(void)
 {
-    _notify_message_data.sync.current_time_ms = AP_HAL::millis64();
+    _sync_data.current_time_ms = AP_HAL::millis64();
     _sync_updated = true;
 }
 
 
 void Uc4hNotifyDevice::update_flags(void)
 {
-    _notify_message_data.flags.flags = AP_Notify::flags;
-    _notify_message_data.flags.events = AP_Notify::events;
+    _flags_data.number_of_arms = 4; //ONLY QUAD SUPPORTED currently
+    _flags_data.flags = AP_Notify::flags;
+    _flags_data.events = AP_Notify::events;
     _flags_updated = true;
 }
 
@@ -193,9 +177,9 @@ void Uc4hNotifyDevice::update_flags(void)
 void Uc4hNotifyDevice::set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b)
 {
     //no checks, it's the user's responsibility !
-    _notify_message_data.rgb3leds.rgb[lednr][0] = r;
-    _notify_message_data.rgb3leds.rgb[lednr][1] = g;
-    _notify_message_data.rgb3leds.rgb[lednr][2] = b;
+    _rgb3leds_data.rgb[lednr][0] = r;
+    _rgb3leds_data.rgb[lednr][1] = g;
+    _rgb3leds_data.rgb[lednr][2] = b;
 }
 
 
@@ -249,147 +233,6 @@ void Uc4hNotifyDevice::update_3rgbleds(void)
 
     _3rgbleds_updated = true;
 }
-
-
-//helper
-void Uc4hNotifyDevice::set_oreoled(uint8_t lednr, uint8_t type, uint8_t period, uint8_t r, uint8_t g, uint8_t b)
-{
-    set_oreoled(lednr, type, period, 0, r, g, b);
-}
-
-
-void Uc4hNotifyDevice::set_oreoled(uint8_t lednr, uint8_t type, uint8_t period, uint8_t phase, uint8_t r, uint8_t g, uint8_t b)
-{
-    //no checks, it's the user's responsibility !
-    _notify_message_data.oreoleds.oreo[lednr][0] = type;
-    _notify_message_data.oreoleds.oreo[lednr][1] = period;
-    _notify_message_data.oreoleds.oreo[lednr][2] = phase;
-    _notify_message_data.oreoleds.oreo[lednr][3] = r;
-    _notify_message_data.oreoleds.oreo[lednr][4] = g;
-    _notify_message_data.oreoleds.oreo[lednr][5] = b;
-}
-
-
-void Uc4hNotifyDevice::update_oreoleds(void)
-{
-// was just for test
-/*
-_led_task_count++;
-
-uint16_t b = _led_task_count % 4; //0,1,2,3
-
-uint16_t i = (b) % 4;
-set_oreoled(i,  UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, 255, 0, 0);
-i = (b+1) % 4;
-set_oreoled(i, UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, 0, 255, 0);
-i = (b+2) % 4;
-set_oreoled(i,   UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, 0, 0, 255);
-i = (b+3) % 4;
-set_oreoled(i,  UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, 128, 128, 128);
-*/
-
-//mimic behavior of OreoLED_PX4
-//    if (mode_firmware_update()) { return; } // don't go any further if the Pixhawk is in firmware update
-//    if (mode_init()) { return; }            // don't go any further if the Pixhawk is initializing
-//    if (mode_failsafe_radio()) { return; }  // don't go any further if the Pixhawk is is in radio failsafe
-//    set_standard_colors();                  // set the rear LED standard colors as described above
-//    if (mode_failsafe_batt()) { return; }   // stop here if the battery is low.
-//    if (_pattern_override) { return; }      // stop here if in mavlink LED control override.
-//    if (mode_auto_flight()) { return; }     // stop here if in an autopilot mode.
-//    mode_pilot_flight();                    // stop here if in an pilot controlled mode.
-
-    #define RED     255, 0, 0
-    #define BLUE    0, 0, 255
-    #define GREEN   0, 255, 0
-
-    // Procedure for when Pixhawk is in FW update / bootloader
-    // Makes all LEDs go into color cycle mode
-    if (AP_Notify::flags.firmware_update) { //XX ignore that case
-        //set_macro(OREOLED_INSTANCE_ALL, OREOLED_PARAM_MACRO_COLOUR_CYCLE);
-        //return;
-    }
-
-    // Makes all LEDs rapidly strobe blue while gyros initialize.
-    if (AP_Notify::flags.initialising) {
-        set_oreoled(UC4HQUAD_FRONTLEFT,  UC4HOREOLOEDTYPE_STROBE_INPHASE, UC4HOREOLOEDPERIOD_SUPER, BLUE); //0, 0, 255);
-        set_oreoled(UC4HQUAD_FRONTRIGHT, UC4HOREOLOEDTYPE_STROBE_INPHASE, UC4HOREOLOEDPERIOD_SUPER, BLUE); //0, 0, 255);
-        set_oreoled(UC4HQUAD_BACKLEFT,   UC4HOREOLOEDTYPE_STROBE_INPHASE, UC4HOREOLOEDPERIOD_SUPER, BLUE); //0, 0, 255);
-        set_oreoled(UC4HQUAD_BACKRIGHT,  UC4HOREOLOEDTYPE_STROBE_INPHASE, UC4HOREOLOEDPERIOD_SUPER, BLUE); //0, 0, 255);
-        return;
-    }
-
-    // Procedure for when Pixhawk is in radio failsafe
-    // LEDs perform alternating Red X pattern
-    if (AP_Notify::flags.failsafe_radio) {
-        set_oreoled(UC4HQUAD_FRONTLEFT,  UC4HOREOLOEDTYPE_STROBE_INPHASE,    UC4HOREOLOEDPERIOD_SLOW, RED); //255, 0, 0);
-        set_oreoled(UC4HQUAD_FRONTRIGHT, UC4HOREOLOEDTYPE_STROBE_OUTOFPHASE, UC4HOREOLOEDPERIOD_SLOW, RED); //255, 0, 0);
-        set_oreoled(UC4HQUAD_BACKLEFT,   UC4HOREOLOEDTYPE_STROBE_OUTOFPHASE, UC4HOREOLOEDPERIOD_SLOW, RED); //255, 0, 0);
-        set_oreoled(UC4HQUAD_BACKRIGHT,  UC4HOREOLOEDTYPE_STROBE_INPHASE,    UC4HOREOLOEDPERIOD_SLOW, RED); //255, 0, 0);
-        return;
-    }
-
-    // Procedure to set standard rear LED colors in aviation theme
-    // Back LEDS White for normal, yellow for GPS not usable, purple for EKF bad
-    uint8_t _rear_r, _rear_g, _rear_b;
-
-    if (!(AP_Notify::flags.gps_fusion)) {
-        _rear_r = 255;
-        _rear_g = 128; //50;
-        _rear_b = 0;
-
-    } else if (AP_Notify::flags.ekf_bad) {
-        _rear_r = 255;
-        _rear_g = 0;
-        _rear_b = 255;
-    } else {
-        _rear_r = 255;
-        _rear_g = 255;
-        _rear_b = 255;
-    }
-
-    // Procedure to set low battery LED output
-    // Colors standard
-    // Fast strobe alternating front/back
-    if (AP_Notify::flags.failsafe_battery) {
-        set_oreoled(UC4HQUAD_FRONTLEFT,  UC4HOREOLOEDTYPE_STROBE_INPHASE,    UC4HOREOLOEDPERIOD_FAST, RED); //255, 0, 0);
-        set_oreoled(UC4HQUAD_FRONTRIGHT, UC4HOREOLOEDTYPE_STROBE_INPHASE,    UC4HOREOLOEDPERIOD_FAST, RED); //255, 0, 0);
-        set_oreoled(UC4HQUAD_BACKLEFT,   UC4HOREOLOEDTYPE_STROBE_OUTOFPHASE, UC4HOREOLOEDPERIOD_FAST, _rear_r, _rear_g, _rear_b);
-        set_oreoled(UC4HQUAD_BACKRIGHT,  UC4HOREOLOEDTYPE_STROBE_OUTOFPHASE, UC4HOREOLOEDPERIOD_FAST, _rear_r, _rear_g, _rear_b);
-        return;
-    }
-
-//XX    if (_pattern_override) { return; }      // stop here if in mavlink LED control override.
-
-    // Procedure for when Pixhawk is in an autopilot mode
-    // Makes all LEDs strobe super fast using standard colors
-    if (AP_Notify::flags.autopilot_mode) {
-        set_oreoled(UC4HQUAD_FRONTLEFT,  UC4HOREOLOEDTYPE_STROBE_INPHASE, UC4HOREOLOEDPERIOD_SUPER, RED); //255, 0, 0);
-        set_oreoled(UC4HQUAD_FRONTRIGHT, UC4HOREOLOEDTYPE_STROBE_INPHASE, UC4HOREOLOEDPERIOD_SUPER, GREEN); //0, 255, 0);
-        if ((AP_Notify::flags.pre_arm_check && AP_Notify::flags.pre_arm_gps_check) || AP_Notify::flags.armed) {
-            set_oreoled(UC4HQUAD_BACKLEFT,  UC4HOREOLOEDTYPE_STROBE_OUTOFPHASE, UC4HOREOLOEDPERIOD_SUPER, _rear_r, _rear_g, _rear_b);
-            set_oreoled(UC4HQUAD_BACKRIGHT, UC4HOREOLOEDTYPE_STROBE_OUTOFPHASE, UC4HOREOLOEDPERIOD_SUPER, _rear_r, _rear_g, _rear_b);
-        } else {
-            set_oreoled(UC4HQUAD_BACKLEFT,  UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, _rear_r, _rear_g, _rear_b);
-            set_oreoled(UC4HQUAD_BACKRIGHT, UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, _rear_r, _rear_g, _rear_b);
-        }
-        return;
-    }
-
-    // Procedure for when Pixhawk is in a pilot controlled mode
-    // All LEDs use standard pattern and colors
-    set_oreoled(UC4HQUAD_FRONTLEFT,  UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, RED); //255, 0, 0);
-    set_oreoled(UC4HQUAD_FRONTRIGHT, UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, GREEN); //0, 255, 0);
-    if ((AP_Notify::flags.pre_arm_check && AP_Notify::flags.pre_arm_gps_check) || AP_Notify::flags.armed) {
-        set_oreoled(UC4HQUAD_BACKLEFT,  UC4HOREOLOEDTYPE_STROBE_INPHASE,    UC4HOREOLOEDPERIOD_FAST, _rear_r, _rear_g, _rear_b);
-        set_oreoled(UC4HQUAD_BACKRIGHT, UC4HOREOLOEDTYPE_STROBE_OUTOFPHASE, UC4HOREOLOEDPERIOD_FAST, _rear_r, _rear_g, _rear_b);
-    } else {
-        set_oreoled(UC4HQUAD_BACKLEFT,  UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, _rear_r, _rear_g, _rear_b);
-        set_oreoled(UC4HQUAD_BACKRIGHT, UC4HOREOLOEDTYPE_SOLID, UC4HOREOLOEDPERIOD_NONE, _rear_r, _rear_g, _rear_b);
-    }
-
-    _oreoleds_updated = true;
-}
-
 
 
 
