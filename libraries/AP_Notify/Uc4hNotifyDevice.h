@@ -78,6 +78,7 @@ private:
     char _text_data[NOTIFY_TEXT_BUFFER_SIZE];
 
     void update_flags(void);
+    void update_text(void);
 
     void set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b);
     void update_3rgbleds(void);

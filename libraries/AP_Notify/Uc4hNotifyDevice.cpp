@@ -39,6 +39,7 @@ Uc4hNotifyDevice::Uc4hNotifyDevice():
     }
 
 //    memset(&_notify_message_data, 0, sizeof(_notify_message_data));
+    strcpy(_text_data, "");
 }    
 
 
@@ -121,7 +122,7 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
         }
 
     } else
-    if (_3rgbleds_updated) {
+/*    if (_3rgbleds_updated) {
         _3rgbleds_updated = false;
 
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
@@ -133,6 +134,18 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
             }
         }
 
+    } else */
+    if (_text_updated) {
+        _text_updated = false;
+        if (AP_Notify::flags.armed) return; //should never happen, but play it safe
+
+        for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
+            if (_ap_uavcan[i] != nullptr) {
+
+                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_TEXT, 0, (uint8_t*)(&_text_data), strlen(_text_data) );
+
+            }
+        }
     }
 }
 
@@ -145,15 +158,16 @@ void Uc4hNotifyDevice::update_slow(void)
     if ((current_time_ms - _task_time_last) < 234) {
         return;
     }
-    _task_time_last = current_time_ms;
+    _task_time_last = current_time_ms; //precision is not required
 
     if ((current_time_ms - _sync_time_last) > 4000) {
-        _sync_time_last = current_time_ms;
+        _sync_time_last = current_time_ms; //precision is not required
         update_sync();
     }
 
     update_flags();
-    update_3rgbleds();
+//    update_3rgbleds();
+    update_text();
 }
 
 
@@ -170,6 +184,21 @@ void Uc4hNotifyDevice::update_flags(void)
     _flags_data.flags = AP_Notify::flags;
     _flags_data.events = AP_Notify::events;
     _flags_updated = true;
+}
+
+
+void Uc4hNotifyDevice::update_text(void)
+{
+    if (AP_Notify::flags.armed) return; //don't send text when armed
+
+    const char* p = pNotify->get_text();
+    if (!p) return;
+    if (strlen(p) == 0) return;
+
+    if (strcmp(p,_text_data) == 0) return; //check if text has changed
+
+    strcpy(_text_data, p);
+    _text_updated = true;
 }
 
 
@@ -199,36 +228,33 @@ void Uc4hNotifyDevice::update_3rgbleds(void)
     i = (b+2) % 3;
     set_led_rgb( i, 0x3F, 0, 0); //red
 */
-    #define SET_RED     set_led_rgb( 0, 0x3F, 0, 0); //red
-    #define SET_GREEN   set_led_rgb( 0, 0, 0x3F, 0); //green
-    #define SET_YELLOW  set_led_rgb( 0, 0x1F, 0x3F, 0) //yellow
 
     //pre arm check light: red - yellow - green
     if( AP_Notify::flags.gps_status >= AP_GPS::GPS_OK_FIX_3D) {
-        SET_GREEN; //set_led_rgb( 0, 0, 0x3F, 0); //green
+        set_led_rgb( 0, 0, 0x3F, 0); //green
     } else
     if( AP_Notify::flags.gps_status == AP_GPS::GPS_OK_FIX_2D) {
-        SET_YELLOW; //set_led_rgb( 0, 0x1F, 0x3F, 0); //yellow
+        set_led_rgb( 0, 0x1F, 0x3F, 0); //yellow
     } else {
-        SET_RED; //set_led_rgb( 0, 0x3F, 0, 0); //red
+        set_led_rgb( 0, 0x3F, 0, 0); //red
     }
 
     //mimic position_ok()
     // this is it not yet exactly, but I don't want to pollute the vehicle library, so let's go with this
     if (AP_Notify::flags.ekf_bad) {
-        SET_RED; //set_led_rgb( 1, 0x3F, 0, 0); //red
+        set_led_rgb( 1, 0x3F, 0, 0); //red
     } else
     if (AP_Notify::flags.have_pos_abs) {
-        SET_GREEN; //set_led_rgb( 1, 0, 0x3F, 0); //green
+        set_led_rgb( 1, 0, 0x3F, 0); //green
     } else {
-        SET_YELLOW; //set_led_rgb( 0, 0x1F, 0x3F, 0); //yellow
+        set_led_rgb( 1, 0x1F, 0x3F, 0); //yellow
     }
 
     //pre arm check light: red - green
     if (AP_Notify::flags.pre_arm_check) {
-        SET_GREEN; //set_led_rgb( 2, 0, 0x3F, 0); //green
+        set_led_rgb( 2, 0, 0x3F, 0); //green
     } else {
-        SET_RED; //set_led_rgb( 2, 0x3F, 0, 0); //red
+        set_led_rgb( 2, 0x3F, 0, 0); //red
     }
 
     _3rgbleds_updated = true;
