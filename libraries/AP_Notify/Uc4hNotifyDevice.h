@@ -36,39 +36,45 @@ public:
     // called at 50Hz
     virtual void update();
 
+    //this is the type in the UAVCAN message
     enum UC4HNOTIFYTYPEENUM {
-        UC4HNOTIFYTYPE_FLAGS = 0,
-        UC4HNOTIFYTYPE_RGBLEDS, //subtype is the number of leds
+        UC4HNOTIFYTYPE_FLAGS = 0, //subtype is the version of the flags structure
+        //DEPRECATED UC4HNOTIFYTYPE_RGBLEDS, //subtype is the number of leds
+        UC4HNOTIFYTYPE_TEXT = 254,
+        UC4HNOTIFYTYPE_SYNC = 255, //send ArduPilots current ms time, to allow the nodes to synchronize
     };
-
-    enum UC4HNOTIFYMODEENUM {
-        UC4HNOTIFYMODE_FLAGS = 0,
-        UC4HNOTIFYMODE_3RGBLEDS,
-    };
-    uint16_t notify_mode; //this tells in which mode the notify device is
 
 private:
 
     AP_UAVCAN *_ap_uavcan[MAX_NUMBER_OF_CAN_DRIVERS];
     bool _healthy;
     uint64_t _task_time_last; //to slow down
-    bool _updated;
+    bool _flags_updated;
+    bool _text_updated;
+    uint64_t _sync_time_last;
+    bool _sync_updated;
 
     void find_CAN(void);
     void send_CAN_notify_message(void);
 
     void update_slow(void);
 
-    struct {
-        union {
-            struct {
-                uint8_t rgb[3][3];
-            } rgb3leds;
-            uint8_t buf[32]; //can be up to 64, but this shoukld be plenty for us
-        };
-    } _notify_data;
+    struct __attribute__((packed)) {
+        uint8_t number_of_arms;
+        struct AP_Notify::notify_flags_and_values_type flags;
+        struct AP_Notify::notify_events_type events;
+    } _flags_data;
 
-    void set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b);
-    uint16_t _led_task_count;
-    void update_mode_3rgbleds(void);
+    struct {
+        uint64_t current_time_ms;
+    } _sync_data;
+
+    char _text_data[NOTIFY_TEXT_BUFFER_SIZE];
+
+    void update_flags(void);
+    void update_text(void);
+
+    void update_sync(void);
+
+    uint16_t _led_task_count; //for fooling around
 };
