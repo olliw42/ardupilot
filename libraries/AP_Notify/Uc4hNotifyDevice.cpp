@@ -29,7 +29,6 @@ Uc4hNotifyDevice::Uc4hNotifyDevice():
     _healthy(false),
     _task_time_last(0),
     _flags_updated(false),
-    _3rgbleds_updated(false),
     _text_updated(false),
     _sync_time_last(0),
     _sync_updated(false)
@@ -122,19 +121,6 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
         }
 
     } else
-/*    if (_3rgbleds_updated) {
-        _3rgbleds_updated = false;
-
-        for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-            if (_ap_uavcan[i] != nullptr) {
-
-                //subtype is the number of leds
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_RGBLEDS, 3, (uint8_t*)(&_rgb3leds_data), sizeof(_rgb3leds_data) );
-
-            }
-        }
-
-    } else */
     if (_text_updated) {
         _text_updated = false;
         if (AP_Notify::flags.armed) return; //should never happen, but play it safe
@@ -166,7 +152,6 @@ void Uc4hNotifyDevice::update_slow(void)
     }
 
     update_flags();
-//    update_3rgbleds();
     update_text();
 }
 
@@ -200,68 +185,6 @@ void Uc4hNotifyDevice::update_text(void)
     strcpy(_text_data, p);
     _text_updated = true;
 }
-
-
-//helper
-void Uc4hNotifyDevice::set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b)
-{
-    //no checks, it's the user's responsibility !
-    _rgb3leds_data.rgb[lednr][0] = r;
-    _rgb3leds_data.rgb[lednr][1] = g;
-    _rgb3leds_data.rgb[lednr][2] = b;
-}
-
-
-void Uc4hNotifyDevice::update_3rgbleds(void)
-{
-/*// was just for test
-    _led_task_count++;
-
-    uint16_t b = _led_task_count % 3; //0,1,2
-
-    uint16_t i = (b) % 3;
-    set_led_rgb( i, 0, 0x3F, 0); //green
-
-    i = (b+1) % 3;
-    set_led_rgb( i, 0x3F, 0x3F, 0); //yellow
-
-    i = (b+2) % 3;
-    set_led_rgb( i, 0x3F, 0, 0); //red
-*/
-
-    //pre arm check light: red - yellow - green
-    if( AP_Notify::flags.gps_status >= AP_GPS::GPS_OK_FIX_3D) {
-        set_led_rgb( 0, 0, 0x3F, 0); //green
-    } else
-    if( AP_Notify::flags.gps_status == AP_GPS::GPS_OK_FIX_2D) {
-        set_led_rgb( 0, 0x1F, 0x3F, 0); //yellow
-    } else {
-        set_led_rgb( 0, 0x3F, 0, 0); //red
-    }
-
-    //mimic position_ok()
-    // this is it not yet exactly, but I don't want to pollute the vehicle library, so let's go with this
-    if (AP_Notify::flags.ekf_bad) {
-        set_led_rgb( 1, 0x3F, 0, 0); //red
-    } else
-    if (AP_Notify::flags.have_pos_abs) {
-        set_led_rgb( 1, 0, 0x3F, 0); //green
-    } else {
-        set_led_rgb( 1, 0x1F, 0x3F, 0); //yellow
-    }
-
-    //pre arm check light: red - green
-    if (AP_Notify::flags.pre_arm_check) {
-        set_led_rgb( 2, 0, 0x3F, 0); //green
-    } else {
-        set_led_rgb( 2, 0x3F, 0, 0); //red
-    }
-
-    _3rgbleds_updated = true;
-}
-
-
-
 
 
 

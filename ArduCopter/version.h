@@ -30,8 +30,10 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 
 /*
 v0.07:
-
-
+ - UC4HNOTIFYTYPE_FLAGS implemented
+ - UC4HNOTIFYTYPE_TEXT, UC4HNOTIFYTYPE_SYNC added
+ - UC4HNOTIFYTYPE_RGBLEDS deprecated, and code removed
+flight tested with flame wheel 14.Apr.2018
 
 
 v0.06:

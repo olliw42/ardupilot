@@ -38,11 +38,10 @@ public:
 
     //this is the type in the UAVCAN message
     enum UC4HNOTIFYTYPEENUM {
-        UC4HNOTIFYTYPE_FLAGS = 0,
-        UC4HNOTIFYTYPE_RGBLEDS, //subtype is the number of leds
-
+        UC4HNOTIFYTYPE_FLAGS = 0, //subtype is the version of the flags structure
+        //DEPRECATED UC4HNOTIFYTYPE_RGBLEDS, //subtype is the number of leds
         UC4HNOTIFYTYPE_TEXT = 254,
-        UC4HNOTIFYTYPE_SYNC = 255, //send ArduPilots current us time, to allow the nodes to synchronize
+        UC4HNOTIFYTYPE_SYNC = 255, //send ArduPilots current ms time, to allow the nodes to synchronize
     };
 
 private:
@@ -51,7 +50,6 @@ private:
     bool _healthy;
     uint64_t _task_time_last; //to slow down
     bool _flags_updated;
-    bool _3rgbleds_updated;
     bool _text_updated;
     uint64_t _sync_time_last;
     bool _sync_updated;
@@ -68,10 +66,6 @@ private:
     } _flags_data;
 
     struct {
-        uint8_t rgb[3][3]; //3x rgb
-    } _rgb3leds_data;
-
-    struct {
         uint64_t current_time_ms;
     } _sync_data;
 
@@ -79,9 +73,6 @@ private:
 
     void update_flags(void);
     void update_text(void);
-
-    void set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b);
-    void update_3rgbleds(void);
 
     void update_sync(void);
 
