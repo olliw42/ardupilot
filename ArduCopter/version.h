@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v007-001"
+#define THISFIRMWARE "BetaCopter V3.6-dev v007"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -34,6 +34,7 @@ v0.07:
  - UC4HNOTIFYTYPE_TEXT, UC4HNOTIFYTYPE_SYNC added
  - UC4HNOTIFYTYPE_RGBLEDS deprecated, and code removed
 flight tested with flame wheel 14.Apr.2018
+prepare release
 
 
 v0.06:
