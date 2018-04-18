@@ -28,14 +28,17 @@ extern const AP_HAL::HAL& hal;
 Uc4hNotifyDevice::Uc4hNotifyDevice():
     _healthy(false),
     _task_time_last(0),
-    _updated(false)
+    _flags_updated(false),
+    _text_updated(false),
+    _sync_time_last(0),
+    _sync_updated(false)
 {
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
         _ap_uavcan[i] = nullptr;
     }
 
-    notify_mode = UC4HNOTIFYMODE_3RGBLEDS; //we currently only support this, sends out 3 rgb values
-    memset(&_notify_data, 0, sizeof(_notify_data));
+//    memset(&_notify_message_data, 0, sizeof(_notify_message_data));
+    strcpy(_text_data, "");
 }    
 
 
@@ -90,23 +93,44 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
 {
     //see BP_Mount_STorM32 class as example
 
-    if (!_updated) {
-        return;
-    }
-    _updated = false;
+    //don't send out more than one message per 50 Hz tick
+    // give sync priority
 
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-        if (_ap_uavcan[i] != nullptr) {
+    if (_sync_updated) {
+        _sync_updated = false;
 
-            switch (notify_mode) {
-            case UC4HNOTIFYMODE_3RGBLEDS:
-                //subtype is the number of leds
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_RGBLEDS, 3, (uint8_t*)(&_notify_data.rgb3leds), 9 );
-                break;
-            default:
-                break;
+        for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
+            if (_ap_uavcan[i] != nullptr) {
+
+                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_SYNC, 0, (uint8_t*)(&_sync_data), sizeof(_sync_data) );
+
             }
+        }
 
+    } else
+    if (_flags_updated) {
+        _flags_updated = false;
+
+        for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
+            if (_ap_uavcan[i] != nullptr) {
+
+                //subtype is the version of the FLAGS field
+                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_FLAGS, 0, (uint8_t*)(&_flags_data), sizeof(_flags_data) );
+
+            }
+        }
+
+    } else
+    if (_text_updated) {
+        _text_updated = false;
+        if (AP_Notify::flags.armed) return; //should never happen, but play it safe
+
+        for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
+            if (_ap_uavcan[i] != nullptr) {
+
+                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_TEXT, 0, (uint8_t*)(&_text_data), strlen(_text_data) );
+
+            }
         }
     }
 }
@@ -120,75 +144,52 @@ void Uc4hNotifyDevice::update_slow(void)
     if ((current_time_ms - _task_time_last) < 234) {
         return;
     }
-    _task_time_last = current_time_ms;
+    _task_time_last = current_time_ms; //precision is not required
 
-    switch (notify_mode) {
-        case UC4HNOTIFYMODE_3RGBLEDS:
-            update_mode_3rgbleds();
-            break;
-        default:
-            break;
+    if ((current_time_ms - _sync_time_last) > 4000) {
+        _sync_time_last = current_time_ms; //precision is not required
+        update_sync();
     }
+
+    update_flags();
+    update_text();
 }
 
 
-void Uc4hNotifyDevice::set_led_rgb(uint8_t lednr, uint8_t r, uint8_t g, uint8_t b)
+void Uc4hNotifyDevice::update_sync(void)
 {
-    //no checks, it's the user's responsibility !
-
-    _notify_data.rgb3leds.rgb[lednr][0] = r;
-    _notify_data.rgb3leds.rgb[lednr][1] = g;
-    _notify_data.rgb3leds.rgb[lednr][2] = b;
+    _sync_data.current_time_ms = AP_HAL::millis64();
+    _sync_updated = true;
 }
 
 
-void Uc4hNotifyDevice::update_mode_3rgbleds(void)
+void Uc4hNotifyDevice::update_flags(void)
 {
-/*// was just for test
-    _led_task_count++;
-
-    uint16_t b = _led_task_count % 3; //0,1,2
-
-    uint16_t i = (b) % 3;
-    set_led_rgb( i, 0, 0x3F, 0); //green
-
-    i = (b+1) % 3;
-    set_led_rgb( i, 0x3F, 0x3F, 0); //yellow
-
-    i = (b+2) % 3;
-    set_led_rgb( i, 0x3F, 0, 0); //red
-*/
-
-    //pre arm check light: red - yellow - green
-    if( AP_Notify::flags.gps_status >= AP_GPS::GPS_OK_FIX_3D) {
-        set_led_rgb( 0, 0, 0x3F, 0); //green
-    } else
-    if( AP_Notify::flags.gps_status == AP_GPS::GPS_OK_FIX_2D) {
-        set_led_rgb( 0, 0x3F, 0x3F, 0); //yellow
-    } else {
-        set_led_rgb( 0, 0x3F, 0, 0); //red
-    }
-
-    //mimic position_ok()
-    // this is it not yet exactly, but I don't want to pollute the vehicle library, so let's go with this
-    if (AP_Notify::flags.ekf_bad) {
-        set_led_rgb( 1, 0x3F, 0, 0); //red
-    } else
-    if (AP_Notify::flags.have_pos_abs) {
-        set_led_rgb( 1, 0, 0x3F, 0); //green
-    } else {
-        set_led_rgb( 1, 0x3F, 0x3F, 0); //yellow
-    }
-
-    //pre arm check light: red - green
-    if (AP_Notify::flags.pre_arm_check) {
-        set_led_rgb( 2, 0, 0x3F, 0); //green
-    } else {
-        set_led_rgb( 2, 0x3F, 0, 0); //red
-    }
-
-    _updated = true;
+    _flags_data.number_of_arms = 4; //ONLY QUAD SUPPORTED currently
+    _flags_data.flags = AP_Notify::flags;
+    _flags_data.events = AP_Notify::events;
+    _flags_updated = true;
 }
+
+
+void Uc4hNotifyDevice::update_text(void)
+{
+    if (AP_Notify::flags.armed) return; //don't send text when armed
+
+    const char* p = pNotify->get_text();
+    if (!p) return;
+    if (strlen(p) == 0) return;
+
+    if (strcmp(p,_text_data) == 0) return; //check if text has changed
+
+    strcpy(_text_data, p);
+    _text_updated = true;
+}
+
+
+
+
+
 
 
 /*

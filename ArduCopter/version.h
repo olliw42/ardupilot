@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v006"
+#define THISFIRMWARE "BetaCopter V3.6-dev v007"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -27,6 +27,14 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 */
 
 /*
+v0.07:
+ - UC4HNOTIFYTYPE_FLAGS implemented
+ - UC4HNOTIFYTYPE_TEXT, UC4HNOTIFYTYPE_SYNC added
+ - UC4HNOTIFYTYPE_RGBLEDS deprecated, and code removed
+flight tested with flame wheel 14.Apr.2018
+prepare release
+
+
 v0.06:
 APM_Config.h: 1x
 GCS_Mavlink.cpp: 1x
