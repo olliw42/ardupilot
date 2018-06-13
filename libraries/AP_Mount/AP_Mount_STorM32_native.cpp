@@ -76,7 +76,7 @@ void AP_Mount_STorM32_native::update_fast()
     //slow down everything to 100 Hz
     // we can't use update(), since 50 Hz isn't compatible with the desired 20 Hz STorM32Link rate
     // each message is send at 20 Hz i.e. 50 ms, for 5 task slots => 10 ms per task slot
-    uint64_t current_time_ms = AP_HAL::millis64();
+    uint32_t current_time_ms = AP_HAL::millis();
     if ((current_time_ms - _task_time_last) >= 10) {
         _task_time_last = current_time_ms;
 
@@ -384,7 +384,7 @@ void AP_Mount_STorM32_native::find_gimbal_native(void)
         return;
     }
 
-    uint64_t current_time_ms = AP_HAL::millis64();
+    uint32_t current_time_ms = AP_HAL::millis();
 
 #if FIND_GIMBAL_MAX_SEARCH_TIME_MS
     if (current_time_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {

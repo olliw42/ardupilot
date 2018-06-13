@@ -339,7 +339,8 @@ void STorM32_lib::receive_reset(void)
 void STorM32_lib::receive_reset_wflush(void)
 {
     //it is claimed a while can't do it, so do a for
-    for (uint32_t i = 0; i < _serial_available(); i++) {
+    uint32_t available = _serial_available();
+    for (uint32_t i = 0; i < available; i++) {
         _serial_read();
     }
     if (_serial_available() > 0) {
@@ -404,7 +405,8 @@ void STorM32_lib::do_receive_singlechar(void)
 void STorM32_lib::do_receive(void)
 {
     //it is claimed a while can't do it, so do a for
-    for (uint32_t i = 0; i < _serial_available(); i++) {
+    uint32_t available = _serial_available();
+    for (uint32_t i = 0; i < available; i++) {
         do_receive_singlechar();
     }
 

@@ -61,7 +61,7 @@ private:
         TASK_SLOT4,
         TASK_SLOTNUMBER,
     };
-    uint64_t _task_time_last;
+    uint32_t _task_time_last;
     uint16_t _task_counter;
 
     // discovery functions
