@@ -382,11 +382,7 @@ static void (*battery_info_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uav
 
 static void genericbatteryinfo_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg, uint8_t mgr)
 {
-    if (hal.can_mgr[mgr] == nullptr) {
-        return;
-    }
-
-    AP_UAVCAN *ap_uavcan = hal.can_mgr[mgr]->get_UAVCAN();
+    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
         return;
     }
@@ -413,11 +409,7 @@ static void (*genericbatteryinfo_st_cb[2])(const uavcan::ReceivedDataStructure<u
 
 static void escstatus_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg, uint8_t mgr)
 {
-    if (hal.can_mgr[mgr] == nullptr) {
-        return;
-    }
-
-    AP_UAVCAN *ap_uavcan = hal.can_mgr[mgr]->get_UAVCAN();
+    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
         return;
     }
@@ -446,11 +438,7 @@ static void (*escstatus_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::eq
 
 static void storm32status_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg, uint8_t mgr)
 {
-    if (hal.can_mgr[mgr] == nullptr) {
-        return;
-    }
-
-    AP_UAVCAN *ap_uavcan = hal.can_mgr[mgr]->get_UAVCAN();
+    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
         return;
     }
@@ -1683,14 +1671,15 @@ uint8_t AP_UAVCAN::genericbatteryinfo_register_listener(AP_BattMonitor_Backend* 
 
     //insert listener
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
-        if (_genericbatteryinfo.id[i] == id) {
-            _genericbatteryinfo.listeners[sel_place] = new_listener;
-            _genericbatteryinfo.listener_to_id[sel_place] = i;
-            _genericbatteryinfo.id_taken[i]++;
-            ret = i + 1;
-            debug_uavcan(2, "reg_GENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
-            break;
+        if (_genericbatteryinfo.id[i] != id) {
+            continue;
         }
+        _genericbatteryinfo.listeners[sel_place] = new_listener;
+        _genericbatteryinfo.listener_to_id[sel_place] = i;
+        _genericbatteryinfo.id_taken[i]++;
+        ret = i + 1;
+        debug_uavcan(2, "reg_GENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
+        break;
     }
 
     return ret;
@@ -1707,10 +1696,11 @@ AP_UAVCAN::GenericBatteryInfo_Data* AP_UAVCAN::genericbatteryinfo_getptrto_data(
 
     // if id is not yet in list, find the first free spot, and take that
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
-        if (_genericbatteryinfo.id[i] == UINT8_MAX) {
-            _genericbatteryinfo.id[i] = id;
-            return &_genericbatteryinfo.data[i];
+        if (_genericbatteryinfo.id[i] != UINT8_MAX) {
+            continue;
         }
+        _genericbatteryinfo.id[i] = id;
+        return &_genericbatteryinfo.data[i];
     }
 
     return nullptr;
@@ -1719,17 +1709,19 @@ AP_UAVCAN::GenericBatteryInfo_Data* AP_UAVCAN::genericbatteryinfo_getptrto_data(
 void AP_UAVCAN::genericbatteryinfo_update_data(uint8_t id)
 {
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
-        if (_genericbatteryinfo.id[i] == id) {
-            for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-                if (_genericbatteryinfo.listener_to_id[li] == i) {
+        if (_genericbatteryinfo.id[i] != id) {
+            continue;
+        }
 
-                    _genericbatteryinfo.listeners[li]->handle_genericbatteryinfo_msg(
-                            _genericbatteryinfo.data[i].voltage,
-                            _genericbatteryinfo.data[i].current,
-                            _genericbatteryinfo.data[i].charge_consumed_mAh);
-
-                }
+        for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+            if (_genericbatteryinfo.listener_to_id[li] != i) {
+                continue;
             }
+
+            _genericbatteryinfo.listeners[li]->handle_genericbatteryinfo_msg(
+                    _genericbatteryinfo.data[i].voltage,
+                    _genericbatteryinfo.data[i].current,
+                    _genericbatteryinfo.data[i].charge_consumed_mAh);
         }
     }
 }
@@ -1781,10 +1773,11 @@ AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
 
     // if id is not yet in list, find the first free spot, and take that
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
-        if (_escstatus.id[i] == UINT8_MAX) {
-            _escstatus.id[i] = id;
-            return &_escstatus.data[i];
+        if (_escstatus.id[i] != UINT8_MAX) {
+            continue;
         }
+        _escstatus.id[i] = id;
+        return &_escstatus.data[i];
     }
 
     return nullptr;
@@ -1793,36 +1786,30 @@ AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
 void AP_UAVCAN::escstatus_update_data(uint8_t id)
 {
     // only 8 LOG_ESC1_MSG are defined, see /libraries/DataFlash/LogStructure.h
-    // technically, it could happen that the esc_index is not continues, and one would need a better handling
+    // technically, it could happen that the esc_index is not continuous, and one would need a better handling
     // however, I think, ArduPilot implicitly enforces continues esc_index, so should be no problem
     if (id >= 8) return;
 
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
-        if (_escstatus.id[i] == id) {
-//            for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-//                if (_escstatus.listener_to_id[li] == i) {
+        if (_escstatus.id[i] != id) {
+            continue;
+        }
 
 //TODO: do not log packets with error???
 // no, it would be better to extend the ESC log message, and to drop wrong packages on the node side
-
-                    uint64_t time_us = AP_HAL::micros64();
-                    struct log_Esc pkt = {
-                            LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + id)),
-                            time_us     : time_us,
-                            rpm         : (int32_t)(_escstatus.data[i].rpm),
-                            voltage     : (uint16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
-                            current     : (uint16_t)(_escstatus.data[i].current*100.0f + 0.5f),
-                            temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f),
-                            current_tot : (uint16_t)(0)
-                     };
-                     DataFlash_Class::instance()->WriteBlock(&pkt, sizeof(pkt));
-
-/*                    _escstatus.listeners[j]->handle_escstatus_msg(
-                            _escstatus.data[i].voltage,
-                            _escstatus.data[i].current,
-                            _escstatus.data[i].temperature);*/
-//                }
-//            }
+        DataFlash_Class *df = DataFlash_Class::instance();
+        if (df && df->logging_enabled()) {
+            uint64_t time_us = AP_HAL::micros64();
+            struct log_Esc pkt = {
+                    LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + id)),
+                    time_us     : time_us,
+                    rpm         : (int32_t)(_escstatus.data[i].rpm),
+                    voltage     : (uint16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
+                    current     : (uint16_t)(_escstatus.data[i].current*100.0f + 0.5f),
+                    temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f),
+                    current_tot : (uint16_t)(0)
+            };
+            df->WriteBlock(&pkt, sizeof(pkt));
         }
     }
 }
@@ -1849,14 +1836,15 @@ uint8_t AP_UAVCAN::storm32status_register_listener(BP_Mount_STorM32* new_listene
 
     //insert listener
     for (uint8_t i = 0; i < AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER; i++) {
-        if (_storm32status.id[i] == id) {
-            _storm32status.listeners[sel_place] = new_listener;
-            _storm32status.listener_to_id[sel_place] = i;
-            _storm32status.id_taken[i]++;
-            ret = i + 1;
-            debug_uavcan(2, "reg_STORM32STATUS place:%d, chan: %d\n\r", sel_place, i);
-            break;
+        if (_storm32status.id[i] != id) {
+            continue;
         }
+        _storm32status.listeners[sel_place] = new_listener;
+        _storm32status.listener_to_id[sel_place] = i;
+        _storm32status.id_taken[i]++;
+        ret = i + 1;
+        debug_uavcan(2, "reg_STORM32STATUS place:%d, chan: %d\n\r", sel_place, i);
+        break;
     }
 
     return ret;
@@ -1873,10 +1861,11 @@ AP_UAVCAN::STorM32Status_Data* AP_UAVCAN::storm32status_getptrto_data(uint8_t id
 
     // if id is not yet in list, find the first free spot, and take that
     for (uint8_t i = 0; i < AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER; i++) {
-        if (_storm32status.id[i] == UINT8_MAX) {
-            _storm32status.id[i] = id;
-            return &_storm32status.data[i];
+        if (_storm32status.id[i] != UINT8_MAX) {
+            continue;
         }
+        _storm32status.id[i] = id;
+        return &_storm32status.data[i];
     }
 
     return nullptr;
@@ -1885,29 +1874,30 @@ AP_UAVCAN::STorM32Status_Data* AP_UAVCAN::storm32status_getptrto_data(uint8_t id
 void AP_UAVCAN::storm32status_update_data(uint8_t id)
 {
     for (uint8_t i = 0; i < AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER; i++) {
-        if (_storm32status.id[i] == id) {
-            for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-                if (_storm32status.listener_to_id[li] == i) {
+        if (_storm32status.id[i] != id) {
+            continue;
+        }
+        for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+            if (_storm32status.listener_to_id[li] != i) {
+                continue;
+            }
 
-                    _storm32status.listeners[li]->handle_storm32status_uavcanmsg_mode(_storm32status.data[i].mode);
-                    if (_storm32status.data[i].anglequaternion_tag) { //quaternion
-                        //we only allow frame = 0 for quaternion
-                        //we do not handle angular velocities
-                        if (_storm32status.data[i].frame == 0) {
-                            _storm32status.listeners[li]->handle_storm32status_uavcanmsg_quaternion_frame0(
-                                    _storm32status.data[i].orientation_q[0],
-                                    _storm32status.data[i].orientation_q[1],
-                                    _storm32status.data[i].orientation_q[2],
-                                    _storm32status.data[i].orientation_q[3]);
-                        }
-                    } else { //angles
-                        _storm32status.listeners[li]->handle_storm32status_uavcanmsg_angles_rad(
-                            _storm32status.data[i].orientation_angles_rad[0],
-                            _storm32status.data[i].orientation_angles_rad[1],
-                            _storm32status.data[i].orientation_angles_rad[2]);
-                    }
-
+            _storm32status.listeners[li]->handle_storm32status_uavcanmsg_mode(_storm32status.data[i].mode);
+            if (_storm32status.data[i].anglequaternion_tag) { //quaternion
+                //we only allow frame = 0 for quaternion
+                //we do not handle angular velocities
+                if (_storm32status.data[i].frame == 0) {
+                    _storm32status.listeners[li]->handle_storm32status_uavcanmsg_quaternion_frame0(
+                            _storm32status.data[i].orientation_q[0],
+                            _storm32status.data[i].orientation_q[1],
+                            _storm32status.data[i].orientation_q[2],
+                            _storm32status.data[i].orientation_q[3]);
                 }
+            } else { //angles
+                _storm32status.listeners[li]->handle_storm32status_uavcanmsg_angles_rad(
+                        _storm32status.data[i].orientation_angles_rad[0],
+                        _storm32status.data[i].orientation_angles_rad[1],
+                        _storm32status.data[i].orientation_angles_rad[2]);
             }
         }
     }
