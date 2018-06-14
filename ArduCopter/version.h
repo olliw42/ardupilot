@@ -49,10 +49,12 @@ v0.08:
  - further corrections which appeared during compile test
    AP_UAVCAN::escstatus_update_data()
    => compiles
+ - use AP_UAVCAN::get_uavcan()
+ - adapt uavcan code to latest style in registers
+ - change AP_UAVCAN::escstatus_update_data(), follow AP_BLHeli::read_telemetry_packet()
 
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
-TODO: adapt uavcan code to latest style, i.e. *AP_UAVCAN::get_uavcan, as well as in registers
 
 
 v0.07:
