@@ -732,9 +732,9 @@ bool AP_UAVCAN::try_init(void)
     act_out_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
     act_out_array[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);
 
-                    esc_raw[_uavcan_i] = new uavcan::Publisher<uavcan::equipment::esc::RawCommand>(*node);
-                    esc_raw[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
-                    esc_raw[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);
+    esc_raw[_uavcan_i] = new uavcan::Publisher<uavcan::equipment::esc::RawCommand>(*node);
+    esc_raw[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+    esc_raw[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);
 
     rgb_led[_uavcan_i] = new uavcan::Publisher<uavcan::equipment::indication::LightsCommand>(*node);
     rgb_led[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
@@ -743,42 +743,43 @@ bool AP_UAVCAN::try_init(void)
     _led_conf.devices_count = 0;
 
 //OW
-                    {
-                        uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *st;
-                        st = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
-                        const int start_res = st->start(genericbatteryinfo_st_cb[_uavcan_i]);
-                        if (start_res < 0) {
-                            debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
-                            return false;
-                        }
-                    }
-                    {
-                        uavcan::Subscriber<uavcan::equipment::esc::Status> *st;
-                        st = new uavcan::Subscriber<uavcan::equipment::esc::Status>(*node);
-                        const int start_res = st->start(escstatus_st_cb[_uavcan_i]);
-                        if (start_res < 0) {
-                            debug_uavcan(1, "UAVCAN EscStatus subscriber start problem\n\r");
-                            return false;
-                        }
-                    }
-                    {
-                        uavcan::Subscriber<uavcan::olliw::storm32::Status> *st;
-                        st = new uavcan::Subscriber<uavcan::olliw::storm32::Status>(*node);
-                        const int start_res = st->start(storm32status_st_cb[_uavcan_i]);
-                        if (start_res < 0) {
-                            debug_uavcan(1, "UAVCAN Storm32Status subscriber start problem\n\r");
-                            return false;
-                        }
-                    }
+    {
+        uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *st;
+        st = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
+        const int start_res = st->start(genericbatteryinfo_st_cb[_uavcan_i]);
+        if (start_res < 0) {
+            debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
+            return false;
+        }
+    }
+    {
+        uavcan::Subscriber<uavcan::equipment::esc::Status> *st;
+        st = new uavcan::Subscriber<uavcan::equipment::esc::Status>(*node);
+        const int start_res = st->start(escstatus_st_cb[_uavcan_i]);
+        if (start_res < 0) {
+            debug_uavcan(1, "UAVCAN EscStatus subscriber start problem\n\r");
+            return false;
+        }
+    }
+    {
+        uavcan::Subscriber<uavcan::olliw::storm32::Status> *st;
+        st = new uavcan::Subscriber<uavcan::olliw::storm32::Status>(*node);
+        const int start_res = st->start(storm32status_st_cb[_uavcan_i]);
+        if (start_res < 0) {
+            debug_uavcan(1, "UAVCAN Storm32Status subscriber start problem\n\r");
+            return false;
+        }
+    }
 
-                    storm32nodespecific_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::storm32::NodeSpecific>(*node);
-                    storm32nodespecific_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
-                    storm32nodespecific_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower); //this will be overwritten later
+    storm32nodespecific_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::storm32::NodeSpecific>(*node);
+    storm32nodespecific_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+    storm32nodespecific_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower); //this will be overwritten later
 
-                    uc4hnotify_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::uc4h::Notify>(*node);
-                    uc4hnotify_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
-                    uc4hnotify_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower);
+    uc4hnotify_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::uc4h::Notify>(*node);
+    uc4hnotify_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+    uc4hnotify_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower);
 //OWEND
+
     /*
      * Informing other nodes that we're ready to work.
      * Default mode is INITIALIZING.
@@ -942,10 +943,10 @@ void AP_UAVCAN::do_cyclic(void)
     }
 
     if (led_out_sem_take()) {
-
         led_out_send();
         led_out_sem_give();
     }
+
 //OW
     uint64_t current_time_ms = AP_HAL::millis64();
     storm32_do_cyclic(current_time_ms);
@@ -1808,10 +1809,11 @@ void AP_UAVCAN::escstatus_update_data(uint8_t id)
                     struct log_Esc pkt = {
                             LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + id)),
                             time_us     : time_us,
-                            rpm         : (int16_t)(_escstatus.data[i].rpm),
-                            voltage     : (int16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
-                            current     : (int16_t)(_escstatus.data[i].current*100.0f + 0.5f),
-                            temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f)
+                            rpm         : (int32_t)(_escstatus.data[i].rpm),
+                            voltage     : (uint16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
+                            current     : (uint16_t)(_escstatus.data[i].current*100.0f + 0.5f),
+                            temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f),
+                            current_tot : (uint16_t)(0)
                      };
                      DataFlash_Class::instance()->WriteBlock(&pkt, sizeof(pkt));
 
