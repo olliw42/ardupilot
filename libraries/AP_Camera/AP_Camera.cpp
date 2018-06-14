@@ -157,9 +157,12 @@ void AP_Camera::trigger_pic()
 /*
     AP_Notify *notify = AP_Notify::instance();
     if (notify) notify->bpactions.camera_trigger_pic = true;
-*/
+*//*
     AP::bpnotify().actions.camera_trigger_pic = true;
+*/
 //OWEND
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    if (notify) notify->actions.camera_trigger_pic = true;
 
     log_picture();
 }

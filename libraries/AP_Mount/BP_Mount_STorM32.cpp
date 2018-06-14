@@ -16,8 +16,8 @@ extern const AP_HAL::HAL& hal;
 
 
 //singleton to communicate events & flags to the STorM32 mount
-// resembles AP_GPS
 BP_Mount_STorM32_Notify *BP_Mount_STorM32_Notify::_singleton;
+
 
 // constructor
 BP_Mount_STorM32_Notify::BP_Mount_STorM32_Notify()
@@ -28,15 +28,8 @@ BP_Mount_STorM32_Notify::BP_Mount_STorM32_Notify()
     _singleton = this;
 }
 
-namespace AP
-{
-    BP_Mount_STorM32_Notify &bpnotify() {
-        return BP_Mount_STorM32_Notify::bpnotify();
-    }
-};
 
-
-
+// that's the main class
 BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :
     AP_Mount_Backend(frontend, state, instance)
 {
@@ -155,9 +148,15 @@ void BP_Mount_STorM32::update_fast()
                     notify->bpactions.camera_trigger_pic = false;
                     if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
                 }
-*/
+*//*
                 if( AP::bpnotify().actions.camera_trigger_pic ){
                     AP::bpnotify().actions.camera_trigger_pic = false;
+                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
+                }
+*/
+                BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+                if (notify && (notify->actions.camera_trigger_pic)) {
+                    notify->actions.camera_trigger_pic = false;
                     if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
                 }
 
@@ -191,8 +190,11 @@ void BP_Mount_STorM32::update_fast()
 /*
                         AP_Notify *notify = AP_Notify::instance();
                         if (notify) { notify->bpactions.mount0_armed = _armed; }
-*/
+*//*
                         AP::bpnotify().actions.mount0_armed = _armed;
+*/
+                        BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+                        if (notify) { notify->actions.mount0_armed = _armed; }
                     }
                 }
 
@@ -419,7 +421,6 @@ void BP_Mount_STorM32::send_target_angles(void)
 }
 
 
-
 //------------------------------------------------------
 // status angles handlers, angles are in ArduPilot convention
 //------------------------------------------------------
@@ -623,7 +624,7 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
     if (!notify->bpactions.gcs_connection_detected) { //postpone all further sends until a gcs has been detected
         return;
     }
-*/
+*//*
     if (AP::bpnotify().actions.gcs_send_banner) {
         AP::bpnotify().actions.gcs_send_banner = false;
         gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
@@ -638,14 +639,32 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
     if (!AP::bpnotify().actions.gcs_connection_detected) { //postpone all further sends until a gcs has been detected
         return;
     }
+*/
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    if (!notify) { //since BP_Mount_STorM32_Notify is instantiated before mount, this shouldn't happen, right?
+        return;
+    }
+
+    if (notify->actions.gcs_send_banner) {
+        notify->actions.gcs_send_banner = false;
+        gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
+        if (strlen(versionstr)) {
+            char s[64];
+            strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );
+            gcs().send_text(MAV_SEVERITY_INFO, s);
+        }
+        _send_armeddisarmed = true; //also send gimbal state
+    }
+
+    if (!notify->actions.gcs_connection_detected) { //postpone all further sends until a gcs has been detected
+        return;
+    }
 
     if (_send_armeddisarmed) {
         _send_armeddisarmed = false;
         gcs().send_text(MAV_SEVERITY_INFO, (_armed) ? "  STorM32: ARMED" : "  STorM32: DISARMED" );
     }
 }
-
-
 
 
 //------------------------------------------------------

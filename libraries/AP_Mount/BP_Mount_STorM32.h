@@ -11,12 +11,12 @@
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
-
-#define STORM32_USE_UAVCAN
+//undefine to enable only serial support
+//#define STORM32_USE_UAVCAN
 
 
 //singleton to communicate events & flags to the STorM32 mount
-// resembles AP_Notify, but doesn't use the AP_Notify type of singleton, it follows AP_GPS singleton
+// resembles AP_Notify
 class BP_Mount_STorM32_Notify
 {
 public:
@@ -28,15 +28,14 @@ public:
     BP_Mount_STorM32_Notify &operator=(const BP_Mount_STorM32_Notify&) = delete;
 
     // get singleton instance
-    static BP_Mount_STorM32_Notify &bpnotify() {
-        return *_singleton;
+    static BP_Mount_STorM32_Notify *instance(void) {
+        return _singleton;
     }
 
-    /// bitmask of flags
-    // an 'action' is either a flag or a event
+    /// bitmask of flags, 'action' is either a flag or an event
     struct bpactions_type {
         //flags
-        uint32_t gcs_connection_detected : 1; //this permanently set once a send_banner() has been done
+        uint32_t gcs_connection_detected : 1; //this is permanently set once a send_banner() has been done
         uint32_t mount0_armed            : 1; //not used currently, but can be useful in future
         //events
         uint32_t gcs_send_banner         : 1; //this is set by send_banner(), and should be reset by a consumer
@@ -48,13 +47,8 @@ private:
     static BP_Mount_STorM32_Notify *_singleton;
 };
 
-namespace AP
-{
-    BP_Mount_STorM32_Notify &bpnotify();
-};
 
-
-
+// that's the main class
 class BP_Mount_STorM32 : public AP_Mount_Backend, public STorM32_lib
 {
 
@@ -92,7 +86,7 @@ public:
 
 private:
     // BP_Mount_STorM32_Notify instance
-    BP_Mount_STorM32_Notify notify;
+    BP_Mount_STorM32_Notify notify_instance;
 
     // helper to handle corrupt rcin data
     bool is_failsafe(void);

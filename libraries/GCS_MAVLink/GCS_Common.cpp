@@ -2066,9 +2066,15 @@ void GCS_MAVLINK::send_banner()
         notify->bpactions.gcs_connection_detected = true;
         notify->bpactions.gcs_send_banner = true;
     }
-*/
+*//*
     AP::bpnotify().actions.gcs_connection_detected = true;
     AP::bpnotify().actions.gcs_send_banner = true;
+*/
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    if (notify) {
+        notify->actions.gcs_connection_detected = true;
+        notify->actions.gcs_send_banner = true;
+    }
 //OWEND
 }
 
