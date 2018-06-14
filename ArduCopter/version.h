@@ -28,6 +28,7 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 
 /*
 v0.08:
+ - added changes from STorM32nativeonly branch
 
 
 v0.07:

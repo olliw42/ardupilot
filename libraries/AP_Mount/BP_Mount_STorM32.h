@@ -3,33 +3,28 @@
  */
 #pragma once
 
-#include <AP_HAL/AP_HAL.h>
-#include <AP_AHRS/AP_AHRS.h>
-
-#include <AP_Math/AP_Math.h>
-#include <AP_Common/AP_Common.h>
-#include <AP_GPS/AP_GPS.h>
-#include <GCS_MAVLink/GCS.h>
-#include <GCS_MAVLink/GCS_MAVLink.h>
-#include <RC_Channel/RC_Channel.h>
 #include "AP_Mount.h"
 #include "AP_Mount_Backend.h"
+#include "STorM32_lib.h"
 
-#include "BP_STorM32.h"
-
-
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //the startup has become quite slow, giving it plenty of time helps with testing, set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
 
+#define STORM32_USE_UAVCAN
 
-class BP_Mount_STorM32 : public AP_Mount_Backend, public BP_STorM32
+
+class BP_Mount_STorM32 : public AP_Mount_Backend, public STorM32_lib
 {
 
 public:
     // Constructor
     BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance);
+
+    // do not allow copies
+    BP_Mount_STorM32(const BP_Mount_STorM32 &other) = delete;
+    BP_Mount_STorM32 &operator=(const BP_Mount_STorM32&) = delete;
 
     // init - performs any required initialisation for this instance
     virtual void init(const AP_SerialManager& serial_manager);
@@ -59,15 +54,17 @@ private:
     // helper to handle corrupt rcin data
     bool is_failsafe(void);
 
-    // interface to BP_STorM32
-    virtual size_t _serial_txspace(void);
-    virtual size_t _serial_write(const uint8_t *buffer, size_t size, uint8_t priority);
-    virtual uint32_t _serial_available(void);
-    virtual int16_t _serial_read(void);
-    uint16_t _rcin_read(uint8_t ch);
+    // interface to STorM32_lib
+    size_t _serial_txspace(void) override;
+    size_t _serial_write(const uint8_t *buffer, size_t size, uint8_t priority) override;
+    uint32_t _serial_available(void) override;
+    int16_t _serial_read(void) override;
+    uint16_t _rcin_read(uint8_t ch) override;
 
     // internal variables
+#ifdef STORM32_USE_UAVCAN
     AP_UAVCAN *_ap_uavcan[MAX_NUMBER_OF_CAN_DRIVERS];
+#endif
     AP_HAL::UARTDriver *_uart;
     AP_Mount::MountType _mount_type;
     bool _initialised;              // true once the driver has been initialised
@@ -81,7 +78,7 @@ private:
         TASK_SLOT4,
         TASK_SLOTNUMBER,
     };
-    uint64_t _task_time_last;
+    uint32_t _task_time_last;
     uint16_t _task_counter;
 
     // we want to keep that info, just in case, the fields are 16 in size, so add one to convert it to string
@@ -121,8 +118,8 @@ private:
 
     // target out
     enum ANGLESTYPEENUM {
-        angles_deg = 0, //the STorM32 convention is angles in deg, not rad!
-        angles_pwm
+        ANGLES_DEG = 0, //the STorM32 convention is angles in deg, not rad!
+        ANGLES_PWM
     };
 
     struct {
@@ -147,7 +144,7 @@ private:
     void set_target_angles_bymountmode(void);
     void get_pwm_target_angles_from_radio(uint16_t* pitch_pwm, uint16_t* roll_pwm, uint16_t* yaw_pwm);
     void get_valid_pwm_from_channel(uint8_t rc_in, uint16_t* pwm);
-    void set_target_angles_deg(float pitch_deg, float roll_deg, float yaw_deg, enum MAV_MOUNT_MODE mount_mode);
+    void set_target_angles_deg(float pitch_deg, float roll_deg, float yaw_deg, enum MAV_MOUNT_MODE mount_mode); //NOT USED??
     void set_target_angles_rad(float pitch_rad, float roll_rad, float yaw_rad, enum MAV_MOUNT_MODE mount_mode);
     void set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_pwm, uint16_t yaw_pwm, enum MAV_MOUNT_MODE mount_mode);
     void send_target_angles(void);

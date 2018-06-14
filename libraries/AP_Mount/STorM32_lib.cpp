@@ -1,37 +1,41 @@
+//******************************************************
+// (c) olliw, www.olliw.eu
+// GPL3
+//******************************************************
+
 #include <GCS_MAVLink/include/mavlink/v2.0/checksum.h>
-#include <AP_Mount/BP_STorM32.h>
-
-#include "../ArduCopter/Copter.h"
-
+#include <AP_Notify/AP_Notify.h>
+#include <AP_Mount/STorM32_lib.h>
 
 //******************************************************
-// BP_STorM32 class functions
+// STorM32_lib class functions
 //******************************************************
-
 
 /// Constructor
-BP_STorM32::BP_STorM32() :
-    _serial_is_initialised(false),
-    _storm32link_seq(0)
+STorM32_lib::STorM32_lib()
 {
+    //these need to be initialized to the following values
+// but doesn't need to be done explicitly, since they are zero
+    _serial_is_initialised = false;
+    _storm32link_seq = 0;
     _serial_in.state = SERIALSTATE_IDLE;
 }
 
-
 // determines from the STorM32 state if the gimbal is in a normal operation mode
-bool BP_STorM32::is_normal_state(uint16_t state)
+bool STorM32_lib::is_normal_state(uint16_t state)
 {
-    if ((state == STORM32STATE_NORMAL) || (state == STORM32STATE_STARTUP_FASTLEVEL)) return true;
+    if ((state == STORM32STATE_NORMAL) || (state == STORM32STATE_STARTUP_FASTLEVEL)) {
+        return true;
+    }
     return false;
 }
-
 
 //------------------------------------------------------
 // send stuff
 //------------------------------------------------------
 
 // 33 bytes = 2865us @ 115200bps
-void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
+void STorM32_lib::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
 {
     if (!_serial_is_initialised) {
         return;
@@ -47,10 +51,10 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
         STORM32LINK_FCSTATUS_AP_GPS3DFIX          = 0x04, //ca 60-XXs
         STORM32LINK_FCSTATUS_AP_NAVHORIZVEL       = 0x08, //comes very late, after GPS fix and few secs after position_ok()
         STORM32LINK_FCSTATUS_AP_ARMED             = 0x40, //tells when copter is about to take-off
-        STORM32LINK_FCSTATUS_ISARDUPILOT          = 0x80, // permanently set, to indicate that this is ArduPilot, so STorM32 knows about and can act on it
+        STORM32LINK_FCSTATUS_ISARDUPILOT          = 0x80, //permanently set, to indicate that it's ArduPilot, so STorM32 knows about and can act accordingly
     };
 
-    uint8_t status = 0;
+    uint8_t status = STORM32LINK_FCSTATUS_ISARDUPILOT;
     //from tests, 2018-02-10/11, I concluded
     // ahrs.healthy():     indicates Q is OK, ca. 15 secs, Q is doing a square dance before, so must wait for this
     // ahrs.initialised(): indicates vz is OK (vx,vy ate OK very early), ca. 30-35 secs
@@ -74,28 +78,26 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     // copter.letmeget_motors_armed(); can be replaced by notify->flags.armed,  works identically:
     AP_Notify *notify = AP_Notify::instance();
 
-    if (ahrs.healthy()) status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY;
-    if (ahrs.initialised()) status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED;
-    if (nav_status.flags.horiz_vel) status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL;
-    if( AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D ) status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX;
-    if (notify && (notify->flags.armed)) status |= STORM32LINK_FCSTATUS_AP_ARMED;
-    status |= STORM32LINK_FCSTATUS_ISARDUPILOT;
+    if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
+    if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
+    if (nav_status.flags.horiz_vel) { status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL; }
+    if (AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
+    if (notify && (notify->flags.armed)) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
 
     int16_t yawrate = 0;
 
     Quaternion quat;
-    quat.from_rotation_matrix( ahrs.get_rotation_body_to_ned() );
+    quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
 
     Vector3f vel;
-    //ahrs.get_velocity_NED(vel) returns a bool, what does it exactly mean ???
-    // whatever it means it's probably a good idea to consider it
+    //ahrs.get_velocity_NED(vel) returns a bool, os it's a good idea to consider it
     if (!ahrs.get_velocity_NED(vel)) { vel.x = vel.y = vel.z = 0.0f; }
 
     tSTorM32LinkV2 t;
-    t.stx = 0xF9;
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x21;
     t.cmd = 0xDA;
-    t.seq = _storm32link_seq; _storm32link_seq++;  //this is not really used
+    t.seq = _storm32link_seq; _storm32link_seq++; //this is not really used
     t.status = status;
     t.spare = 0;
     t.yawratecmd = yawrate;
@@ -111,9 +113,8 @@ void BP_STorM32::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     _serial_write( (uint8_t*)(&t), sizeof(tSTorM32LinkV2), PRIORITY_HIGHEST );
 }
 
-
 // 19 bytes = 1650us @ 115200bps
-void BP_STorM32::send_cmd_setangles(float pitch_deg, float roll_deg, float yaw_deg, uint16_t flags)
+void STorM32_lib::send_cmd_setangles(float pitch_deg, float roll_deg, float yaw_deg, uint16_t flags)
 {
     if (!_serial_is_initialised) {
         return;
@@ -124,7 +125,7 @@ void BP_STorM32::send_cmd_setangles(float pitch_deg, float roll_deg, float yaw_d
     }
 
     tCmdSetAngles t;
-    t.stx = 0xF9; //0xFA; //0xF9 to suppress response
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x0E;
     t.cmd = 0x11;
     t.pitch = pitch_deg;
@@ -137,9 +138,8 @@ void BP_STorM32::send_cmd_setangles(float pitch_deg, float roll_deg, float yaw_d
     _serial_write( (uint8_t*)(&t), sizeof(tCmdSetAngles) );
 }
 
-
 // 11 bytes = 955us @ 115200bps
-void BP_STorM32::send_cmd_setpitchrollyaw(uint16_t pitch, uint16_t roll, uint16_t yaw)
+void STorM32_lib::send_cmd_setpitchrollyaw(uint16_t pitch, uint16_t roll, uint16_t yaw)
 {
     if (!_serial_is_initialised) {
         return;
@@ -150,7 +150,7 @@ void BP_STorM32::send_cmd_setpitchrollyaw(uint16_t pitch, uint16_t roll, uint16_
     }
 
     tCmdSetPitchRollYaw t;
-    t.stx = 0xF9; //0xFA; //0xF9 to suppress response
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x06;
     t.cmd = 0x12;
     t.pitch = pitch;
@@ -163,14 +163,13 @@ void BP_STorM32::send_cmd_setpitchrollyaw(uint16_t pitch, uint16_t roll, uint16_
 
 
 // 11 bytes = 955us @ 115200bps
-void BP_STorM32::send_cmd_recentercamera(void)
+void STorM32_lib::send_cmd_recentercamera(void)
 {
     send_cmd_setpitchrollyaw(0, 0, 0);
 }
 
-
 // 11 bytes = 955us @ 115200bps
-void BP_STorM32::send_cmd_docamera(uint16_t camera_cmd)
+void STorM32_lib::send_cmd_docamera(uint16_t camera_cmd)
 {
     if (!_serial_is_initialised) {
         return;
@@ -181,7 +180,7 @@ void BP_STorM32::send_cmd_docamera(uint16_t camera_cmd)
     }
 
     tCmdDoCamera t;
-    t.stx = 0xF9; //0xFA; //0xF9 to suppress response
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x06;
     t.cmd = 0x0F;
     t.dummy1 = 0;
@@ -195,9 +194,8 @@ void BP_STorM32::send_cmd_docamera(uint16_t camera_cmd)
     _serial_write( (uint8_t*)(&t), sizeof(tCmdDoCamera) );
 }
 
-
 // 28 bytes = 2431us @ 115200bps
-void BP_STorM32::send_cmd_setinputs(void)
+void STorM32_lib::send_cmd_setinputs(void)
 {
     if (!_serial_is_initialised) {
         return;
@@ -210,7 +208,7 @@ void BP_STorM32::send_cmd_setinputs(void)
     uint8_t status = 0;
 
     tCmdSetInputs t;
-    t.stx = 0xF9; //0xFA; //0xF9 to suppress response
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x17;
     t.cmd = 0x16;
     t.channel0 = _rcin_read(0);
@@ -235,9 +233,8 @@ void BP_STorM32::send_cmd_setinputs(void)
     _serial_write( (uint8_t*)(&t), sizeof(tCmdSetInputs) );
 }
 
-
 // 19 bytes = 1650us @ 115200bps
-void BP_STorM32::send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs)
+void STorM32_lib::send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs)
 {
     if (!_serial_is_initialised) {
         return;
@@ -255,7 +252,7 @@ void BP_STorM32::send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs)
     }
 
     tCmdSetHomeTargetLocation t;
-    t.stx = 0xF9; //0xFA; //0xF9 to suppress response
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x0E;
     t.cmd = 0x17;
     t.latitude = location.lat;
@@ -267,9 +264,8 @@ void BP_STorM32::send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs)
     _serial_write( (uint8_t*)(&t), sizeof(tCmdSetHomeTargetLocation) );
 }
 
-
 // 19 bytes = 1650us @ 115200bps
-void BP_STorM32::send_cmd_settargetlocation(void)
+void STorM32_lib::send_cmd_settargetlocation(void)
 {
     if (!_serial_is_initialised) {
         return;
@@ -283,7 +279,7 @@ void BP_STorM32::send_cmd_settargetlocation(void)
     struct Location location = {};
 
     tCmdSetHomeTargetLocation t;
-    t.stx = 0xF9; //0xFA; //0xF9 to suppress response
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x0E;
     t.cmd = 0x18;
     t.latitude = location.lat;
@@ -295,9 +291,8 @@ void BP_STorM32::send_cmd_settargetlocation(void)
     _serial_write( (uint8_t*)(&t), sizeof(tCmdSetHomeTargetLocation) );
 }
 
-
 // 7 bytes = 608us @ 115200bps
-void BP_STorM32::send_cmd_getdatafields(uint16_t flags)
+void STorM32_lib::send_cmd_getdatafields(uint16_t flags)
 {
     if (!_serial_is_initialised) {
         return;
@@ -308,7 +303,7 @@ void BP_STorM32::send_cmd_getdatafields(uint16_t flags)
     }
 
     tCmdGetDataFields t;
-    t.stx = 0xF9; //0xFA; //0xF9 to suppress response
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x02;
     t.cmd = 0x06;
     t.flags = flags;
@@ -317,9 +312,8 @@ void BP_STorM32::send_cmd_getdatafields(uint16_t flags)
     _serial_write( (uint8_t*)(&t), sizeof(tCmdGetDataFields) );
 }
 
-
 // 5 bytes = 434us @ 115200bps
-void BP_STorM32::send_cmd_getversionstr(void)
+void STorM32_lib::send_cmd_getversionstr(void)
 {
     if (!_serial_is_initialised) {
         return;
@@ -330,7 +324,7 @@ void BP_STorM32::send_cmd_getversionstr(void)
     }
 
     tCmdGetVersionStr t;
-    t.stx = 0xF9; //0xFA; //0xF9 to suppress response
+    t.stx = 0xF9; //0xF9 to suppress response
     t.len = 0x00;
     t.cmd = 0x02;
     t.crc = crc_calculate(&(t.len), sizeof(tCmdGetVersionStr)-3);
@@ -338,65 +332,61 @@ void BP_STorM32::send_cmd_getversionstr(void)
     _serial_write( (uint8_t*)(&t), sizeof(tCmdGetVersionStr) );
 }
 
-
 //------------------------------------------------------
 // receive stuff, only relevant for a real serial, not CAN
 //------------------------------------------------------
 
-void BP_STorM32::receive_reset(void)
+void STorM32_lib::receive_reset(void)
 {
     _serial_in.state = SERIALSTATE_IDLE;
 }
 
-
-void BP_STorM32::receive_reset_wflush(void)
+void STorM32_lib::receive_reset_wflush(void)
 {
-    while (_serial_available() > 0) {
+    //it is claimed a while can't do it, the UARTDriver lib seems to be weak, so do a for 
+    // the UARTDriver lib doesn't have a rxflush(), and it's flush() is non-functional, hence this stupid looping
+    uint32_t available = _serial_available();
+    for (uint32_t i = 0; i < available; i++) {
+        _serial_read();
+    }
+    if (_serial_available() > 0) {
         _serial_read();
     }
     _serial_in.state = SERIALSTATE_IDLE;
 }
 
-
 //reads in one char and processes it
-// there should/could be some timeout handling
-// there should/could be some error handling
-// but flush_rx() will take care of both of that
-void BP_STorM32::do_receive_singlechar(void)
+// there is no explicit timeout handling or error handling
+// call a flush_rx() and receive_reset() to take care of both of that
+void STorM32_lib::do_receive_singlechar(void)
 {
-    uint8_t c;
+    if (_serial_available() <= 0) { //this broadens the use of the function, play it safe
+        return;
+    }
 
-    if (_serial_available() <= 0) return;  //this should never happen, but play it safe
+    uint8_t c = _serial_read();
 
     switch (_serial_in.state) {
         case SERIALSTATE_IDLE:
-            c = _serial_read();
-
-            if (c == 0xFB) { //the outcoming RCCMD start sign was received
+            if (c == 0xFB) { //the outcoming RCcmd start sign was received
                 _serial_in.stx = c;
                 _serial_in.state = SERIALSTATE_RECEIVE_PAYLOAD_LEN;
             }
             break;
 
         case SERIALSTATE_RECEIVE_PAYLOAD_LEN:
-            c = _serial_read();
-
             _serial_in.len = c;
             _serial_in.state = SERIALSTATE_RECEIVE_CMD;
             break;
 
         case SERIALSTATE_RECEIVE_CMD:
-            c = _serial_read();
-
             _serial_in.cmd = c;
             _serial_in.payload_cnt = 0;
             _serial_in.state = SERIALSTATE_RECEIVE_PAYLOAD;
             break;
 
         case SERIALSTATE_RECEIVE_PAYLOAD:
-            c = _serial_read();
-
-            if (_serial_in.payload_cnt >= SERIAL_RECEIVE_BUFFER_SIZE) {
+            if (_serial_in.payload_cnt >= STORM32_LIB_RECEIVE_BUFFER_SIZE) {
                 _serial_in.state = SERIALSTATE_IDLE; //error, get out of here
                 return;
             }
@@ -404,7 +394,7 @@ void BP_STorM32::do_receive_singlechar(void)
             _serial_in.buf[_serial_in.payload_cnt++] = c;
 
             if (_serial_in.payload_cnt >= _serial_in.len + 2) { //do expect always a crc
-              uint16_t crc = 0; //XX ignore crc for the moment
+              uint16_t crc = 0; //ignore crc for the moment
               if (crc == 0) {
                   _serial_in.state = SERIALSTATE_MESSAGE_RECEIVED;
               }
@@ -413,24 +403,23 @@ void BP_STorM32::do_receive_singlechar(void)
 
         case SERIALSTATE_MESSAGE_RECEIVED:
         case SERIALSTATE_MESSAGE_RECEIVEDANDDIGESTED:
-            c = _serial_read();
             break;
     }
 }
 
-
 //reads in as many chars as there are there
-void BP_STorM32::do_receive(void)
+void STorM32_lib::do_receive(void)
 {
-    while (_serial_available() > 0) {
+    //it is claimed a while can't do it, the UARTDriver lib seems to be weak, so do a for 
+    uint32_t available = _serial_available();
+    for (uint32_t i = 0; i < available; i++) {
         do_receive_singlechar();
     }
 
-// serial state is reset by a flush_rx() and receive_reset()
+    // serial state is reset by a flush_rx() and receive_reset(), so, don't worry further
 }
 
-
-bool BP_STorM32::message_received(void)
+bool STorM32_lib::message_received(void)
 {
     if (_serial_in.state == SERIALSTATE_MESSAGE_RECEIVED) {
         _serial_in.state = SERIALSTATE_MESSAGE_RECEIVEDANDDIGESTED;

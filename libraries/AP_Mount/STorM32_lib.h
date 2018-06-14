@@ -1,31 +1,38 @@
+//******************************************************
+// (c) olliw, www.olliw.eu
+// GPL3
+//******************************************************
 #pragma once
 
 #include <AP_AHRS/AP_AHRS.h>
 
+//******************************************************
+// STorM32_lib
+//******************************************************
 
-#define SERIAL_RECEIVE_BUFFER_SIZE      96 //the largest rccmd response can be 77
+#define STORM32_LIB_RECEIVE_BUFFER_SIZE      96 //the largest RCcmd response can be 77
 
-
-class BP_STorM32
+class STorM32_lib
 {
 
 public:
     /// Constructor
-    BP_STorM32();
+    STorM32_lib();
 
+    // interface to write and read from a serial stream (serial or CAN or else)
     enum PRIORITYENUM {
         PRIORITY_DEFAULT = 0,
         PRIORITY_HIGHER = 1,
         PRIORITY_HIGHEST = 2
     };
     
-    // interface to write and read from a serial stream (serial or CAN)
     bool _serial_is_initialised;
-    virtual size_t _serial_txspace(void){ return 0; }
-    virtual size_t _serial_write(const uint8_t *buffer, size_t size, uint8_t priority){ return 0; }
+
+    virtual size_t _serial_txspace(void) = 0;
+    virtual size_t _serial_write(const uint8_t *buffer, size_t size, uint8_t priority) = 0;
     size_t _serial_write(const uint8_t *buffer, size_t size){ return _serial_write(buffer, size, PRIORITY_DEFAULT); }
-    virtual uint32_t _serial_available(void){ return 0; }
-    virtual int16_t _serial_read(void){ return 0; }
+    virtual uint32_t _serial_available(void) = 0;
+    virtual int16_t _serial_read(void) = 0;
 
     // interface to read the raw receiver values
     virtual uint16_t _rcin_read(uint8_t ch){ return 0; };
@@ -53,14 +60,14 @@ public:
       LIVEDATA_IMUACCABS                      = 0x8000,
     };
 
-    // functions for sending to the STorM32, using rccmds
+    // functions for sending to the STorM32, using RCcmds
     void send_storm32link_v2(const AP_AHRS_TYPE &ahrs);
     void send_cmd_setangles(float pitch_deg, float roll_deg, float yaw_deg, uint16_t flags);
     void send_cmd_setpitchrollyaw(uint16_t pitch, uint16_t roll, uint16_t yaw);
     void send_cmd_recentercamera(void);
     void send_cmd_docamera(uint16_t trigger_value);
     void send_cmd_setinputs(void);
-    void send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs); //?? or should this be const struct Location &current_loc, as in mount???
+    void send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs);
     void send_cmd_settargetlocation(void);
     void send_cmd_getdatafields(uint16_t flags);
     void send_cmd_getversionstr(void);
@@ -85,7 +92,7 @@ protected:
       STORM32STATE_STARTUP_FASTLEVEL,
     };
 
-    // rrcmd data packets, outgoing to STorM32
+    // RCcmd data packets, outgoing to STorM32
     enum STORM32RCCMDENUM {
         STORM32RCCMD_GET_VERSIONSTR = 0x02,
         STORM32RCCMD_GET_DATAFIELDS = 0x06,
@@ -187,9 +194,7 @@ protected:
         uint16_t crc;
     };
 
-
-    // rrcmd data packets, outgoing get-cmds to STorM32, and incoming from STorM32
-
+    // RCcmd data packets, outgoing get-cmds to STorM32, and incoming from STorM32
     struct PACKED tCmdGetVersionStr { //len = 0x00, cmd = 0x02
         uint8_t stx;
         uint8_t len;
@@ -230,8 +235,7 @@ protected:
         } livedata_attitude;
     };
 
-    // for handling reception of data from the STorM32, received from the serial/UART
-
+    // for handling reception of data from the STorM32, received from a serial-UART
     enum SERIALSTATEENUM {
         SERIALSTATE_IDLE = 0, //waits for something to come
         SERIALSTATE_RECEIVE_PAYLOAD_LEN,
@@ -243,18 +247,18 @@ protected:
 
     typedef struct { //structure to process incoming serial data
         // auxiliary fields to handle reception
-        uint16_t state;
+        enum SERIALSTATEENUM state;
         uint16_t payload_cnt;
-        // rccmd message fields, without crc
+        // RCcmd message fields, without crc
         uint8_t stx;
         uint8_t len;
         uint8_t cmd;
         union {
-            uint8_t buf[SERIAL_RECEIVE_BUFFER_SIZE+8]; //have some overhead
+            uint8_t buf[STORM32_LIB_RECEIVE_BUFFER_SIZE+8]; //have some overhead
             tCmdGetDataFieldsAckPayload getdatafields;
             tCmdGetVersionStrAckPayload getversionstr;
         };
     } tSerial;
     tSerial _serial_in;
 
-}; //end of class BP_STorM32
+}; //end of class STorM32_lib

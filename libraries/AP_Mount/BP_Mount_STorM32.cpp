@@ -1,26 +1,36 @@
-#include "BP_Mount_STorM32.h"
 #include <AP_HAL/AP_HAL.h>
-#include "../ArduCopter/Copter.h"
-#include <GCS_MAVLink/GCS_MAVLink.h>
+#include <AP_Common/AP_Common.h>
+#include <AP_AHRS/AP_AHRS.h>
+#include <AP_SerialManager/AP_SerialManager.h>
+#include <AP_GPS/AP_GPS.h>
+#include <GCS_MAVLink/GCS.h>
+#include <RC_Channel/RC_Channel.h>
+#include "BP_Mount_STorM32.h"
 
 //using #if HAL_WITH_UAVCAN doesn't appear to work here, why ???
+#ifdef STORM32_USE_UAVCAN
 #include <AP_UAVCAN/AP_UAVCAN.h>
-
+#endif
 
 extern const AP_HAL::HAL& hal;
 
 
 BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :
-    AP_Mount_Backend(frontend, state, instance),
-    _initialised(false),
-    _armed(false),
-    _send_armeddisarmed(false)
+    AP_Mount_Backend(frontend, state, instance)
 {
+    //these need to be initialized to the following values
+// but doesn't need to be done explicitly, since they are zero
+    _initialised = false;
+    _armed = false;
+    _send_armeddisarmed = false;
+
+#ifdef STORM32_USE_UAVCAN
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
         _ap_uavcan[i] = nullptr;
     }
+#endif
     _uart = nullptr;
-    _mount_type = AP_Mount::Mount_Type_None; //will be determined in init()
+    _mount_type = AP_Mount::Mount_Type_None; //the mount type will be determined in init()
 
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
@@ -44,6 +54,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 {
     //from instance we can determine its type, we keep it here since that's easier/shorter
     _mount_type = _frontend.get_mount_type(_instance);
+
     // it should never happen that it's not one of the two, but let's enforce it, to not depend on the outside
     if ((_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) && (_mount_type != AP_Mount::Mount_Type_STorM32_Native)) {
         _mount_type = AP_Mount::Mount_Type_None;
@@ -52,8 +63,8 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
     if (_mount_type == AP_Mount::Mount_Type_STorM32_Native) {
         _uart = serial_manager.find_serial(AP_SerialManager::SerialProtocol_STorM32_Native, 0);
         if (_uart) {
-            //_initialised = true; //don't do this yet, we first need to pass find_gimbal()
-            _serial_is_initialised = true; //tell the BP_STorM32 class
+            _serial_is_initialised = true; //tell the STorM32_lib class
+            //we do not set _initialised = true, since we first need to pass find_gimbal()
         } else {
             _serial_is_initialised = false; //tell the BP_STorM32 class, should not be needed, just to play it safe
             _mount_type = AP_Mount::Mount_Type_None; //this prevents many things from happening, safety guard
@@ -92,15 +103,16 @@ void BP_Mount_STorM32::update_fast()
         return;
     }
 
-    //slow down everything to 100Hz
+    //slow down everything to 100 Hz
     // we can't use update(), since 50 Hz isn't compatible with the desired 20 Hz STorM32Link rate
     // this is not totally correct, it seems the loop is slower than 100Hz, but just a bit?
     // should I use 9 ms, or better use micros64(), and something like 9900us? (with 10ms it might be easy to miss a 400Hz tick)
-    uint64_t current_time_ms = AP_HAL::millis64();
-    if ((current_time_ms - _task_time_last) >= 10) { //each message is send at 20Hz   50ms for 5 task slots => 10ms per task slot
+    // each message is send at 20 Hz i.e. 50 ms, for 5 task slots => 10 ms per task slot
+    uint32_t current_time_ms = AP_HAL::millis();
+    if ((current_time_ms - _task_time_last) >= 10) {
         _task_time_last = current_time_ms;
 
-        const uint16_t LIVEDATA_FLAGS = LIVEDATA_STATUS_V2|LIVEDATA_ATTITUDE_RELATIVE;
+        const uint16_t LIVEDATA_FLAGS = LIVEDATA_STATUS_V2 | LIVEDATA_ATTITUDE_RELATIVE;
 
         switch (_task_counter) {
             case TASK_SLOT0:
@@ -147,10 +159,10 @@ void BP_Mount_STorM32::update_fast()
                             -_serial_in.getdatafields.livedata_attitude.yaw_deg );
                         // we also can check if gimbal is in normal mode
                         bool _armed_new = is_normal_state(_serial_in.getdatafields.livedata_status.state);
-                        if (_armed_new != _armed) _send_armeddisarmed = true;
+                        if (_armed_new != _armed) { _send_armeddisarmed = true; }
                         _armed = _armed_new;
                         AP_Notify *notify = AP_Notify::instance();
-                        if (notify) notify->bpactions.mount0_armed = _armed;
+                        if (notify) { notify->bpactions.mount0_armed = _armed; }
                     }
                 }
 
@@ -158,7 +170,7 @@ void BP_Mount_STorM32::update_fast()
         }
 
         _task_counter++;
-        if (_task_counter >= TASK_SLOTNUMBER) _task_counter = 0;
+        if (_task_counter >= TASK_SLOTNUMBER) { _task_counter = 0; }
     }
 }
 
@@ -180,6 +192,10 @@ void BP_Mount_STorM32::status_msg(mavlink_channel_t chan)
 {
     //it doesn't matter if not _initalised
     // will then send out zeros
+    // check nevertheless
+    if (!_initialised) {
+        return;
+    }
 
     float pitch_deg, roll_deg, yaw_deg;
 
@@ -187,9 +203,6 @@ void BP_Mount_STorM32::status_msg(mavlink_channel_t chan)
 
     // MAVLink MOUNT_STATUS: int32_t pitch(deg*100), int32_t roll(deg*100), int32_t yaw(deg*100)
     mavlink_msg_mount_status_send(chan, 0, 0, pitch_deg*100.0f, roll_deg*100.0f, yaw_deg*100.0f);
-
-    // return target angles as gimbal's actual attitude.  To-Do: retrieve actual gimbal attitude and send these instead
-//    mavlink_msg_mount_status_send(chan, 0, 0, ToDeg(_angle_ef_target_rad.y)*100, ToDeg(_angle_ef_target_rad.x)*100, ToDeg(_angle_ef_target_rad.z)*100);
 }
 
 
@@ -215,9 +228,9 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
         case MAV_MOUNT_MODE_RETRACT:
             {
                 const Vector3f &target = _state._retract_angles.get();
-                _angle_ef_target_rad.x = ToRad(target.x);
-                _angle_ef_target_rad.y = ToRad(target.y);
-                _angle_ef_target_rad.z = ToRad(target.z);
+                _angle_ef_target_rad.x = radians(target.x);
+                _angle_ef_target_rad.y = radians(target.y);
+                _angle_ef_target_rad.z = radians(target.z);
                 send_ef_target = true;
             }
             break;
@@ -226,9 +239,9 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
         case MAV_MOUNT_MODE_NEUTRAL:
             {
                 const Vector3f &target = _state._neutral_angles.get();
-                _angle_ef_target_rad.x = ToRad(target.x);
-                _angle_ef_target_rad.y = ToRad(target.y);
-                _angle_ef_target_rad.z = ToRad(target.z);
+                _angle_ef_target_rad.x = radians(target.x);
+                _angle_ef_target_rad.y = radians(target.y);
+                _angle_ef_target_rad.z = radians(target.z);
                 send_ef_target = true;
             }
             break;
@@ -249,7 +262,7 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
                 update_targets_from_rc();
                 send_ef_target = true;
             }
-            if( is_failsafe() ){
+            if (is_failsafe()) {
                 pitch_pwm = roll_pwm = yaw_pwm = 1500;
                 _angle_ef_target_rad.y = _angle_ef_target_rad.x = _angle_ef_target_rad.z = 0.0f;
             }
@@ -257,7 +270,7 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
 
         // point mount to a GPS point given by the mission planner
         case MAV_MOUNT_MODE_GPS_POINT:
-            if(AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D) {
+            if (AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D) {
                 calc_angle_to_location(_state._roi_target, _angle_ef_target_rad, true, true);
                 send_ef_target = true;
             }
@@ -304,7 +317,7 @@ void BP_Mount_STorM32::set_target_angles_deg(float pitch_deg, float roll_deg, fl
     _target.deg.pitch = pitch_deg;
     _target.deg.roll = roll_deg;
     _target.deg.yaw = yaw_deg;
-    _target.type = angles_deg;
+    _target.type = ANGLES_DEG;
     _target.mode = mount_mode;
     _target_to_send = true; //do last, should not matter, but who knows
 }
@@ -312,10 +325,10 @@ void BP_Mount_STorM32::set_target_angles_deg(float pitch_deg, float roll_deg, fl
 
 void BP_Mount_STorM32::set_target_angles_rad(float pitch_rad, float roll_rad, float yaw_rad, enum MAV_MOUNT_MODE mount_mode)
 {
-    _target.deg.pitch = ToDeg(pitch_rad);
-    _target.deg.roll = ToDeg(roll_rad);
-    _target.deg.yaw = ToDeg(yaw_rad);
-    _target.type = angles_deg;
+    _target.deg.pitch = degrees(pitch_rad);
+    _target.deg.roll = degrees(roll_rad);
+    _target.deg.yaw = degrees(yaw_rad);
+    _target.type = ANGLES_DEG;
     _target.mode = mount_mode;
     _target_to_send = true; //do last, should not matter, but who knows
 }
@@ -326,7 +339,7 @@ void BP_Mount_STorM32::set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_p
     _target.pwm.pitch = pitch_pwm;
     _target.pwm.roll = roll_pwm;
     _target.pwm.yaw = yaw_pwm;
-    _target.type = angles_pwm;
+    _target.type = ANGLES_PWM;
     _target.mode = mount_mode;
     _target_to_send = true; //do last, should not matter, but who knows
 }
@@ -335,11 +348,9 @@ void BP_Mount_STorM32::set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_p
 void BP_Mount_STorM32::send_target_angles(void)
 {
     if (_target.mode <= MAV_MOUNT_MODE_NEUTRAL) { //RETRACT and NEUTRAL
-        if (_target_mode_last == _target.mode) {
-            // has been done already, skip
-        } else {
+        if (_target_mode_last != _target.mode) { // only do it once, i.e., when mode has just changed
             // trigger a recenter camera, this clears all internal Remote states
-            // the camera does not need to be recentered explicitly, thus break;
+            // the camera does not need to be recentered explicitly, thus return
             send_cmd_recentercamera();
             _target_mode_last = _target.mode;
         }
@@ -349,12 +360,12 @@ void BP_Mount_STorM32::send_target_angles(void)
     // update to current mode, to avoid repeated actions on some mount mode changes
     _target_mode_last = _target.mode;
 
-    if (_target.type == angles_pwm) {
+    if (_target.type == ANGLES_PWM) {
         uint16_t pitch_pwm = _target.pwm.pitch;
         uint16_t roll_pwm = _target.pwm.roll;
         uint16_t yaw_pwm = _target.pwm.yaw;
 
-        uint16_t DZ = 10; //_rc_target_pwm_deadzone;
+        const uint16_t DZ = 10; //_rc_target_pwm_deadzone;
 
         if (pitch_pwm < 10) pitch_pwm = 1500;
         if (pitch_pwm < 1500-DZ) pitch_pwm += DZ; else if (pitch_pwm > 1500+DZ) pitch_pwm -= DZ; else pitch_pwm = 1500;
@@ -366,14 +377,14 @@ void BP_Mount_STorM32::send_target_angles(void)
         if (yaw_pwm < 1500-DZ) yaw_pwm += DZ; else if (yaw_pwm > 1500+DZ) yaw_pwm -= DZ; else yaw_pwm = 1500;
 
         send_cmd_setpitchrollyaw(pitch_pwm, roll_pwm, yaw_pwm);
-    }else {
+    } else {
         float pitch_deg = _target.deg.pitch;
         float roll_deg = _target.deg.roll;
         float yaw_deg = _target.deg.yaw;
 
         //convert from ArduPilot to STorM32 convention
         // this need correction p:-1,r:+1,y:-1
-        send_cmd_setangles(-pitch_deg, -roll_deg, -yaw_deg, 0);
+        send_cmd_setangles(-pitch_deg, roll_deg, -yaw_deg, 0);
     }
 }
 
@@ -419,7 +430,7 @@ void BP_Mount_STorM32::handle_storm32status_uavcanmsg_quaternion_frame0(float x,
 
 void BP_Mount_STorM32::handle_storm32status_uavcanmsg_angles_rad(float roll_rad, float pitch_rad, float yaw_rad)
 {
-    set_status_angles_deg(ToDeg(pitch_rad), ToDeg(roll_rad), ToDeg(yaw_rad));
+    set_status_angles_deg(degrees(pitch_rad), degrees(roll_rad), degrees(yaw_rad));
 }
 
 
@@ -429,6 +440,7 @@ void BP_Mount_STorM32::handle_storm32status_uavcanmsg_angles_rad(float roll_rad,
 
 void BP_Mount_STorM32::find_CAN(void)
 {
+#ifdef STORM32_USE_UAVCAN
     if (_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return;
     }
@@ -442,7 +454,6 @@ void BP_Mount_STorM32::find_CAN(void)
     //TODO: this is flawed, it stops searching for further CAN interfaces once one has been detected
     // I really would need to know more details of the underlying procedures
     //TODO: we probably want a timeout, so that it stops searching after a reasonable time
-
     if (hal.can_mgr == nullptr) {
         return;
     }
@@ -458,6 +469,7 @@ void BP_Mount_STorM32::find_CAN(void)
             }
         }
     }
+#endif
 }
 
 
@@ -467,6 +479,7 @@ void BP_Mount_STorM32::find_CAN(void)
 // this doesn't give us info such as firmware and armed state!!!
 void BP_Mount_STorM32::find_gimbal_uavcan(void)
 {
+#ifdef STORM32_USE_UAVCAN
     if (_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return;
     }
@@ -476,7 +489,7 @@ void BP_Mount_STorM32::find_gimbal_uavcan(void)
     }
 
 #if FIND_GIMBAL_MAX_SEARCH_TIME_MS
-    uint64_t current_time_ms = AP_HAL::millis64();
+    uint32_t current_time_ms = AP_HAL::millis();
 
     if (current_time_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
         _initialised = false; //should be already false, but it can't hurt to ensure that
@@ -496,6 +509,7 @@ void BP_Mount_STorM32::find_gimbal_uavcan(void)
         _task_counter = TASK_SLOT0;
         _initialised = true;
     }
+#endif
 }
 
 
@@ -509,13 +523,13 @@ void BP_Mount_STorM32::find_gimbal_native(void)
         return;
     }
 
-    uint64_t current_time_ms = AP_HAL::millis64();
+    uint32_t current_time_ms = AP_HAL::millis();
 
 #if FIND_GIMBAL_MAX_SEARCH_TIME_MS
     if (current_time_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
         _initialised = false; //should be already false, but it can't hurt to ensure that
-       _serial_is_initialised = false; //switch off BP_STorM32
-       _mount_type = AP_Mount::Mount_Type_None; //switch off finally, also makes find_gimbal() to stop searching
+        _serial_is_initialised = false; //switch off STorM32_lib
+        _mount_type = AP_Mount::Mount_Type_None; //switch off finally, also makes find_gimbal() to stop searching
         return;
     }
 #endif
@@ -539,11 +553,15 @@ void BP_Mount_STorM32::find_gimbal_native(void)
                     boardstr[16] = '\0';
                     _task_counter = TASK_SLOT0;
                     _initialised = true;
+                    return; //done, get out of here
                 }
+                break;
+            default:
+                // skip
                 break;
         }
         _task_counter++;
-        if( _task_counter >= 3 ) _task_counter = 0;
+        if( _task_counter >= 3 ) { _task_counter = 0; }
     }
 }
 
@@ -591,9 +609,11 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
 
 size_t BP_Mount_STorM32::_serial_txspace(void)
 {
+#ifdef STORM32_USE_UAVCAN
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return 1000;
     }
+#endif
     if (_mount_type == AP_Mount::Mount_Type_STorM32_Native) {
         return (size_t)_uart->txspace();
     }
@@ -603,25 +623,18 @@ size_t BP_Mount_STorM32::_serial_txspace(void)
 
 size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8_t priority)
 {
+#ifdef STORM32_USE_UAVCAN
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
-
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
             if (_ap_uavcan[i] != nullptr) {
                 _ap_uavcan[i]->storm32nodespecific_send( (uint8_t*)buffer, size, priority );
             }
         }
-
         return size; //technically it should be set to zero if no transmission happened, i == MAX_NUMBER_OF_CAN_DRIVERS
-
     }
+#endif
     if (_mount_type == AP_Mount::Mount_Type_STorM32_Native) {
-
-        if (_uart != nullptr) {
-            return _uart->write(buffer, size);
-        }
-
-        return 0;
-
+        return _uart->write(buffer, size);
     }
     return 0;
 }

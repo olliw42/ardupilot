@@ -1637,11 +1637,11 @@ void AP_UAVCAN::storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, 
 
         // BP_STorM32 priorities are PRIORITY_DEFAULT = 0, PRIORITY_HIGHER = 1, PRIORITY_HIGHEST = 2
         // from spying the CAN ID in the UAVCAN Gui Tool it seems that this has indeed the intended effect :)
-        if( priority == BP_STorM32::PRIORITY_HIGHEST ){
+        if( priority == STorM32_lib::PRIORITY_HIGHEST ){
           //ensure that this is lower than what is used for escRaw !!! which uses OneLowerThanHighest
           _storm32nodespecific.priority = TwoLowerThanHighest;
         } else
-        if( priority == BP_STorM32::PRIORITY_HIGHER ){
+        if( priority == STorM32_lib::PRIORITY_HIGHER ){
           // give it a bit of an advantage over default
           _storm32nodespecific.priority = OneHigherThanDefault;
         } else {
