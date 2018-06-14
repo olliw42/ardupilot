@@ -98,6 +98,14 @@ AP_BattMonitor::init()
                 _num_instances++;
 #endif
                 break;
+//OW //XXXXXX needs to be checked if this makes sense!
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_GenericBatteryInfo:
+#if HAL_WITH_UAVCAN
+                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], _params[instance]);
+                _num_instances++;
+#endif
+                break;
+//OWEND
             case AP_BattMonitor_Params::BattMonitor_TYPE_NONE:
             default:
                 break;

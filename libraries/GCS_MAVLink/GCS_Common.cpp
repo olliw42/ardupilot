@@ -41,6 +41,10 @@
 #include <SITL/SITL.h>
 #endif
 
+//OW
+#include <AP_Mount/BP_Mount_STorM32.h>
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 uint32_t GCS_MAVLINK::last_radio_status_remrssi_ms;
@@ -2420,6 +2424,24 @@ void GCS_MAVLINK::send_banner()
     if (hal.util->get_system_id(sysid)) {
         send_text(MAV_SEVERITY_INFO, sysid);
     }
+
+//OW
+/*
+    AP_Notify *notify = AP_Notify::instance();
+    if (notify) {
+        notify->bpactions.gcs_connection_detected = true;
+        notify->bpactions.gcs_send_banner = true;
+    }
+*//*
+    AP::bpnotify().actions.gcs_connection_detected = true;
+    AP::bpnotify().actions.gcs_send_banner = true;
+*/
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    if (notify) {
+        notify->actions.gcs_connection_detected = true;
+        notify->actions.gcs_send_banner = true;
+    }
+//OWEND
 }
 
 

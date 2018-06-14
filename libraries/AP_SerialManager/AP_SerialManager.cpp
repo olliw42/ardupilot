@@ -250,6 +250,15 @@ void AP_SerialManager::init()
                     state[i].uart->begin(map_baudrate(state[i].baud), 30, 30);
                     state[i].uart->set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
                     break;
+//OW
+                case SerialProtocol_STorM32_Native:
+                    // Note baudrate is hardcoded to 115200
+                    state[i].baud = AP_SERIALMANAGER_SToRM32_BAUD / 1000;   // update baud param in case user looks at it
+                    state[i].uart->begin(map_baudrate(state[i].baud),
+                                         AP_SERIALMANAGER_SToRM32_BUFSIZE_RX,
+                                         AP_SERIALMANAGER_SToRM32_BUFSIZE_TX);
+                    break;
+//OWEND
             }
         }
     }

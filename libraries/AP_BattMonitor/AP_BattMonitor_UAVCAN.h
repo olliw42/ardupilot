@@ -28,6 +28,10 @@ public:
 
     void handle_bi_msg(float voltage, float current, float temperature) override;
 
+//OW
+    void handle_genericbatteryinfo_msg(float voltage, float current, float charge) override;
+//OWEND
+
 protected:
     BattMonitor_UAVCAN_Type _type;
 };
