@@ -29,7 +29,7 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 /*
 v0.08:
  - added changes from STorM32nativeonly branch
-
+ - replace AP_Notify mechanism with own singleton -> changes also in: GCS_Common.cpp, AP_Camera.h
 
 v0.07:
  - UC4HNOTIFYTYPE_FLAGS implemented

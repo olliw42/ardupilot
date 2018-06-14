@@ -254,9 +254,6 @@ void AP_Notify::init(bool enable_external_leds)
     // clear all flags and events
     memset(&AP_Notify::flags, 0, sizeof(AP_Notify::flags));
     memset(&AP_Notify::events, 0, sizeof(AP_Notify::events));
-//OW
-    memset(&bpactions, 0, sizeof(bpactions));
-//OWEND
 
     // clear flight mode string and text buffer
     memset(_flight_mode_str, 0, sizeof(_flight_mode_str));

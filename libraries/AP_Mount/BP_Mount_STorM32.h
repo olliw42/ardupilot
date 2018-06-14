@@ -15,11 +15,51 @@
 #define STORM32_USE_UAVCAN
 
 
+//singleton to communicate events & flags to the STorM32 mount
+// resembles AP_Notify, but doesn't use the AP_Notify type of singleton, it follows AP_GPS singleton
+class BP_Mount_STorM32_Notify
+{
+public:
+    // constructor
+    BP_Mount_STorM32_Notify();
+
+    // do not allow copies
+    BP_Mount_STorM32_Notify(const BP_Mount_STorM32_Notify &other) = delete;
+    BP_Mount_STorM32_Notify &operator=(const BP_Mount_STorM32_Notify&) = delete;
+
+    // get singleton instance
+    static BP_Mount_STorM32_Notify &bpnotify() {
+        return *_singleton;
+    }
+
+    /// bitmask of flags
+    // an 'action' is either a flag or a event
+    struct bpactions_type {
+        //flags
+        uint32_t gcs_connection_detected : 1; //this permanently set once a send_banner() has been done
+        uint32_t mount0_armed            : 1; //not used currently, but can be useful in future
+        //events
+        uint32_t gcs_send_banner         : 1; //this is set by send_banner(), and should be reset by a consumer
+        uint32_t camera_trigger_pic      : 1; //this is set by trigger_pic(), and should be reset by a consumer
+    };
+    struct bpactions_type actions;
+
+private:
+    static BP_Mount_STorM32_Notify *_singleton;
+};
+
+namespace AP
+{
+    BP_Mount_STorM32_Notify &bpnotify();
+};
+
+
+
 class BP_Mount_STorM32 : public AP_Mount_Backend, public STorM32_lib
 {
 
 public:
-    // Constructor
+    // constructor
     BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance);
 
     // do not allow copies
@@ -51,6 +91,9 @@ public:
     virtual bool is_armed(){ return _armed; }
 
 private:
+    // BP_Mount_STorM32_Notify instance
+    BP_Mount_STorM32_Notify notify;
+
     // helper to handle corrupt rcin data
     bool is_failsafe(void);
 

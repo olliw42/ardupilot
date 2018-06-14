@@ -35,6 +35,10 @@
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #endif
 
+//OW
+#include <AP_Mount/BP_Mount_STorM32.h>
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 uint32_t GCS_MAVLINK::last_radio_status_remrssi_ms;
@@ -2056,11 +2060,15 @@ void GCS_MAVLINK::send_banner()
     }
 
 //OW
+/*
     AP_Notify *notify = AP_Notify::instance();
     if (notify) {
         notify->bpactions.gcs_connection_detected = true;
         notify->bpactions.gcs_send_banner = true;
     }
+*/
+    AP::bpnotify().actions.gcs_connection_detected = true;
+    AP::bpnotify().actions.gcs_send_banner = true;
 //OWEND
 }
 

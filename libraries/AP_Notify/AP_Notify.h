@@ -117,21 +117,6 @@ public:
     static struct notify_flags_and_values_type flags;
     static struct notify_events_type events;
 
-//OW
-    //I use AP_Notify as container which everyone has easy access to
-    // I prefer this over a 'own' singleton class, since it's less polluting, and notifiers may want to use the info
-    // a 'action' is either a flag or a event
-    struct notify_bpactions_type {
-        //flags
-        uint32_t gcs_connection_detected : 1; //this permanently set once a send_banner() has been done
-        uint32_t mount0_armed            : 1; //not used currently, but can be useful in future
-        //events
-        uint32_t gcs_send_banner         : 1; //this is set by send_banner(), and should be reset by a consumer
-        uint32_t camera_trigger_pic      : 1; //this is set by trigger_pic(), and should be reset by a consumer
-    };
-    struct notify_bpactions_type bpactions;
-//OWEND
-
     // initialisation
     void init(bool enable_external_leds);
 

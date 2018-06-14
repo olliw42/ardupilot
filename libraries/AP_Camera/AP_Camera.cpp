@@ -12,7 +12,7 @@
 #include <unistd.h>
 #endif
 //OW
-#include "../ArduCopter/Copter.h"
+#include <AP_Mount/BP_Mount_STorM32.h>
 //OWEND
 
 // ------------------------------
@@ -154,8 +154,11 @@ void AP_Camera::trigger_pic()
     }
 
 //OW
+/*
     AP_Notify *notify = AP_Notify::instance();
     if (notify) notify->bpactions.camera_trigger_pic = true;
+*/
+    AP::bpnotify().actions.camera_trigger_pic = true;
 //OWEND
 
     log_picture();
