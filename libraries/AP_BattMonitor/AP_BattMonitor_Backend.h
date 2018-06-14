@@ -50,8 +50,7 @@ public:
     void update_resistance_estimate();
 
     // callback for UAVCAN messages
-    virtual void handle_bi_msg(float voltage, float current,
-            float temperature) {}
+    virtual void handle_bi_msg(float voltage, float current, float temperature) {}
 //OW
     virtual void handle_genericbatteryinfo_msg(float voltage, float current, float charge) {}
 //OWEND

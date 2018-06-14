@@ -42,11 +42,11 @@ void AP_BattMonitor_UAVCAN::init()
                 }
                 break;
 //OW
-                        case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_GenericBatteryInfo:
-                            if (uavcan->genericbatteryinfo_register_listener(this, _params._serial_number)) {
-                                debug_bm_uavcan(2, "UAVCAN BattMonitor[?] GenericBatteryInfo registered id: %d\n\r", _params._serial_number);
-                            }
-                            break;
+            case UAVCAN_GENERICBATTERY_INFO:
+                if (ap_uavcan->genericbatteryinfo_register_listener(this, _params._serial_number)) {
+                    debug_bm_uavcan(2, "UAVCAN BattMonitor GenericBatteryInfo registered id: %d\n\r", _params._serial_number);
+                }
+                break;
 //OWEND
         }
     }
@@ -99,17 +99,21 @@ void AP_BattMonitor_UAVCAN::handle_genericbatteryinfo_msg(float voltage, float c
     uint32_t tnow = AP_HAL::micros();
 
     if (!uavcan::isNaN(charge)) {
-        _state.current_total_mah = charge;
+        _state.consumed_mah = charge;
+        _state.consumed_wh = 0.001f * charge * _state.voltage;
     } else {
         float dt = tnow - _state.last_time_micros;
 
         // update total current drawn since startup
-        if (_state.last_time_micros != 0 && dt < 2000000.0f) {
+        if (_state.last_time_micros != 0 && dt < 2000000) {
             // .0002778 is 1/3600 (conversion to hours)
-            _state.current_total_mah += _state.current_amps * dt * 0.0000002778f;
+            float mah = (float) ((double) _state.current_amps * (double) dt * (double) 0.0000002778f);
+            _state.consumed_mah += mah;
+            _state.consumed_wh  += 0.001f * mah * _state.voltage;
         }
     }
 
+    // record time
     _state.last_time_micros = tnow;
 
     _state.healthy = true;
