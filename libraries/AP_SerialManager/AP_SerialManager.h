@@ -100,6 +100,9 @@ public:
         SerialProtocol_Sbus1 = 15,
         SerialProtocol_ESCTelemetry = 16,
         SerialProtocol_Devo_Telem = 17,
+//OW
+        SerialProtocol_STorM32_Native = 84
+//OWEND
     };
 
     // get singleton instance

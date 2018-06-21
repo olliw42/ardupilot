@@ -16,6 +16,11 @@
 #include <AP_Baro/AP_Baro_Backend.h>
 #include <AP_Compass/AP_Compass.h>
 #include <AP_BattMonitor/AP_BattMonitor_Backend.h>
+//OW
+#include <AP_Mount/BP_Mount_STorM32.h>
+#include "NodeSpecific.hpp"
+#include "Notify.hpp"
+//OWEND
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
@@ -37,6 +42,11 @@
 #define AP_UAVCAN_MAX_MAG_NODES 4
 #define AP_UAVCAN_MAX_BARO_NODES 4
 #define AP_UAVCAN_MAX_BI_NUMBER 4
+//OW
+#define AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER 4
+#define AP_UAVCAN_ESCSTATUS_MAX_NUMBER 8
+#define AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER 1 //we accept only one gimbal
+//OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
 #define AP_UAVCAN_SW_VERS_MINOR 0
@@ -279,6 +289,121 @@ public:
     {
         _parent_can_mgr = parent_can_mgr;
     }
+
+//OW
+    // --- GenericBatteryInfo ---
+    // incoming message, by device id
+public:
+    struct GenericBatteryInfo_Data {
+        float voltage; //float16
+        float current; //float16
+        float charge_consumed_mAh; //float16
+        uint8_t status_flags;
+    };
+
+    uint8_t genericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
+    GenericBatteryInfo_Data* genericbatteryinfo_getptrto_data(uint8_t id);
+    void genericbatteryinfo_update_data(uint8_t id);
+
+private:
+    struct {
+        uint16_t id[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t id_taken[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+        AP_BattMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+        GenericBatteryInfo_Data data[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+    } _genericbatteryinfo;
+
+    // --- EscStatus ---
+    // incoming message, by device id
+public:
+    // currently, we do nothing than to write the data to dataflash
+    // => we do not need a listener, we can do it in _update_data()
+    // register_listener would be called from the listener class
+    // => for EscStatus it is never called, and it doesn't harm to leave AP_BattMonitor_Backend
+    // this of course needs to change once we have a proper class which wants to listen to EscStatus
+    struct EscStatus_Data {
+        uint32_t error_count;
+        float voltage;
+        float current;
+        float temperature;
+        int32_t rpm;
+        uint8_t power_rating_pct;
+    };
+    //uint8_t escstatus_register_listener(AP_EscMonitor_Backend* new_listener, uint8_t id);
+    EscStatus_Data* escstatus_getptrto_data(uint8_t id);
+    void escstatus_update_data(uint8_t id);
+
+private:
+    struct {
+        uint16_t id[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+        //uint16_t id_taken[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+        //uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+        //AP_EscMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+        EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+    } _escstatus;
+
+    // --- STorM32Status ---
+    // incoming message, by node id
+public:
+    struct STorM32Status_Data {
+        uint8_t mode; //must be 0 currently
+        uint8_t frame; //must be 0 currently
+        bool anglequaternion_tag; //0: angles, 1: quaternion
+        float orientation_angles_rad[3]; //roll, pitch, yaw
+        float orientation_q[4]; //x,y,z,w
+        float angular_velocity[3]; //x,y,z
+        //private
+        bool angular_velocity_available; //tells if velocity has been sent
+    };
+    uint8_t storm32status_register_listener(BP_Mount_STorM32* new_listener, uint8_t id);
+    STorM32Status_Data* storm32status_getptrto_data(uint8_t id);
+    void storm32status_update_data(uint8_t id);
+
+private:
+    struct {
+        uint16_t id[AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER];
+        uint16_t id_taken[AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER];
+        uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+        BP_Mount_STorM32* listeners[AP_UAVCAN_MAX_LISTENERS];
+        STorM32Status_Data data[AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER];
+    } _storm32status;
+
+
+    // --- STorM32NodeSpecific ---
+    // outgoing message
+public:
+    bool storm32nodespecific_sem_take();
+    void storm32nodespecific_sem_give();
+    void storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, uint8_t priority);
+
+private:
+    struct {
+        uavcan::olliw::storm32::NodeSpecific msg;
+        uavcan::TransferPriority priority;
+        bool to_send;
+        AP_HAL::Semaphore* sem;
+    } _storm32nodespecific;
+
+    // --- Uc4hNotify ---
+    // outgoing message
+public:
+    bool uc4hnotify_sem_take();
+    void uc4hnotify_sem_give();
+    void uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len);
+
+private:
+    struct {
+        uavcan::olliw::uc4h::Notify msg;
+        uavcan::TransferPriority priority;
+        bool to_send;
+        AP_HAL::Semaphore* sem;
+    } _uc4hnotify;
+
+    // --- outgoing message handler ---
+    void storm32_do_cyclic(uint64_t current_time_ms);
+    void uc4h_do_cyclic(uint64_t current_time_ms);
+//OWEND
 };
 
 #endif /* AP_UAVCAN_H_ */

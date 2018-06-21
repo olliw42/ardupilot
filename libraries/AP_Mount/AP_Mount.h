@@ -38,6 +38,9 @@ class AP_Mount_SoloGimbal;
 class AP_Mount_Alexmos;
 class AP_Mount_SToRM32;
 class AP_Mount_SToRM32_serial;
+//OW
+class BP_Mount_STorM32;
+//OWEND
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -53,6 +56,9 @@ class AP_Mount
     friend class AP_Mount_Alexmos;
     friend class AP_Mount_SToRM32;
     friend class AP_Mount_SToRM32_serial;
+//OW
+    friend class BP_Mount_STorM32;
+//OWEND
 
 public:
     AP_Mount(const AP_AHRS_TYPE &ahrs, const struct Location &current_loc);
@@ -69,7 +75,11 @@ public:
         Mount_Type_SoloGimbal = 2,      /// Solo's gimbal
         Mount_Type_Alexmos = 3,         /// Alexmos mount
         Mount_Type_SToRM32 = 4,         /// SToRM32 mount using MAVLink protocol
-        Mount_Type_SToRM32_serial = 5   /// SToRM32 mount using custom serial protocol
+        Mount_Type_SToRM32_serial = 5,   /// SToRM32 mount using custom serial protocol
+//OW
+        Mount_Type_STorM32_UAVCAN = 83,
+        Mount_Type_STorM32_Native = 84,
+//OWEND
     };
 
     // init - detect and initialise all mounts

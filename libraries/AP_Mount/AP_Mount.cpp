@@ -7,6 +7,9 @@
 #include "AP_Mount_Alexmos.h"
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
+//OW
+#include "BP_Mount_STorM32.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Param: _DEFLT_MODE
@@ -462,6 +465,17 @@ void AP_Mount::init(const AP_SerialManager& serial_manager)
         } else if (mount_type == Mount_Type_SToRM32_serial) {
             _backends[instance] = new AP_Mount_SToRM32_serial(*this, state[instance], instance);
             _num_instances++;
+//OW
+        // check for STorM32 mounts using UAVCAN protocol
+        } else if (mount_type == Mount_Type_STorM32_UAVCAN) {
+            _backends[instance] = new BP_Mount_STorM32(*this, state[instance], instance);
+            _num_instances++;
+
+        // check for STorM32 mounts using native serial protocol
+        } else if (mount_type == Mount_Type_STorM32_Native) {
+            _backends[instance] = new BP_Mount_STorM32(*this, state[instance], instance);
+            _num_instances++;
+//OWEND
         }
 
         // init new instance
