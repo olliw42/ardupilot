@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter dev v008"
+#define THISFIRMWARE "BetaCopter V3.6-dev v008"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -31,7 +31,7 @@ v0.08:
  - added changes from STorM32nativeonly branch
  - replace AP_Notify mechanism with own singleton -> changes also in: GCS_Common.cpp, AP_Camera.h
  - notify singleton changed to AP_Notify style, needs testing !
- - merge master of 14.06.2018, using master-bcdev-merge method (ensures updated submodules)
+ - merge master of 14.06.2018, using master-bcdev-merge method (ensures updated submodules, NO!)
 # Conflicts:
 #   libraries/AP_BattMonitor/AP_BattMonitor.cpp
 #   libraries/AP_BattMonitor/AP_BattMonitor.h
@@ -54,7 +54,12 @@ v0.08:
  - change AP_UAVCAN::escstatus_update_data(), follow AP_BLHeli::read_telemetry_packet()
  - remove _st_
  - 2018.06.21: submodules Chibio, mavlink updated
-
+ - merge master of 20.06.2018, using master-bcdev-merge method
+ - two very simple merge conflicts in AP_Battmonitor => compiles
+ - BP_Mount_STorM32_Notify bench tested, and is working
+ - USE_UC4H_UAVCAN define to disable/enable all extra UAVCAN stuff
+ - needs moving #include <AP_UAVCAN/AP_UAVCAN.h> to Uc4hNotifyDevice.h
+ - 2018.06.21: testflight flamewheel, passed
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
 

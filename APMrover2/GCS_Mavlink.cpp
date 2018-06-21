@@ -448,7 +448,8 @@ static const ap_message STREAM_EXTRA3_msgs[] = {
     MSG_MAG_CAL_PROGRESS,
     MSG_EKF_STATUS_REPORT,
     MSG_VIBRATION,
-    MSG_RPM
+    MSG_RPM,
+    MSG_ESC_TELEMETRY,
 };
 
 const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
@@ -1222,7 +1223,6 @@ void Rover::mavlink_delay_cb()
         last_5s = tnow;
         gcs().send_text(MAV_SEVERITY_INFO, "Initialising APM");
     }
-    check_usb_mux();
 
     DataFlash.EnableWrites(true);
 }
@@ -1309,9 +1309,4 @@ bool GCS_MAVLINK_Rover::set_mode(const uint8_t mode)
         return false;
     }
     return rover.set_mode(*new_mode, MODE_REASON_GCS_COMMAND);
-}
-
-const AP_FWVersion &GCS_MAVLINK_Rover::get_fwver() const
-{
-    return rover.fwver;
 }

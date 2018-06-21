@@ -81,6 +81,7 @@ enum ap_message : uint8_t {
     MSG_BATTERY_STATUS,
     MSG_AOA_SSA,
     MSG_LANDING,
+    MSG_ESC_TELEMETRY,
     MSG_NAMED_FLOAT,
     MSG_LAST // MSG_LAST must be the last entry in this enum
 };
@@ -257,7 +258,6 @@ protected:
     virtual AP_AdvancedFailsafe *get_advanced_failsafe() const { return nullptr; };
     virtual AP_VisualOdom *get_visual_odom() const { return nullptr; }
     virtual bool set_mode(uint8_t mode) = 0;
-    virtual const AP_FWVersion &get_fwver() const = 0;
     void set_ekf_origin(const Location& loc);
 
     virtual MAV_TYPE frame_type() const = 0;
@@ -296,7 +296,7 @@ protected:
     void handle_param_request_list(mavlink_message_t *msg);
     void handle_param_request_read(mavlink_message_t *msg);
     virtual bool params_ready() const { return true; }
-
+    void handle_system_time_message(const mavlink_message_t *msg);
     void handle_common_rally_message(mavlink_message_t *msg);
     void handle_rally_fetch_point(mavlink_message_t *msg);
     void handle_rally_point(mavlink_message_t *msg);
@@ -372,6 +372,9 @@ protected:
     virtual float vfr_hud_airspeed() const;
     virtual int16_t vfr_hud_throttle() const { return 0; }
     Vector3f vfr_hud_velned;
+
+    static constexpr const float magic_force_arm_value = 2989.0f;
+    static constexpr const float magic_force_disarm_value = 21196.0f;
 
 private:
 

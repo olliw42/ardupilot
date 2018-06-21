@@ -43,9 +43,11 @@ void AP_BattMonitor_UAVCAN::init()
                 break;
 //OW
             case UAVCAN_GENERICBATTERY_INFO:
+#ifdef USE_UC4H_UAVCAN
                 if (ap_uavcan->genericbatteryinfo_register_listener(this, _params._serial_number)) {
                     debug_bm_uavcan(2, "UAVCAN BattMonitor GenericBatteryInfo registered id: %d\n\r", _params._serial_number);
                 }
+#endif
                 break;
 //OWEND
         }
@@ -89,6 +91,7 @@ void AP_BattMonitor_UAVCAN::handle_bi_msg(float voltage, float current, float te
 //OW
 void AP_BattMonitor_UAVCAN::handle_genericbatteryinfo_msg(float voltage, float current, float charge)
 {
+#ifdef USE_UC4H_UAVCAN
     _state.voltage = voltage;
     _state.current_amps = current;
 //XX    _state.current_total_mah = charge;
@@ -117,6 +120,7 @@ void AP_BattMonitor_UAVCAN::handle_genericbatteryinfo_msg(float voltage, float c
     _state.last_time_micros = tnow;
 
     _state.healthy = true;
+#endif
 }
 //OWEND
 

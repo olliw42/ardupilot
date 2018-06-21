@@ -18,9 +18,11 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_GPS/AP_GPS.h>
-#include <AP_UAVCAN/AP_UAVCAN.h>
+//#include <AP_UAVCAN/AP_UAVCAN.h>
 #include "Uc4hNotifyDevice.h"
 #include "AP_Notify.h"
+
+#ifdef USE_UC4H_UAVCAN
 
 extern const AP_HAL::HAL& hal;
 
@@ -186,7 +188,7 @@ void Uc4hNotifyDevice::update_text(void)
     _text_updated = true;
 }
 
-
+#endif
 
 
 

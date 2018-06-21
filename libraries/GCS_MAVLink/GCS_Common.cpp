@@ -21,6 +21,7 @@
 #include <AP_RangeFinder/RangeFinder_Backend.h>
 #include <AP_Airspeed/AP_Airspeed.h>
 #include <AP_Gripper/AP_Gripper.h>
+#include <AP_BLHeli/AP_BLHeli.h>
 
 #include "GCS.h"
 
@@ -215,7 +216,9 @@ void GCS_MAVLINK::send_battery_status(const AP_BattMonitor &battery,
                                     battery.has_current(instance) ? battery.current_amps(instance) * 100 : -1, // current in centiampere
                                     battery.has_current(instance) ? battery.consumed_mah(instance) : -1,       // total consumed current in milliampere.hour
                                     battery.has_consumed_energy(instance) ? battery.consumed_wh(instance) * 36 : -1, // consumed energy in hJ (hecto-Joules)
-                                    battery.capacity_remaining_pct(instance));
+                                    battery.capacity_remaining_pct(instance),
+                                    0, // time remaining, seconds (not provided)
+                                    MAV_BATTERY_CHARGE_STATE_UNDEFINED);
 }
 
 // returns true if all battery instances were reported
@@ -955,20 +958,16 @@ GCS_MAVLINK::update(uint32_t max_time_us)
         }
     }
 
-    if (!waypoint_receiving) {
-        hal.util->perf_end(_perf_update);    
-        return;
-    }
+    if (waypoint_receiving) {
+        const uint32_t wp_recv_time = 1000U + (stream_slowdown*20);
 
-    uint32_t wp_recv_time = 1000U + (stream_slowdown*20);
-
-    // stop waypoint receiving if timeout
-    if (waypoint_receiving && (tnow - waypoint_timelast_receive) > wp_recv_time+waypoint_receive_timeout) {
-        waypoint_receiving = false;
-    } else if (waypoint_receiving &&
-               (tnow - waypoint_timelast_request) > wp_recv_time) {
-        waypoint_timelast_request = tnow;
-        send_message(MSG_NEXT_WAYPOINT);
+        // stop waypoint receiving if timeout
+        if (tnow - waypoint_timelast_receive > wp_recv_time+waypoint_receive_timeout) {
+            waypoint_receiving = false;
+        } else if (tnow - waypoint_timelast_request > wp_recv_time) {
+            waypoint_timelast_request = tnow;
+            send_message(MSG_NEXT_WAYPOINT);
+        }
     }
 
     hal.util->perf_end(_perf_update);    
@@ -980,9 +979,12 @@ GCS_MAVLINK::update(uint32_t max_time_us)
  */
 void GCS_MAVLINK::send_system_time()
 {
+    uint64_t time_unix = 0;
+    AP::rtc().get_utc_usec(time_unix); // may fail, leaving time_unix at 0
+
     mavlink_msg_system_time_send(
         chan,
-        AP::gps().time_epoch_usec(),
+        time_unix,
         AP_HAL::millis());
 }
 
@@ -1493,7 +1495,7 @@ void GCS_MAVLINK::send_autopilot_version() const
     uint16_t product_id = 0;
     uint64_t uid = 0;
     uint8_t  uid2[MAVLINK_MSG_AUTOPILOT_VERSION_FIELD_UID2_LEN] = {0};
-    const AP_FWVersion &version = get_fwver();
+    const AP_FWVersion &version = AP::fwversion();
 
     flight_sw_version = version.major << (8 * 3) | \
                         version.minor << (8 * 2) | \
@@ -1954,6 +1956,14 @@ void GCS_MAVLINK::handle_statustext(mavlink_message_t *msg)
 }
 
 
+void GCS_MAVLINK::handle_system_time_message(const mavlink_message_t *msg)
+{
+    mavlink_system_time_t packet;
+    mavlink_msg_system_time_decode(msg, &packet);
+
+    AP::rtc().set_utc_usec(packet.time_unix_usec, AP_RTC::SOURCE_MAVLINK_SYSTEM_TIME);
+}
+
 MAV_RESULT GCS_MAVLINK::handle_command_camera(const mavlink_command_long_t &packet)
 {
     AP_Camera *camera = get_camera();
@@ -2335,6 +2345,10 @@ void GCS_MAVLINK::handle_common_message(mavlink_message_t *msg)
     case MAVLINK_MSG_ID_ATT_POS_MOCAP:
         handle_att_pos_mocap(msg);
         break;
+
+    case MAVLINK_MSG_ID_SYSTEM_TIME:
+        handle_system_time_message(msg);
+        break;
     }
 
 }
@@ -2411,12 +2425,17 @@ void GCS_MAVLINK::handle_send_autopilot_version(const mavlink_message_t *msg)
 void GCS_MAVLINK::send_banner()
 {
     // mark the firmware version in the tlog
-    const AP_FWVersion &fwver = get_fwver();
+    const AP_FWVersion &fwver = AP::fwversion();
+
     send_text(MAV_SEVERITY_INFO, fwver.fw_string);
 
-    if (fwver.middleware_hash_str && fwver.os_hash_str) {
-        send_text(MAV_SEVERITY_INFO, "PX4: %s NuttX: %s",
-                  fwver.middleware_hash_str, fwver.os_hash_str);
+    if (fwver.middleware_name && fwver.os_name) {
+        send_text(MAV_SEVERITY_INFO, "%s: %s %s: %s",
+                  fwver.middleware_name, fwver.middleware_hash_str,
+                  fwver.os_name, fwver.os_hash_str);
+    } else if (fwver.os_name) {
+        send_text(MAV_SEVERITY_INFO, "%s: %s",
+                  fwver.os_name, fwver.os_hash_str);
     }
 
     // send system ID if we can
@@ -2990,6 +3009,17 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         CHECK_PAYLOAD_SIZE(VIBRATION);
         send_vibration();
         break;
+
+    case MSG_ESC_TELEMETRY: {
+#ifdef HAVE_AP_BLHELI_SUPPORT
+        CHECK_PAYLOAD_SIZE(ESC_TELEMETRY_1_TO_4);
+        AP_BLHeli *blheli = AP_BLHeli::get_singleton();
+        if (blheli) {
+            blheli->send_esc_telemetry_mavlink(uint8_t(chan));
+        }
+#endif
+        break;
+    }
 
     default:
         // try_send_message must always at some stage return true for

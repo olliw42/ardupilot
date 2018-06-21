@@ -603,8 +603,9 @@ static const ap_message STREAM_EXTRA3_msgs[] = {
     MSG_EKF_STATUS_REPORT,
     MSG_VIBRATION,
 #if RPM_ENABLED == ENABLED
-    MSG_RPM
+    MSG_RPM,
 #endif
+    MSG_ESC_TELEMETRY,
 };
 
 const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
@@ -1367,11 +1368,6 @@ MAV_RESULT GCS_MAVLINK_Sub::handle_flight_termination(const mavlink_command_long
 bool GCS_MAVLINK_Sub::set_mode(uint8_t mode)
 {
     return sub.set_mode((control_mode_t)mode, MODE_REASON_GCS_COMMAND);
-}
-
-const AP_FWVersion &GCS_MAVLINK_Sub::get_fwver() const
-{
-    return sub.fwver;
 }
 
 int32_t GCS_MAVLINK_Sub::global_position_int_alt() const {

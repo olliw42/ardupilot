@@ -126,7 +126,6 @@ public:
     void loop(void) override;
 
 private:
-    static const AP_FWVersion fwver;
 
     // must be the first AP_Param variable declared to ensure its
     // constructor runs before the constructors of the other AP_Param
@@ -232,9 +231,6 @@ private:
     // true if initialisation has completed
     bool initialised;
 
-    // if USB is connected
-    bool usb_connected;
-
     // This is the state of the flight control system
     // There are multiple states defined such as MANUAL, AUTO, ...
     Mode *control_mode;
@@ -316,9 +312,6 @@ private:
     // Location structure defined in AP_Common
     // The home location used for RTL.  The location is set when we first get stable GPS lock
     const struct Location &home;
-
-    // true if the system time has been set from the GPS
-    bool system_time_set;
 
     // true if the compass's initial location has been set
     bool compass_init_location;
@@ -427,7 +420,6 @@ private:
     void update_home_from_EKF();
     bool set_home_to_current_location(bool lock);
     bool set_home(const Location& loc, bool lock);
-    void set_system_time_from_GPS();
     void update_home();
 
     // compat.cpp
@@ -530,7 +522,6 @@ private:
     bool set_mode(Mode &new_mode, mode_reason_t reason);
     bool mavlink_set_mode(uint8_t mode);
     void startup_INS_ground(void);
-    void check_usb_mux(void);
     void print_mode(AP_HAL::BetterStream *port, uint8_t mode);
     void notify_mode(const Mode *new_mode);
     uint8_t check_digital_pin(uint8_t pin);

@@ -21,6 +21,7 @@ public:
         BattMonitor_TYPE_BEBOP                      = 6,
         BattMonitor_TYPE_MAXELL                     = 7,
         BattMonitor_TYPE_UAVCAN_BatteryInfo         = 8,
+        BattMonitor_TYPE_BLHeliESC                  = 9,
 //OW
         BattMonitor_TYPE_UAVCAN_GenericBatteryInfo  = 83,
 //OWEND

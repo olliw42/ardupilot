@@ -44,11 +44,13 @@
 //    they're mainly because I can't add/commit and thus can't checkout to e.g. master
 //the workaround is to "somehow" get the .hpp file generated, without affecting the uavcan submodule in any way,
 //and to place the new .hpp into the AP_UAVCAN library folder
+#ifdef USE_UC4H_UAVCAN
 #include "GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
 #include "Status.hpp"
 #include "NodeSpecific.hpp"
 #include "Notify.hpp"
+#endif
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -374,7 +376,13 @@ static void battery_info_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equi
 static void (*battery_info_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::BatteryInfo>& msg)
         = { battery_info_st_cb0, battery_info_st_cb1 };
 
+// publisher interfaces
+static uavcan::Publisher<uavcan::equipment::actuator::ArrayCommand>* act_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
+static uavcan::Publisher<uavcan::equipment::esc::RawCommand>* esc_raw[MAX_NUMBER_OF_CAN_DRIVERS];
+static uavcan::Publisher<uavcan::equipment::indication::LightsCommand>* rgb_led[MAX_NUMBER_OF_CAN_DRIVERS];
+
 //OW
+#ifdef USE_UC4H_UAVCAN
 //--- GenericBatteryInfo ---
 // incoming message, by id
 
@@ -481,14 +489,8 @@ static void storm32status_cb_func(const uavcan::ReceivedDataStructure<uavcan::ol
 static void storm32status_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg){ storm32status_cb_func(msg, 0); }
 static void storm32status_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg){ storm32status_cb_func(msg, 1); }
 static void (*storm32status_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg) = { storm32status_cb0, storm32status_cb1 };
-//OWEND
 
 // publisher interfaces
-static uavcan::Publisher<uavcan::equipment::actuator::ArrayCommand>* act_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
-static uavcan::Publisher<uavcan::equipment::esc::RawCommand>* esc_raw[MAX_NUMBER_OF_CAN_DRIVERS];
-static uavcan::Publisher<uavcan::equipment::indication::LightsCommand>* rgb_led[MAX_NUMBER_OF_CAN_DRIVERS];
-
-//OW
 //--- STorM32NodeSpecific ---
 // outgoing message
 static uavcan::Publisher<uavcan::olliw::storm32::NodeSpecific>* storm32nodespecific_array[MAX_NUMBER_OF_CAN_DRIVERS];
@@ -497,6 +499,7 @@ static uavcan::Publisher<uavcan::olliw::uc4h::Notify>* uc4hnotify_array[MAX_NUMB
 // further stuff for outgoing messages
 const uavcan::TransferPriority TwoLowerThanHighest(uavcan::TransferPriority::NumericallyMin + 2);
 const uavcan::TransferPriority OneHigherThanDefault((1U << uavcan::TransferPriority::BitLen) / 2 - 1);
+#endif
 //OWEND
 
 
@@ -551,6 +554,7 @@ AP_UAVCAN::AP_UAVCAN() :
     _led_out_sem = hal.util->new_semaphore();
 
 //OW
+#ifdef USE_UC4H_UAVCAN
     // --- GenericBatteryInfo ---
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
         _genericbatteryinfo.id[i] = UINT8_MAX;
@@ -588,6 +592,7 @@ AP_UAVCAN::AP_UAVCAN() :
     // --- Uc4hNotifyc ---
     _uc4hnotify.to_send = false;
     _uc4hnotify.sem = hal.util->new_semaphore();
+#endif
 //OWEND
 
     debug_uavcan(2, "AP_UAVCAN constructed\n\r");
@@ -732,6 +737,7 @@ bool AP_UAVCAN::try_init(void)
     _led_conf.devices_count = 0;
 
 //OW
+#ifdef USE_UC4H_UAVCAN
     uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *genericbatteryinfo_sub;
     genericbatteryinfo_sub = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
     const int genericbatteryinfo_start_res = genericbatteryinfo_sub->start(genericbatteryinfo_cb[_uavcan_i]);
@@ -761,6 +767,7 @@ bool AP_UAVCAN::try_init(void)
     uc4hnotify_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::uc4h::Notify>(*node);
     uc4hnotify_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
     uc4hnotify_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower);
+#endif
 //OWEND
 
     /*
@@ -931,9 +938,11 @@ void AP_UAVCAN::do_cyclic(void)
     }
 
 //OW
+#ifdef USE_UC4H_UAVCAN
     uint64_t current_time_ms = AP_HAL::millis64();
     storm32_do_cyclic(current_time_ms);
     uc4h_do_cyclic(current_time_ms);
+#endif
 //OWEND
 }
 
@@ -1642,6 +1651,7 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
 }
 
 //OW
+#ifdef USE_UC4H_UAVCAN
 // my convention: i for AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
 
 //--- GenericBatteryInfo ---
@@ -1678,6 +1688,24 @@ uint8_t AP_UAVCAN::genericbatteryinfo_register_listener(AP_BattMonitor_Backend* 
     }
 
     return ret;
+}
+
+//is not used, since remove_BM_bi_listener() is also not used, AP_BattMonitor_UAVCAN doesn't have a destructor defined
+void AP_UAVCAN::genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener)
+{
+    // Check for all listeners and compare pointers
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_genericbatteryinfo.listeners[li] != rem_listener) {
+            continue;
+        }
+        _genericbatteryinfo.listeners[li] = nullptr;
+
+        // Also decrement usage counter and reset listening node
+        if (_genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[li]] > 0) {
+            _genericbatteryinfo.id_taken[_genericbatteryinfo.listener_to_id[li]]--;
+        }
+        _genericbatteryinfo.listener_to_id[li] = UINT8_MAX;
+    }
 }
 
 AP_UAVCAN::GenericBatteryInfo_Data* AP_UAVCAN::genericbatteryinfo_getptrto_data(uint8_t id)
@@ -1844,6 +1872,24 @@ uint8_t AP_UAVCAN::storm32status_register_listener(BP_Mount_STorM32* new_listene
     }
 
     return ret;
+}
+
+//is not used
+void AP_UAVCAN::storm32status_remove_listener(BP_Mount_STorM32* rem_listener)
+{
+    // Check for all listeners and compare pointers
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_storm32status.listeners[li] != rem_listener) {
+            continue;
+        }
+        _storm32status.listeners[li] = nullptr;
+
+        // Also decrement usage counter and reset listening node
+        if (_storm32status.id_taken[_storm32status.listener_to_id[li]] > 0) {
+            _storm32status.id_taken[_storm32status.listener_to_id[li]]--;
+        }
+        _storm32status.listener_to_id[li] = UINT8_MAX;
+    }
 }
 
 AP_UAVCAN::STorM32Status_Data* AP_UAVCAN::storm32status_getptrto_data(uint8_t id)
@@ -2025,5 +2071,6 @@ void AP_UAVCAN::uc4h_do_cyclic(uint64_t current_time_ms)
         return; //always send only one message per cycle
     }
 }
+#endif
 //OWEND
 #endif // HAL_WITH_UAVCAN

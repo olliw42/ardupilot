@@ -7,17 +7,12 @@
 #include <RC_Channel/RC_Channel.h>
 #include "BP_Mount_STorM32.h"
 
-//using #if HAL_WITH_UAVCAN doesn't appear to work here, why ???
-#ifdef STORM32_USE_UAVCAN
-#include <AP_UAVCAN/AP_UAVCAN.h>
-#endif
-
 extern const AP_HAL::HAL& hal;
 
 
-//singleton to communicate events & flags to the STorM32 mount
+//that's the notify class
+// singleton to communicate events & flags to the STorM32 mount
 BP_Mount_STorM32_Notify *BP_Mount_STorM32_Notify::_singleton;
-
 
 // constructor
 BP_Mount_STorM32_Notify::BP_Mount_STorM32_Notify()
@@ -29,7 +24,8 @@ BP_Mount_STorM32_Notify::BP_Mount_STorM32_Notify()
 }
 
 
-// that's the main class
+//that's the main class
+// constructor
 BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :
     AP_Mount_Backend(frontend, state, instance)
 {
@@ -39,7 +35,7 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
     _armed = false;
     _send_armeddisarmed = false;
 
-#ifdef STORM32_USE_UAVCAN
+#if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
         _ap_uavcan[i] = nullptr;
     }
@@ -142,18 +138,6 @@ void BP_Mount_STorM32::update_fast()
                     receive_reset_wflush(); //we are brutal and kill all incoming bytes
                     send_cmd_getdatafields(LIVEDATA_FLAGS); //0.6ms
                 }
-/*
-                AP_Notify *notify = AP_Notify::instance();
-                if (notify && (notify->bpactions.camera_trigger_pic)) {
-                    notify->bpactions.camera_trigger_pic = false;
-                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
-                }
-*//*
-                if( AP::bpnotify().actions.camera_trigger_pic ){
-                    AP::bpnotify().actions.camera_trigger_pic = false;
-                    if (_bitmask & SEND_CMD_DOCAMERA) send_cmd_docamera(1); //1.0ms
-                }
-*/
                 BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
                 if (notify && (notify->actions.camera_trigger_pic)) {
                     notify->actions.camera_trigger_pic = false;
@@ -187,12 +171,6 @@ void BP_Mount_STorM32::update_fast()
                         bool _armed_new = is_normal_state(_serial_in.getdatafields.livedata_status.state);
                         if (_armed_new != _armed) { _send_armeddisarmed = true; }
                         _armed = _armed_new;
-/*
-                        AP_Notify *notify = AP_Notify::instance();
-                        if (notify) { notify->bpactions.mount0_armed = _armed; }
-*//*
-                        AP::bpnotify().actions.mount0_armed = _armed;
-*/
                         BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
                         if (notify) { notify->actions.mount0_armed = _armed; }
                     }
@@ -471,7 +449,7 @@ void BP_Mount_STorM32::handle_storm32status_uavcanmsg_angles_rad(float roll_rad,
 
 void BP_Mount_STorM32::find_CAN(void)
 {
-#ifdef STORM32_USE_UAVCAN
+#if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     if (_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return;
     }
@@ -509,7 +487,7 @@ void BP_Mount_STorM32::find_CAN(void)
 // this doesn't give us info such as firmware and armed state!!!
 void BP_Mount_STorM32::find_gimbal_uavcan(void)
 {
-#ifdef STORM32_USE_UAVCAN
+#if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     if (_mount_type != AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return;
     }
@@ -603,44 +581,9 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
     if (!_initialised) {
         return;
     }
-/*
-    AP_Notify *notify = AP_Notify::instance();
-    if (!notify) { //since AP_Notify is instantiated before mount, this shouldn't happen, right?
-        return;
-    }
 
-    if (notify->bpactions.gcs_send_banner) {
-        notify->bpactions.gcs_send_banner = false;
-        gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
-        if (strlen(versionstr)) {
-            char s[64];
-            strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );
-            gcs().send_text(MAV_SEVERITY_INFO, s);
-        }
-        _send_armeddisarmed = true; //also send gimbal state
-    }
-
-    if (!notify->bpactions.gcs_connection_detected) { //postpone all further sends until a gcs has been detected
-        return;
-    }
-*//*
-    if (AP::bpnotify().actions.gcs_send_banner) {
-        AP::bpnotify().actions.gcs_send_banner = false;
-        gcs().send_text(MAV_SEVERITY_INFO, "  STorM32: found and initialized");
-        if (strlen(versionstr)) {
-            char s[64];
-            strcpy(s, "  STorM32: " ); strcat(s, versionstr ); strcat(s, ", " );  strcat(s, boardstr );
-            gcs().send_text(MAV_SEVERITY_INFO, s);
-        }
-        _send_armeddisarmed = true; //also send gimbal state
-    }
-
-    if (!AP::bpnotify().actions.gcs_connection_detected) { //postpone all further sends until a gcs has been detected
-        return;
-    }
-*/
     BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
-    if (!notify) { //since BP_Mount_STorM32_Notify is instantiated before mount, this shouldn't happen, right?
+    if (!notify) { //since BP_Mount_STorM32_Notify is instantiated together with mount, this shouldn't happen
         return;
     }
 
@@ -672,7 +615,7 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
 
 size_t BP_Mount_STorM32::_serial_txspace(void)
 {
-#ifdef STORM32_USE_UAVCAN
+#if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return 1000;
     }
@@ -686,7 +629,7 @@ size_t BP_Mount_STorM32::_serial_txspace(void)
 
 size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8_t priority)
 {
-#ifdef STORM32_USE_UAVCAN
+#if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
             if (_ap_uavcan[i] != nullptr) {

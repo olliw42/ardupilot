@@ -24,7 +24,7 @@ void Rover::init_ardupilot()
 
     hal.console->printf("\n\nInit %s"
                         "\n\nFree RAM: %u\n",
-                        fwver.fw_string,
+                        AP::fwversion().fw_string,
                         (unsigned)hal.util->available_memory());
 
     //
@@ -70,17 +70,12 @@ void Rover::init_ardupilot()
     // init baro before we start the GCS, so that the CLI baro test works
     barometer.init();
 
-    // we start by assuming USB connected, as we initialed the serial
-    // port with SERIAL0_BAUD. check_usb_mux() fixes this if need be.
-    usb_connected = true;
-    check_usb_mux();
-
     // setup telem slots with serial ports
     gcs().setup_uarts(serial_manager);
 
     // setup frsky telemetry
 #if FRSKY_TELEM_ENABLED == ENABLED
-    frsky_telemetry.init(serial_manager, fwver.fw_string, (is_boat() ? MAV_TYPE_SURFACE_BOAT : MAV_TYPE_GROUND_ROVER));
+    frsky_telemetry.init(serial_manager, (is_boat() ? MAV_TYPE_SURFACE_BOAT : MAV_TYPE_GROUND_ROVER));
 #endif
 #if DEVO_TELEM_ENABLED == ENABLED
     devo_telemetry.init(serial_manager);
@@ -286,17 +281,6 @@ void Rover::startup_INS_ground(void)
 
     ins.init(scheduler.get_loop_rate_hz());
     ahrs.reset();
-}
-
-void Rover::check_usb_mux(void)
-{
-    bool usb_check = hal.gpio->usb_connected();
-    if (usb_check == usb_connected) {
-        return;
-    }
-
-    // the user has switched to/from the telemetry port
-    usb_connected = usb_check;
 }
 
 // update notify with mode change

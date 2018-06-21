@@ -5,6 +5,10 @@
 #ifndef AP_UAVCAN_H_
 #define AP_UAVCAN_H_
 
+//OW
+#define USE_UC4H_UAVCAN
+//OWEND
+
 #include <uavcan/uavcan.hpp>
 
 #include <AP_HAL/CAN.h>
@@ -17,9 +21,11 @@
 #include <AP_Compass/AP_Compass.h>
 #include <AP_BattMonitor/AP_BattMonitor_Backend.h>
 //OW
+#ifdef USE_UC4H_UAVCAN
 #include <AP_Mount/BP_Mount_STorM32.h>
 #include "NodeSpecific.hpp"
 #include "Notify.hpp"
+#endif
 //OWEND
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
@@ -291,6 +297,7 @@ public:
     }
 
 //OW
+#ifdef USE_UC4H_UAVCAN
     // --- GenericBatteryInfo ---
     // incoming message, by device id
 public:
@@ -302,6 +309,7 @@ public:
     };
 
     uint8_t genericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
+    void genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
     GenericBatteryInfo_Data* genericbatteryinfo_getptrto_data(uint8_t id);
     void genericbatteryinfo_update_data(uint8_t id);
 
@@ -331,6 +339,7 @@ public:
         uint8_t power_rating_pct;
     };
     //uint8_t escstatus_register_listener(AP_EscMonitor_Backend* new_listener, uint8_t id);
+    //void AP_UAVCAN::escstatus_remove_listener(AP_EscMonitor_Backend* rem_listener);
     EscStatus_Data* escstatus_getptrto_data(uint8_t id);
     void escstatus_update_data(uint8_t id);
 
@@ -357,6 +366,7 @@ public:
         bool angular_velocity_available; //tells if velocity has been sent
     };
     uint8_t storm32status_register_listener(BP_Mount_STorM32* new_listener, uint8_t id);
+    void storm32status_remove_listener(BP_Mount_STorM32* rem_listener);
     STorM32Status_Data* storm32status_getptrto_data(uint8_t id);
     void storm32status_update_data(uint8_t id);
 
@@ -403,6 +413,7 @@ private:
     // --- outgoing message handler ---
     void storm32_do_cyclic(uint64_t current_time_ms);
     void uc4h_do_cyclic(uint64_t current_time_ms);
+#endif
 //OWEND
 };
 
