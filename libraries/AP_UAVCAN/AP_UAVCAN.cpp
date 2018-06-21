@@ -35,6 +35,10 @@
 
 #include <uavcan/equipment/power/BatteryInfo.hpp>
 
+//OW
+#include <uavcan/equipment/air_data/RawAirData.hpp>
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 #define debug_uavcan(level, fmt, args...) do { if ((level) <= AP_BoardConfig_CAN::get_can_debug()) { hal.console->printf(fmt, ##args); }} while (0)
@@ -358,6 +362,38 @@ static void battery_info_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equi
 static void (*battery_info_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::BatteryInfo>& msg)
         = { battery_info_st_cb0, battery_info_st_cb1 };
 
+//OW
+//--- RawAirData ---
+// incoming message, by node id
+
+static void rawairdata_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg, uint8_t mgr)
+{
+    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    uint8_t id = msg.getSrcNodeID().get(); //by node id
+
+    AP_UAVCAN::RawAirData_Data *data = ap_uavcan->rawairdata_getptrto_data(id);
+    if (data != nullptr) {
+        data->flags = msg.flags;
+        data->static_pressure = msg.static_pressure;
+        data->differential_pressure = msg.differential_pressure;
+        data->static_pressure_sensor_temperature = msg.static_pressure_sensor_temperature;
+        data->differential_pressure_sensor_temperature = msg.differential_pressure_sensor_temperature;
+        data->static_air_temperature = msg.static_air_temperature;
+        data->pitot_temperature = msg.pitot_temperature;
+
+        ap_uavcan->rawairdata_update_data(id);
+    }
+}
+
+static void rawairdata_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg){ rawairdata_cb_func(msg, 0); }
+static void rawairdata_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg){ rawairdata_cb_func(msg, 1); }
+static void (*rawairdata_cb_arr[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg) = { rawairdata_cb0, rawairdata_cb1 };
+//OWEND
+
 // publisher interfaces
 static uavcan::Publisher<uavcan::equipment::actuator::ArrayCommand>* act_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
 static uavcan::Publisher<uavcan::equipment::esc::RawCommand>* esc_raw[MAX_NUMBER_OF_CAN_DRIVERS];
@@ -411,6 +447,18 @@ AP_UAVCAN::AP_UAVCAN() :
 
     SRV_sem = hal.util->new_semaphore();
     _led_out_sem = hal.util->new_semaphore();
+
+//OW
+    // --- RawAirData ---
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        _rawairdata.id[i] = UINT8_MAX;
+//        _rawairdata.id_taken[i] = 0;
+    }
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+//        _rawairdata.listener_to_id[li] = UINT8_MAX;
+//        _rawairdata.listeners[li] = nullptr;
+    }
+//OWEND
 
     debug_uavcan(2, "AP_UAVCAN constructed\n\r");
 }
@@ -550,6 +598,18 @@ bool AP_UAVCAN::try_init(void)
     rgb_led[_uavcan_i]->setPriority(uavcan::TransferPriority::OneHigherThanLowest);
 
     _led_conf.devices_count = 0;
+
+//OW
+    {
+        uavcan::Subscriber<uavcan::equipment::air_data::RawAirData> *st;
+        st = new uavcan::Subscriber<uavcan::equipment::air_data::RawAirData>(*node);
+        const int start_res = st->start(rawairdata_cb_arr[_uavcan_i]);
+        if (start_res < 0) {
+            debug_uavcan(1, "UAVCAN RawAirData subscriber start problem\n\r");
+            return false;
+        }
+    }
+//OWEND
 
     /*
      * Informing other nodes that we're ready to work.
@@ -1424,5 +1484,93 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
     }
     return hal.can_mgr[iface]->get_UAVCAN();
 }
+
+
+//OW
+/* api for each node (referenced by node id, slightly different when referenced by device id/index):
+
+uint8_t AP_UAVCAN::register_xxx_listener(AP_Xxx_Backend* new_listener, uint8_t preferred_channel)
+  currently not used anywhere
+
+uint8_t AP_UAVCAN::register_xxx_listener_to_node(AP_Xxx_Backend* new_listener, uint8_t node)
+  called in: AP_Xxx_UAVCAN::register_uavcan_xxx(uint8_t mgr, uint8_t node)
+  the node class registers itself as listener
+
+void AP_UAVCAN::remove_xxx_listener(AP_Xxx_Backend* rem_listener)
+  called in: AP_Xxx_UAVCAN::~AP_Xxx_UAVCAN()
+
+uint8_t AP_UAVCAN::find_smallest_free_xxx_node()
+  called in: AP_Xxx_Backend *AP_Xxx_UAVCAN::probe(AP_Xxx &xxx)
+
+AP_UAVCAN::Xxx_Info *AP_UAVCAN::find_xxx_node(uint8_t node)
+  called in: static void xxxxxx_cb(const uavcan::ReceivedDataStructure<uavcan:: ... >& msg, uint8_t mgr)
+  the naming of this function is totally misleading, it returns a ptr to the data structure
+
+void AP_UAVCAN::update_xxx_state(uint8_t node)
+  called in: static void xxxxxx_cb(const uavcan::ReceivedDataStructure<uavcan:: ... >& msg, uint8_t mgr)
+  reads the data from the UAVCAN message into the data structure
+*/
+// my convention: i for AP_UAVCAN_XXX_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
+
+//--- RawAirData ---
+// incoming message, by node id
+
+//we do not currently use a class which wants to listen to that
+// so, these are currently not needed:
+//   uint8_t AP_UAVCAN::register_xxx_listener_to_node(AP_Xxx_Backend* new_listener, uint8_t node)
+//   void AP_UAVCAN::remove_xxx_listener(AP_Xxx_Backend* rem_listener)
+//   uint8_t AP_UAVCAN::find_smallest_free_xxx_node()
+// also, in rawairdata_update_data() the class handler is not called
+
+AP_UAVCAN::RawAirData_Data* AP_UAVCAN::rawairdata_getptrto_data(uint8_t id)
+{
+    // check if id is already in list, and if it is take it
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        if (_rawairdata.id[i] == id) {
+            return &_rawairdata.data[i];
+        }
+    }
+
+    // if id is not yet in list, find the first free spot, and take that
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        if (_rawairdata.id[i] == UINT8_MAX) {
+            _rawairdata.id[i] = id;
+            return &_rawairdata.data[i];
+        }
+    }
+
+    return nullptr;
+}
+
+void AP_UAVCAN::rawairdata_update_data(uint8_t id)
+{
+    // see /libraries/DataFlash/LogStructure.h
+
+    // go through all listeners and call their's update methods
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        if (_rawairdata.id[i] != id) {
+            continue;
+        }
+
+        for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+            if (_rawairdata.id[li] == i) {
+
+/*
+                uint64_t time_us = AP_HAL::micros64();
+                struct log_Esc pkt = {
+                        LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + id)),
+                        time_us     : time_us,
+                        rpm         : (int16_t)(_escstatus.data[i].rpm),
+                        voltage     : (int16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
+                        current     : (int16_t)(_escstatus.data[i].current*100.0f + 0.5f),
+                        temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f)
+                };
+                DataFlash_Class::instance()->WriteBlock(&pkt, sizeof(pkt));
+*/
+            }
+        }
+    }
+}
+//OWEND
 
 #endif // HAL_WITH_UAVCAN

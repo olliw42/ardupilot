@@ -37,6 +37,9 @@
 #define AP_UAVCAN_MAX_MAG_NODES 4
 #define AP_UAVCAN_MAX_BARO_NODES 4
 #define AP_UAVCAN_MAX_BI_NUMBER 4
+//OW
+#define AP_UAVCAN_RAWAIRDATA_MAX_NUMBER 4
+//OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
 #define AP_UAVCAN_SW_VERS_MINOR 0
@@ -279,6 +282,39 @@ public:
     {
         _parent_can_mgr = parent_can_mgr;
     }
+
+    //OW
+        // --- RawAirData ---
+        // incoming message, by device id
+    public:
+        // currently, we do nothing than to write the data to dataflash
+        // => we do not need a listener, we can do it in _update_data()
+        // register_listener would be called from the listener class
+        // this of course needs to change once we have a class which wants to listen
+        struct RawAirData_Data {
+            uint8_t flags;
+            float static_pressure;
+            float differential_pressure;
+            float static_pressure_sensor_temperature;
+            float differential_pressure_sensor_temperature;
+            float static_air_temperature;
+            float pitot_temperature;
+            //covariance is not used, so drop to save space
+        };
+        //uint8_t rawairdata_register_listener(AP_EscMonitor_Backend* new_listener, uint8_t id);
+        RawAirData_Data* rawairdata_getptrto_data(uint8_t id);
+        void rawairdata_update_data(uint8_t id);
+
+    private:
+        struct {
+            uint16_t id[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
+            //uint16_t id_taken[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
+            //uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+            //AP_EscMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+            RawAirData_Data data[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
+        } _rawairdata;
+
+    //OWEND
 };
 
 #endif /* AP_UAVCAN_H_ */
