@@ -38,7 +38,7 @@
 #define AP_UAVCAN_MAX_BARO_NODES 4
 #define AP_UAVCAN_MAX_BI_NUMBER 4
 //OW
-#define AP_UAVCAN_RAWAIRDATA_MAX_NUMBER 4
+#define AP_UAVCAN_RAWAIRDATA_MAX_NUMBER 1
 //OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
@@ -283,9 +283,9 @@ public:
         _parent_can_mgr = parent_can_mgr;
     }
 
-    //OW
-        // --- RawAirData ---
-        // incoming message, by device id
+//OW
+    // --- RawAirData ---
+    // incoming message, by node id
     public:
         // currently, we do nothing than to write the data to dataflash
         // => we do not need a listener, we can do it in _update_data()
@@ -314,7 +314,7 @@ public:
             RawAirData_Data data[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
         } _rawairdata;
 
-    //OWEND
+//OWEND
 };
 
 #endif /* AP_UAVCAN_H_ */

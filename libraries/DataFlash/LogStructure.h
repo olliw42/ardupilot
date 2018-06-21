@@ -1150,6 +1150,26 @@ struct PACKED log_DSTL {
 #define ARSP_UNITS "snPOPP---"
 #define ARSP_MULTS "F00B00---"
 
+//OW
+struct PACKED log_RAWAIRDATA {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    uint8_t flags;
+    float static_pressure;
+    float differential_pressure;
+    float static_pressure_sensor_temperature;
+    float differential_pressure_sensor_temperature;
+    float static_air_temperature;
+    float pitot_temperature;
+};
+
+#define RAWAIRDATA_LABELS "TimeUS,Flags,StaticP,DiffP,StaticT,DiffT,AirT,PitotT"
+#define RAWAIRDATA_FMT   "QBffffff"
+#define RAWAIRDATA_UNITS "s-PPOOOO" //s, none, Pa, Pa, degC, degC, degC, degC
+#define RAWAIRDATA_MULTS "F-000000"
+//OWEND
+
+
 /*
 Format characters in the format string for binary log messages
   a   : int16_t[32]
@@ -1247,7 +1267,10 @@ Format characters in the format string for binary log messages
     { LOG_PERFORMANCE_MSG, sizeof(log_Performance),                     \
       "PM",  "QHHIIH", "TimeUS,NLon,NLoop,MaxT,Mem,Load", "s---b%", "F---0A" }, \
     { LOG_SRTL_MSG, sizeof(log_SRTL), \
-      "SRTL", "QBHHBfff", "TimeUS,Active,NumPts,MaxPts,Action,N,E,D", "s----mmm", "F----000" }
+      "SRTL", "QBHHBfff", "TimeUS,Active,NumPts,MaxPts,Action,N,E,D", "s----mmm", "F----000" }, \
+    { LOG_RAWAIRSPEED_MSG, sizeof(log_RAWAIRDATA), \
+      "ZRAD", RAWAIRDATA_FMT, RAWAIRDATA_LABELS, RAWAIRDATA_UNITS, RAWAIRDATA_MULTS }
+//OW //OWEND
 
 // messages for more advanced boards
 #define LOG_EXTRA_STRUCTURES \
@@ -1558,6 +1581,10 @@ enum LogMessages : uint8_t {
     LOG_ISBD_MSG,
     LOG_ASP2_MSG,
     LOG_PERFORMANCE_MSG,
+
+//OW
+    LOG_RAWAIRSPEED_MSG,
+//OWEND
     _LOG_LAST_MSG_
 };
 

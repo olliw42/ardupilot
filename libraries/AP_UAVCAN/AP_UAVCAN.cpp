@@ -389,9 +389,12 @@ static void rawairdata_cb_func(const uavcan::ReceivedDataStructure<uavcan::equip
     }
 }
 
-static void rawairdata_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg){ rawairdata_cb_func(msg, 0); }
-static void rawairdata_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg){ rawairdata_cb_func(msg, 1); }
-static void (*rawairdata_cb_arr[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg) = { rawairdata_cb0, rawairdata_cb1 };
+static void rawairdata_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg)
+{ rawairdata_cb_func(msg, 0); }
+static void rawairdata_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg)
+{ rawairdata_cb_func(msg, 1); }
+static void (*rawairdata_cb_arr[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg)
+        = { rawairdata_cb0, rawairdata_cb1 };
 //OWEND
 
 // publisher interfaces
@@ -600,14 +603,12 @@ bool AP_UAVCAN::try_init(void)
     _led_conf.devices_count = 0;
 
 //OW
-    {
-        uavcan::Subscriber<uavcan::equipment::air_data::RawAirData> *st;
-        st = new uavcan::Subscriber<uavcan::equipment::air_data::RawAirData>(*node);
-        const int start_res = st->start(rawairdata_cb_arr[_uavcan_i]);
-        if (start_res < 0) {
-            debug_uavcan(1, "UAVCAN RawAirData subscriber start problem\n\r");
-            return false;
-        }
+    uavcan::Subscriber<uavcan::equipment::air_data::RawAirData> *rawairdata_sub;
+    rawairdata_sub = new uavcan::Subscriber<uavcan::equipment::air_data::RawAirData>(*node);
+    const int rawairdata_start_res = rawairdata_sub->start(rawairdata_cb_arr[_uavcan_i]);
+    if (rawairdata_start_res < 0) {
+        debug_uavcan(1, "UAVCAN RawAirData subscriber start problem\n\r");
+        return false;
     }
 //OWEND
 
@@ -1487,6 +1488,76 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
 
 
 //OW
+// my convention: i for AP_UAVCAN_XXX_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
+
+//--- RawAirData ---
+// incoming message, by node id
+
+//we do not currently use a class which wants to listen to that
+// so, these are currently not needed:
+//   uint8_t AP_UAVCAN::register_xxx_listener_to_node(AP_Xxx_Backend* new_listener, uint8_t node)
+//   void AP_UAVCAN::remove_xxx_listener(AP_Xxx_Backend* rem_listener)
+//   uint8_t AP_UAVCAN::find_smallest_free_xxx_node()
+// also, in rawairdata_update_data() the class's handler is not called
+
+AP_UAVCAN::RawAirData_Data* AP_UAVCAN::rawairdata_getptrto_data(uint8_t id)
+{
+    // check if id is already in list, and if it is take it
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        if (_rawairdata.id[i] == id) {
+            return &_rawairdata.data[i];
+        }
+    }
+
+    // if id is not yet in list, find the first free spot, and take that
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        if (_rawairdata.id[i] == UINT8_MAX) {
+            _rawairdata.id[i] = id;
+            return &_rawairdata.data[i];
+        }
+    }
+
+    return nullptr;
+}
+
+
+void AP_UAVCAN::rawairdata_update_data(uint8_t id)
+{
+    // see /libraries/DataFlash/LogStructure.h
+
+    // go through all listeners and call their's update methods
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        if (_rawairdata.id[i] != id) {
+            continue;
+        }
+
+        //it seems that this is not required, MP plots them as NaN either way, but there is probably a reason for the extra quiet_nanf()
+        #define TSTNAN(x) (uavcan::isNaN(x)) ? df->quiet_nanf() : (x)
+
+        DataFlash_Class *df = DataFlash_Class::instance();
+        if (df && df->logging_enabled()) {
+            uint64_t time_us = AP_HAL::micros64();
+            struct log_RAWAIRDATA pkt = {
+               LOG_PACKET_HEADER_INIT((uint8_t)(LOG_RAWAIRSPEED_MSG)),
+               time_us                                 : time_us,
+               flags                                   : _rawairdata.data[i].flags,
+               static_pressure                         : TSTNAN(_rawairdata.data[i].static_pressure),
+               differential_pressure                   : TSTNAN(_rawairdata.data[i].differential_pressure),
+               static_pressure_sensor_temperature      : TSTNAN(_rawairdata.data[i].static_pressure_sensor_temperature),
+               differential_pressure_sensor_temperature: TSTNAN(_rawairdata.data[i].differential_pressure_sensor_temperature),
+               static_air_temperature                  : TSTNAN(_rawairdata.data[i].static_air_temperature),
+               pitot_temperature                       : TSTNAN(_rawairdata.data[i].pitot_temperature)
+            };
+            df->WriteBlock(&pkt, sizeof(pkt));
+        }
+
+    }
+}
+//OWEND
+
+#endif // HAL_WITH_UAVCAN
+
+//OW
 /* api for each node (referenced by node id, slightly different when referenced by device id/index):
 
 uint8_t AP_UAVCAN::register_xxx_listener(AP_Xxx_Backend* new_listener, uint8_t preferred_channel)
@@ -1511,66 +1582,4 @@ void AP_UAVCAN::update_xxx_state(uint8_t node)
   reads the data from the UAVCAN message into the data structure
 */
 // my convention: i for AP_UAVCAN_XXX_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
-
-//--- RawAirData ---
-// incoming message, by node id
-
-//we do not currently use a class which wants to listen to that
-// so, these are currently not needed:
-//   uint8_t AP_UAVCAN::register_xxx_listener_to_node(AP_Xxx_Backend* new_listener, uint8_t node)
-//   void AP_UAVCAN::remove_xxx_listener(AP_Xxx_Backend* rem_listener)
-//   uint8_t AP_UAVCAN::find_smallest_free_xxx_node()
-// also, in rawairdata_update_data() the class handler is not called
-
-AP_UAVCAN::RawAirData_Data* AP_UAVCAN::rawairdata_getptrto_data(uint8_t id)
-{
-    // check if id is already in list, and if it is take it
-    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
-        if (_rawairdata.id[i] == id) {
-            return &_rawairdata.data[i];
-        }
-    }
-
-    // if id is not yet in list, find the first free spot, and take that
-    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
-        if (_rawairdata.id[i] == UINT8_MAX) {
-            _rawairdata.id[i] = id;
-            return &_rawairdata.data[i];
-        }
-    }
-
-    return nullptr;
-}
-
-void AP_UAVCAN::rawairdata_update_data(uint8_t id)
-{
-    // see /libraries/DataFlash/LogStructure.h
-
-    // go through all listeners and call their's update methods
-    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
-        if (_rawairdata.id[i] != id) {
-            continue;
-        }
-
-        for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-            if (_rawairdata.id[li] == i) {
-
-/*
-                uint64_t time_us = AP_HAL::micros64();
-                struct log_Esc pkt = {
-                        LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + id)),
-                        time_us     : time_us,
-                        rpm         : (int16_t)(_escstatus.data[i].rpm),
-                        voltage     : (int16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
-                        current     : (int16_t)(_escstatus.data[i].current*100.0f + 0.5f),
-                        temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f)
-                };
-                DataFlash_Class::instance()->WriteBlock(&pkt, sizeof(pkt));
-*/
-            }
-        }
-    }
-}
 //OWEND
-
-#endif // HAL_WITH_UAVCAN
