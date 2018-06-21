@@ -99,8 +99,16 @@ int asprintf(char **strp, const char *fmt, ...)
 
 int vprintf(const char *fmt, va_list arg)
 {
+#ifdef HAL_STDOUT_SERIAL
   return chvprintf ((BaseSequentialStream*)&HAL_STDOUT_SERIAL, fmt, arg);
+#else
+  (void)arg;
+  return strlen(fmt);
+#endif
 }
+
+// hook to allow for printf() on systems without HAL_STDOUT_SERIAL
+int (*vprintf_console_hook)(const char *fmt, va_list arg) = vprintf;
 
 int printf(const char *fmt, ...)
 {
@@ -108,7 +116,7 @@ int printf(const char *fmt, ...)
    int done;
  
    va_start (arg, fmt);
-   done =  vprintf(fmt, arg);
+   done =  vprintf_console_hook(fmt, arg);
    va_end (arg);
  
    return done;

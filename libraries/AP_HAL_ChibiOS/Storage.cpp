@@ -15,8 +15,6 @@
  * Code by Andrew Tridgell and Siddharth Bharat Purohit
  */
 #include <AP_HAL/AP_HAL.h>
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-
 #include <AP_BoardConfig/AP_BoardConfig.h>
 
 #include "Storage.h"
@@ -24,6 +22,7 @@
 
 using namespace ChibiOS;
 
+#ifndef HAL_USE_EMPTY_STORAGE
 
 extern const AP_HAL::HAL& hal;
 
@@ -129,6 +128,7 @@ void Storage::_timer_tick(void)
  */
 void Storage::_flash_load(void)
 {
+#ifdef STORAGE_FLASH_PAGE
     _flash_page = STORAGE_FLASH_PAGE;
 
     hal.console->printf("Storage: Using flash pages %u and %u\n", _flash_page, _flash_page+1);
@@ -136,6 +136,9 @@ void Storage::_flash_load(void)
     if (!_flash.init()) {
         AP_HAL::panic("unable to init flash storage");
     }
+#else
+    AP_HAL::panic("unable to init storage");
+#endif
 }
 
 /*
@@ -143,10 +146,12 @@ void Storage::_flash_load(void)
 */
 void Storage::_flash_write(uint16_t line)
 {
+#ifdef STORAGE_FLASH_PAGE
     if (_flash.write(line*CH_STORAGE_LINE_SIZE, CH_STORAGE_LINE_SIZE)) {
         // mark the line clean
         _dirty_mask.clear(line);
     }
+#endif
 }
 
 /*
@@ -154,6 +159,7 @@ void Storage::_flash_write(uint16_t line)
  */
 bool Storage::_flash_write_data(uint8_t sector, uint32_t offset, const uint8_t *data, uint16_t length)
 {
+#ifdef STORAGE_FLASH_PAGE
     size_t base_address = stm32_flash_getpageaddr(_flash_page+sector);
     bool ret = stm32_flash_write(base_address+offset, data, length) == length;
     if (!ret && _flash_erase_ok()) {
@@ -168,6 +174,9 @@ bool Storage::_flash_write_data(uint8_t sector, uint32_t offset, const uint8_t *
         }
     }
     return ret;
+#else
+    return false;
+#endif
 }
 
 /*
@@ -198,4 +207,4 @@ bool Storage::_flash_erase_ok(void)
     return !hal.util->get_soft_armed();
 }
 
-#endif // CONFIG_HAL_BOARD
+#endif // HAL_USE_EMPTY_STORAGE

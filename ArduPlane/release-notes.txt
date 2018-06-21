@@ -1,26 +1,58 @@
-Release 3.8.5beta1, 16th January 2018
---------------------------------
+Release 3.9.0beta1, 21st May 2018
+---------------------------------
 
-This is a minor release with three new features, all related to
-airspeed.
+This is the first in a series of beta releases for plane 3.9.0. It is
+a major release, with a lot of changes.
 
-The first is to support the MS5525 sensor on multiple I2C
-addresses. Two new values of the ARSDP_TYPE are introduced (4 and 5)
-for specific I2C addresses. This allows you to deconflict the MS5525
-from a MS5611 barometer on the same bus.
+The main changes are for supporting two new HALs (hardware abstraction
+layers). One is the port to ChibiOS and the second is the F4Light HAL.
 
-The second is the addition of a driver for the SDP33 airspeed
-sensor. This is an interesting sensor sold by Drotek that doesn't need
-zero offset calibration for each flight. It is still considered
-experimental.
+These ports bring a host of new flight board options, and a lot of new
+features. Some highlights include:
 
-The third new feature is dual airspeed sensor support, which allows
-you to have two independent airspeed sensors. At the moment the
-failover between the sensors is very simple (it will only failover if
-the primary stops communicating). More sophisticated failover methods
-will be introduced in the future. To enable a 2nd airspeed sensor set
-the ARSPD2_TYPE parameter to the type of the 2nd sensor. You can
-combine any types of sensor.
+ - support for many inexpensive STM32F4 based flight boards
+
+ - support for DShot output for BLHeli ESCs, including ESC telemetry
+   feedback
+
+ - new battery monitoring system with more flexible failsafe options
+
+ - support for Devo telemetry output
+
+ - a new position hold library for multicopters which improves
+   quadplane VTOL support
+
+This release is fully compatible with previous releases, and users
+should not notice a significant difference in flight. The focus of the
+beta testing will be on ensuring that the new flight board support is
+stable.
+
+Happy flying!
+
+Release 3.8.5, 25th April 2018
+------------------------------
+
+This release includes small bug fixes and one safety fix. The changes
+are:
+
+ - fixed an issue where the external safety button can activate in
+   flight on some boards, causing them to crash. A new parameter
+   BRD_SAFETYOPTION is added which controls the behaviour of the
+   safety button. The default is to de-activate the safety button when
+   armed.
+
+ - fixed default orientation of ICM-20948 compass for Here GPS
+
+ - added support for dual airspeed sensors
+
+ - added support for the SDP33 airspeed sensor. This is still
+   considered experimental. There are reports of it underestimating
+   the aircrafts speed at higher altitudes.
+
+ - add support for the MS5525 airspeed sensor on multiple I2C
+   addresses. Two new values of the ARSDP_TYPE are introduced (4 and
+   5) for specific I2C addresses. This allows you to deconflict the
+   MS5525 from a MS5611 barometer on the same bus.
 
 Release 3.8.4, 9th January 2018
 -------------------------------

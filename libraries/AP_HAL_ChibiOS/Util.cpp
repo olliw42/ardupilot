@@ -17,10 +17,11 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
 #include "Util.h"
 #include <chheap.h>
 #include "ToneAlarm.h"
+#include "RCOutput.h"
+#include "hwdef/common/stm32_util.h"
 
 #if HAL_WITH_IO_MCU
 #include <AP_BoardConfig/AP_BoardConfig.h>
@@ -32,10 +33,7 @@ extern const AP_HAL::HAL& hal;
 
 using namespace ChibiOS;
 
-extern "C" {
-    size_t mem_available(void);
-    void *malloc_ccm(size_t size);
-};
+#if CH_CFG_USE_HEAP == TRUE
 
 /**
    how much free memory do we have in bytes.
@@ -52,7 +50,9 @@ uint32_t Util::available_memory(void)
 
 void* Util::malloc_type(size_t size, AP_HAL::Util::Memory_Type mem_type)
 {
-    if (mem_type == AP_HAL::Util::MEM_FAST) {
+    if (mem_type == AP_HAL::Util::MEM_DMA_SAFE) {
+        return malloc_dma(size);
+    } else if (mem_type == AP_HAL::Util::MEM_FAST) {
         return try_alloc_from_ccm_ram(size);
     } else {
         return calloc(1, size);
@@ -77,17 +77,18 @@ void* Util::try_alloc_from_ccm_ram(size_t size)
     return ret;
 }
 
+#endif // CH_CFG_USE_HEAP
+
 /*
   get safety switch state
  */
 Util::safety_state Util::safety_switch_state(void)
 {
-#if HAL_WITH_IO_MCU
-    if (AP_BoardConfig::io_enabled()) {
-        return iomcu.get_safety_switch_state();
-    }
-#endif
+#if HAL_USE_PWM == TRUE
+    return ((RCOutput *)hal.rcout)->_safety_switch_state();
+#else
     return SAFETY_NONE;
+#endif
 }
 
 void Util::set_imu_temp(float current)
@@ -177,4 +178,4 @@ void Util::_toneAlarm_timer_tick() {
 
 }
 #endif // HAL_PWM_ALARM
-#endif //CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+

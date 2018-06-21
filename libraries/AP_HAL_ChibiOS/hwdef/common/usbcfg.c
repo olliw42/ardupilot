@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#pragma GCC optimize("O0")
+// #pragma GCC optimize("O0")
 
 #ifdef HAL_USB_PRODUCT_ID
 
@@ -177,12 +177,6 @@ static USBDescriptor vcom_strings[] = {
   {0, NULL}, // product
   {0, NULL}, // version
 };
-
-
-// start of 12 byte CPU ID
-#ifndef UDID_START
-#define UDID_START	0x1FFF7A10
-#endif
 
 /*
   handle substitution of variables in strings for USB descriptors

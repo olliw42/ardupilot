@@ -10,8 +10,15 @@ class AP_BattMonitor_UAVCAN : public AP_BattMonitor_Backend
 {
 public:
 
+    enum BattMonitor_UAVCAN_Type {
+        UAVCAN_BATTERY_INFO = 0,
+//OW
+        UAVCAN_GENERICBATTERY_INFO = 83,
+//OWEND
+    };
+
     /// Constructor
-    AP_BattMonitor_UAVCAN(AP_BattMonitor &mon, AP_BattMonitor::BattMonitor_State &mon_state, AP_BattMonitor_Params &params);
+    AP_BattMonitor_UAVCAN(AP_BattMonitor &mon, AP_BattMonitor::BattMonitor_State &mon_state, BattMonitor_UAVCAN_Type type, AP_BattMonitor_Params &params);
 
     /// Read the battery voltage and current.  Should be called at 10hz
     void read() override;
@@ -22,7 +29,11 @@ public:
         return true;
     }
 
+    void handle_bi_msg(float voltage, float current, float temperature) override;
 //OW
     void handle_genericbatteryinfo_msg(float voltage, float current, float charge) override;
 //OWEND
+
+protected:
+    BattMonitor_UAVCAN_Type _type;
 };

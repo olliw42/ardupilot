@@ -17,6 +17,7 @@
 #include "rotations.h"
 #include "vector2.h"
 #include "vector3.h"
+#include "spline5.h"
 
 // define AP_Param types AP_Vector3f and Ap_Matrix3f
 AP_PARAMDEFV(Vector3f, Vector3f, AP_PARAM_VECTOR3F);
@@ -248,3 +249,7 @@ float rand_float(void);
 
 // generate a random Vector3f of size 1
 Vector3f rand_vec3f(void);
+
+// confirm a value is a valid octal value
+bool is_valid_octal(uint16_t octal);
+

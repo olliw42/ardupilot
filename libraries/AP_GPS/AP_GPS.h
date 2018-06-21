@@ -55,7 +55,6 @@ class AP_GPS
     friend class AP_GPS_NMEA;
     friend class AP_GPS_NOVA;
     friend class AP_GPS_PX4;
-    friend class AP_GPS_QURT;
     friend class AP_GPS_SBF;
     friend class AP_GPS_SBP;
     friend class AP_GPS_SBP2;
@@ -88,7 +87,6 @@ public:
         GPS_TYPE_UAVCAN = 9,
         GPS_TYPE_SBF   = 10,
         GPS_TYPE_GSOF  = 11,
-        GPS_TYPE_QURT  = 12,
         GPS_TYPE_ERB = 13,
         GPS_TYPE_MAV = 14,
         GPS_TYPE_NOVA = 15
@@ -550,6 +548,8 @@ private:
 
     // calculate the blended state
     void calc_blended_state(void);
+
+    bool should_df_log() const;
 
     // Auto configure types
     enum GPS_AUTO_CONFIG {

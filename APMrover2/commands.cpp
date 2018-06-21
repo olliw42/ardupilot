@@ -4,7 +4,7 @@
 void Rover::update_home_from_EKF()
 {
     // exit immediately if home already set
-    if (home_is_set != HOME_UNSET) {
+    if (ahrs.home_is_set()) {
         return;
     }
 
@@ -46,14 +46,12 @@ bool Rover::set_home(const Location& loc, bool lock)
         return false;
     }
 
+    const bool home_was_set = ahrs.home_is_set();
+
     // set ahrs home
     ahrs.set_home(loc);
 
-    // init compass declination
-    if (home_is_set == HOME_UNSET) {
-        // record home is set
-        home_is_set = HOME_SET_NOT_LOCKED;
-
+    if (!home_was_set) {
         // log new home position which mission library will pull from ahrs
         if (should_log(MASK_LOG_CMD)) {
             AP_Mission::Mission_Command temp_cmd;
@@ -65,18 +63,18 @@ bool Rover::set_home(const Location& loc, bool lock)
 
     // lock home position
     if (lock) {
-        home_is_set = HOME_SET_AND_LOCKED;
+        ahrs.lock_home();
     }
 
     // Save Home to EEPROM
     mission.write_home_to_storage();
 
     // log ahrs home and ekf origin dataflash
-    Log_Write_Home_And_Origin();
+    ahrs.Log_Write_Home_And_Origin();
 
     // send new home and ekf origin to GCS
-    gcs().send_home(loc);
-    gcs().send_ekf_origin(loc);
+    gcs().send_home();
+    gcs().send_ekf_origin();
 
     // send text of home position to ground stations
     gcs().send_text(MAV_SEVERITY_INFO, "Set HOME to %.6f %.6f at %.2fm",
@@ -86,32 +84,6 @@ bool Rover::set_home(const Location& loc, bool lock)
 
     // return success
     return true;
-}
-
-// sets ekf_origin if it has not been set.
-//  should only be used when there is no GPS to provide an absolute position
-void Rover::set_ekf_origin(const Location& loc)
-{
-    // check location is valid
-    if (!check_latlng(loc)) {
-        return;
-    }
-
-    // check if EKF origin has already been set
-    Location ekf_origin;
-    if (ahrs.get_origin(ekf_origin)) {
-        return;
-    }
-
-    if (!ahrs.set_origin(loc)) {
-        return;
-    }
-
-    // log ahrs home and ekf origin dataflash
-    Log_Write_Home_And_Origin();
-
-    // send ekf origin to GCS
-    gcs().send_ekf_origin(loc);
 }
 
 // checks if we should update ahrs/RTL home position from GPS
@@ -143,13 +115,13 @@ void Rover::set_system_time_from_GPS()
 */
 void Rover::update_home()
 {
-    if (home_is_set == HOME_SET_NOT_LOCKED) {
+    if (!ahrs.home_is_locked()) {
         Location loc;
         if (ahrs.get_position(loc)) {
             if (get_distance(loc, ahrs.get_home()) > DISTANCE_HOME_MAX) {
                 ahrs.set_home(loc);
-                Log_Write_Home_And_Origin();
-                gcs().send_home(gps.location());
+                ahrs.Log_Write_Home_And_Origin();
+                gcs().send_home();
             }
         }
     }

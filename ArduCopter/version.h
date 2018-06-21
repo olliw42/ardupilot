@@ -31,6 +31,31 @@ v0.08:
  - added changes from STorM32nativeonly branch
  - replace AP_Notify mechanism with own singleton -> changes also in: GCS_Common.cpp, AP_Camera.h
  - notify singleton changed to AP_Notify style, needs testing !
+ - merge master of 14.06.2018, using master-bcdev-merge method (ensures updated submodules)
+# Conflicts:
+#   libraries/AP_BattMonitor/AP_BattMonitor.cpp
+#   libraries/AP_BattMonitor/AP_BattMonitor.h
+#   libraries/AP_BattMonitor/AP_BattMonitor_Backend.h ->EASY
+#   libraries/AP_BattMonitor/AP_BattMonitor_Params.h ->EASY
+#   libraries/AP_BattMonitor/AP_BattMonitor_UAVCAN.cpp
+#   libraries/AP_BattMonitor/AP_BattMonitor_UAVCAN.h
+#   libraries/AP_Notify/AP_Notify.cpp ->EASY
+#   libraries/AP_SerialManager/AP_SerialManager.cpp ->EASY
+#   libraries/AP_SerialManager/AP_SerialManager.h ->EASY
+#   libraries/AP_UAVCAN/AP_UAVCAN.cpp
+#   libraries/AP_UAVCAN/AP_UAVCAN.h
+#   libraries/GCS_MAVLink/GCS_Common.cpp ->EASY
+   merge conflicts mainly in AP_Battmonitor & AP_Uavcan
+ - further corrections which appeared during compile test
+   AP_UAVCAN::escstatus_update_data()
+   => compiles
+ - use AP_UAVCAN::get_uavcan()
+ - adapt uavcan code to latest style in registers
+ - change AP_UAVCAN::escstatus_update_data(), follow AP_BLHeli::read_telemetry_packet()
+
+
+TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
+
 
 v0.07:
  - UC4HNOTIFYTYPE_FLAGS implemented

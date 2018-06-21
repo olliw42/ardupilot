@@ -94,29 +94,32 @@ void __attribute__((noreturn)) error_throb(uint32_t num){
     /* Error fade. */
     while (1) {
         uint16_t k;
-        for(k=0; k<num; k++) {
-            if (CC == TOP_CNT)  {
-                slope = -1;
-            } else if (CC == 0) {
-                slope = 1;
+        for(k=0; k<num+1; k++) {
+            uint32_t m;
+            for(m=100000;m>0;m--){
+                if (CC == TOP_CNT)  {
+                    slope = -1;
+                } else if (CC == 0) {
+                    slope = 1;
+                }
+    
+                if (i == TOP_CNT)  {
+                    CC += slope;
+                    i = 0;
+                }
+
+                if (i < CC) {
+                    n=1;
+                } else {
+                    n=0;
+                }
+                gpio_write_bit(pp->gpio_device, pp->gpio_bit, n);
+
+                volatile int j =10;
+                while(--j);
+
+                i++;
             }
-
-            if (i == TOP_CNT)  {
-                CC += slope;
-                i = 0;
-            }
-
-            if (i < CC) {
-                n=1;
-            } else {
-                n=0;
-            }
-            gpio_write_bit(pp->gpio_device, pp->gpio_bit, n);
-
-            volatile int j =10;
-            while(--j);
-
-            i++;
         }
         emerg_delay(3000); // on 168MHz ~0.1ms so 300ms
     }
@@ -125,11 +128,15 @@ void __attribute__((noreturn)) error_throb(uint32_t num){
 
 
 
+extern void __go_next_task();
+extern void hal_try_kill_task_or_reboot(uint8_t num);
+extern void hal_stop_multitask();
+extern void hal_go_next_task();
+#define NVIC_CCR (*(volatile uint32_t *)0xE000ED14)
 
 // new common exception code
-// TODO: we have task switching so if fault occures in task we can just remove task from queue
 //
-void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr)
+void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr, uint32_t flag)
 {
 
 #ifdef DEBUG_BUILD
@@ -145,7 +152,7 @@ void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr)
         "", // 8 
         "", // 9 
         "", // 10 
-        "PureVirtual function call", // 11
+        "Pure Virtual function call", // 11
         "failed to setup clock", // 12
         "exit from main()", // 13
         "", // 14
@@ -153,14 +160,23 @@ void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr)
 #endif
 
 
-        /* Turn off peripheral interrupts */
+    /* Turn off peripheral interrupts */
     __disable_irq();
 
-    timer_disable_all(); // turn off all PWM
+
+    extern bool hal_is_armed();
+    if((flag & 0x4) && hal_is_armed()){ // not in interrupt and is armed - try to save aircraft
+        hal_try_kill_task_or_reboot(num);
+        // returned - task killed, resume normal operations
+        NVIC_CCR &= ~1; // reset flag NONEBASETHRDENA in NVIC CCR
+        __enable_irq();
+        hal_go_next_task();
+    }
 
     if(is_bare_metal())  // bare metal build without bootloader should reboot to DFU after any fault
         board_set_rtc_register(DFU_RTC_SIGNATURE, RTC_SIGNATURE_REG);
 
+    timer_disable_all(); // turn off all PWM
 
     /* Turn the USB interrupt back on so "the reboot to bootloader" keeps on functioning */
     NVIC_EnableIRQ(OTG_HS_EP1_OUT_IRQn);
@@ -169,35 +185,20 @@ void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr)
     NVIC_EnableIRQ(OTG_HS_IRQn);
     NVIC_EnableIRQ(OTG_FS_IRQn);
 
-    __enable_irq();
 
     if(boardEmergencyHandler) boardEmergencyHandler(); // call emergency handler
 
-#if 0
- #ifdef ERROR_USART
-    usart_putstr(ERROR_USART, "\r\n!!! Exception: ");
-  #ifdef DEBUG_BUILD
-    usart_putstr(ERROR_USART, faults[num]);
-  #else
-    usart_putudec(ERROR_USART, num);
-  #endif
-    usart_putstr(ERROR_USART, " at ");
-    usart_putudec(ERROR_USART, pc);
-    usart_putstr(ERROR_USART, " lr ");
-    usart_putudec(ERROR_USART, lr);
-    usart_putc(ERROR_USART, '\n');
-    usart_putc(ERROR_USART, '\r');
- #endif
-#else
- #ifdef DEBUG_BUILD
+    hal_stop_multitask();
+
+#ifdef DEBUG_BUILD
     printf("\r\n!!! Exception: %s at %x LR=%x\n",faults[num], pc, lr);
- #else
+#else
     printf("\r\n!!! Exception: %d at %x LR=%x\n",num, pc, lr);
- #endif
 #endif
     error_throb(num);
 }
 
+#if 0 // not removed for case if something will require Timer5
 
 uint32_t systick_micros(void)
 {
@@ -221,3 +222,4 @@ uint32_t systick_micros(void)
     return res;
 #undef US_PER_MS
 }
+#endif

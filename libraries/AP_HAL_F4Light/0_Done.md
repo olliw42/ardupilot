@@ -156,32 +156,11 @@
 * renamed board *_MP32V1F4 to *_Revolution to simplify things
 * fixed bug in RC_Input that cause permanent Failsafe
 * added motor clipping reporting and baro compensation by GPS from https://github.com/DuraCopter/ardupilot
+* in case of any HardFault or Panic() in armed state, kill a current task and resume (or reboot a FC) instead of hang
 * ...
 * a lot of minor enhancements
 
 
-Warning!!!
-EEPROM emulation in Flash cause periodic program hunging on time of sector erase! So to allow auto-save parameters
-like MOT_THST_HOVER - MOT_HOVER_LEARN to be 2 you should defer parameter writing (Param HAL_EE_DEFER)
-
-
-
-Timer usage:
-
-1 RC-Output on some boards
-2 RC-Output
-3 RC-Output
-4 soft_i2c0, PPM_IN on AirbotV2
-5 micros()
-6 event generation for WFE
-7 scheduler
-8 PPM_IN
-9 soft_i2c1
-10 soft_i2c2
-11 
-12 PPM_IN
-13 driver's io_completion
-14 schedule tail timer
 
 
 

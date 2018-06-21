@@ -20,6 +20,7 @@ public:
 
     virtual const char* get_custom_log_directory() const { return nullptr; }
     virtual const char* get_custom_terrain_directory() const { return nullptr;  }
+    virtual const char *get_custom_storage_directory() const { return nullptr;  }
 
     // get path to custom defaults file for AP_Param
     virtual const char* get_custom_defaults_file() const {
@@ -81,7 +82,7 @@ public:
     /*
       return a stream for access to a system shell, if available
      */
-    virtual AP_HAL::Stream *get_shell_stream() { return nullptr; }
+    virtual AP_HAL::BetterStream *get_shell_stream() { return nullptr; }
 
     /* Support for an imu heating system */
     virtual void set_imu_temp(float current) {}

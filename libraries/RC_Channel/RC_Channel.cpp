@@ -112,7 +112,11 @@ RC_Channel::get_reverse(void) const
 void
 RC_Channel::set_pwm(int16_t pwm)
 {
-    radio_in = pwm;
+    if (has_override()) {
+        radio_in = override_value;
+    } else {
+        radio_in = pwm;
+    }
 
     if (type_in == RC_CHANNEL_TYPE_RANGE) {
         control_in = pwm_to_range();
@@ -122,14 +126,12 @@ RC_Channel::set_pwm(int16_t pwm)
     }
 }
 
-// read input from APM_RC - create a control_in value, but use a 
-// zero value for the dead zone. When done this way the control_in
-// value can be used as servo_out to give the same output as input
+// recompute control values with no deadzone
+// When done this way the control_in value can be used as servo_out
+// to give the same output as input
 void
-RC_Channel::set_pwm_no_deadzone(int16_t pwm)
+RC_Channel::recompute_pwm_no_deadzone()
 {
-    radio_in = pwm;
-
     if (type_in == RC_CHANNEL_TYPE_RANGE) {
         control_in = pwm_to_range_dz(0);
     } else {
@@ -157,26 +159,6 @@ int16_t RC_Channel::get_control_mid() const
     } else {
         return 0;
     }
-}
-
-// ------------------------------------------
-
-void RC_Channel::load_eeprom(void)
-{
-    radio_min.load();
-    radio_trim.load();
-    radio_max.load();
-    reversed.load();
-    dead_zone.load();
-}
-
-void RC_Channel::save_eeprom(void)
-{
-    radio_min.save();
-    radio_trim.save();
-    radio_max.save();
-    reversed.save();
-    dead_zone.save();
 }
 
 /*
@@ -317,12 +299,6 @@ RC_Channel::percent_input()
     return ret;
 }
 
-void
-RC_Channel::input()
-{
-    radio_in = hal.rcin->read(ch_in);
-}
-
 uint16_t
 RC_Channel::read() const
 {
@@ -337,6 +313,22 @@ bool RC_Channel::in_trim_dz()
     return is_bounded_int32(radio_in, radio_trim - dead_zone, radio_trim + dead_zone);
 }
 
+void RC_Channel::set_override(const uint16_t v, const uint32_t timestamp_us)
+{
+    last_override_time = timestamp_us != 0 ? timestamp_us : AP_HAL::millis();
+    override_value = v;
+}
+
+void RC_Channel::clear_override()
+{
+    last_override_time = 0;
+    override_value = 0;
+}
+
+bool RC_Channel::has_override() const
+{
+    return (override_value > 0) && ((AP_HAL::millis() - last_override_time) < *RC_Channels::override_timeout * 1000);
+}
 
 bool RC_Channel::min_max_configured() const
 {

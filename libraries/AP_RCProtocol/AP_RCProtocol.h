@@ -27,6 +27,7 @@ public:
     enum rcprotocol_t{
         PPM = 0,
         SBUS,
+        SBUS_NI,
         DSM,
         NONE    //last enum always is None
     };
@@ -36,10 +37,11 @@ public:
     uint8_t num_channels();
     uint16_t read(uint8_t chan);
     bool new_input();
+    void start_bind(void);
+    
 private:
     enum rcprotocol_t _detected_protocol = NONE;
     AP_RCProtocol_Backend *backend[NONE];
-    uint8_t num_backends = NONE;
     bool _new_input = false;
     uint32_t _last_input_ms;
 };

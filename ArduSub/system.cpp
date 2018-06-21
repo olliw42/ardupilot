@@ -116,7 +116,6 @@ void Sub::init_ardupilot()
 #endif
 
     // init Location class
-    Location_Class::set_ahrs(&ahrs);
 #if AP_TERRAIN_AVAILABLE && AC_TERRAIN
     Location_Class::set_terrain(&terrain);
     wp_nav.set_terrain(&terrain);
@@ -124,6 +123,7 @@ void Sub::init_ardupilot()
 
 #if AVOIDANCE_ENABLED == ENABLED
     wp_nav.set_avoidance(&avoid);
+    loiter_nav.set_avoidance(&avoid);
 #endif
 
     pos_control.set_dt(MAIN_LOOP_SECONDS);
@@ -143,7 +143,8 @@ void Sub::init_ardupilot()
 #endif
 
     // Init baro and determine if we have external (depth) pressure sensor
-    init_barometer(false);
+    barometer.set_log_baro_bit(MASK_LOG_IMU);
+    barometer.calibrate(false);
     barometer.update();
 
     for (uint8_t i = 0; i < barometer.num_instances(); i++) {
@@ -185,8 +186,10 @@ void Sub::init_ardupilot()
     mission.init();
 
     // initialise DataFlash library
+#if LOGGING_ENABLED == ENABLED
     DataFlash.set_mission(&mission);
     DataFlash.setVehicle_Startup_Log_Writer(FUNCTOR_BIND(&sub, &Sub::Log_Write_Vehicle_Startup_Messages, void));
+#endif
 
     startup_INS_ground();
 
@@ -230,20 +233,6 @@ void Sub::startup_INS_ground()
 }
 
 // calibrate gyros - returns true if successfully calibrated
-bool Sub::calibrate_gyros()
-{
-    // gyro offset calibration
-    sub.ins.init_gyro();
-
-    // reset ahrs gyro bias
-    if (sub.ins.gyro_calibrated_ok_all()) {
-        sub.ahrs.reset_gyro_drift();
-        return true;
-    }
-
-    return false;
-}
-
 // position_ok - returns true if the horizontal absolute position is ok and home position is set
 bool Sub::position_ok()
 {

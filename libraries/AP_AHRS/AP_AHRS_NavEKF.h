@@ -22,6 +22,8 @@
  */
 
 #include <AP_HAL/AP_HAL.h>
+
+#define AP_AHRS_NAVEKF_AVAILABLE 1
 #include "AP_AHRS.h"
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -33,7 +35,7 @@
 #include <AP_NavEKF3/AP_NavEKF3.h>
 #include <AP_NavEKF/AP_Nav_Common.h>              // definitions shared by inertial and ekf nav filters
 
-#define AP_AHRS_NAVEKF_AVAILABLE 1
+
 #define AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000     // time in milliseconds the ekf needs to settle after being started
 
 class AP_AHRS_NavEKF : public AP_AHRS_DCM {
@@ -44,8 +46,7 @@ public:
     };
 
     // Constructor
-    AP_AHRS_NavEKF(AP_InertialSensor &ins, AP_Baro &baro,
-                   NavEKF2 &_EKF2, NavEKF3 &_EKF3, Flags flags = FLAG_NONE);
+    AP_AHRS_NavEKF(NavEKF2 &_EKF2, NavEKF3 &_EKF3, Flags flags = FLAG_NONE);
 
     /* Do not allow copies */
     AP_AHRS_NavEKF(const AP_AHRS_NavEKF &other) = delete;
@@ -72,7 +73,7 @@ public:
     bool get_position(struct Location &loc) const override;
 
     // get latest altitude estimate above ground level in meters and validity flag
-    bool get_hagl(float &hagl) const;
+    bool get_hagl(float &hagl) const override;
 
     // status reporting of estimated error
     float           get_error_rp() const override;
@@ -124,9 +125,6 @@ public:
     // blended accelerometer values in the earth frame in m/s/s
     const Vector3f &get_accel_ef_blended() const override;
 
-    // set home location
-    void set_home(const Location &loc) override;
-
     // set the EKF's origin location in 10e7 degrees.  This should only
     // be called when the EKF has no absolute position reference (i.e. GPS)
     // from which to decide the origin on its own
@@ -163,6 +161,9 @@ public:
 
     // write body odometry measurements to the EKF
     void writeBodyFrameOdom(float quality, const Vector3f &delPos, const Vector3f &delAng, float delTime, uint32_t timeStamp_ms, const Vector3f &posOffset);
+
+    // Write position and quaternion data from an external navigation system
+    void writeExtNavData(const Vector3f &sensOffset, const Vector3f &pos, const Quaternion &quat, float posErr, float angErr, uint32_t timeStamp_ms, uint32_t resetTime_ms) override;
 
     // inhibit GPS usage
     uint8_t setInhibitGPS(void);

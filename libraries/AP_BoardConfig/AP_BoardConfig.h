@@ -8,11 +8,15 @@
 #include <AP_Param_Helper/AP_Param_Helper.h>
 #endif
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN || defined(HAL_CHIBIOS_ARCH_FMUV3) || defined(HAL_CHIBIOS_ARCH_FMUV4) || defined(HAL_CHIBIOS_ARCH_MINDPXV2)
+#if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN || defined(HAL_CHIBIOS_ARCH_FMUV3) || defined(HAL_CHIBIOS_ARCH_FMUV4) || defined(HAL_CHIBIOS_ARCH_FMUV5) || defined(HAL_CHIBIOS_ARCH_MINDPXV2)
 #define AP_FEATURE_BOARD_DETECT 1
-#define AP_FEATURE_SAFETY_BUTTON 1
 #else
 #define AP_FEATURE_BOARD_DETECT 0
+#endif
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN || defined(HAL_CHIBIOS_ARCH_FMUV3) || defined(HAL_CHIBIOS_ARCH_FMUV4) || defined(HAL_CHIBIOS_ARCH_FMUV5) || defined(HAL_CHIBIOS_ARCH_MINDPXV2) || defined(HAL_GPIO_PIN_SAFETY_IN)
+#define AP_FEATURE_SAFETY_BUTTON 1
+#else
 #define AP_FEATURE_SAFETY_BUTTON 0
 #endif
 
@@ -28,7 +32,7 @@
 #define AP_FEATURE_SBUS_OUT 0
 #endif
 
-#ifdef HAL_RCINPUT_WITH_AP_RADIO
+#if HAL_RCINPUT_WITH_AP_RADIO
 #include <AP_Radio/AP_Radio.h>
 #endif
 
@@ -46,7 +50,7 @@ public:
     AP_BoardConfig &operator=(const AP_BoardConfig&) = delete;
 
     // singleton support
-    AP_BoardConfig *get_instance(void) {
+    static AP_BoardConfig *get_instance(void) {
         return instance;
     }
     
@@ -86,6 +90,7 @@ public:
         PX4_BOARD_PCNC1    = 21,
         PX4_BOARD_MINDPXV2 = 22,
         PX4_BOARD_SP01     = 23,
+        PX4_BOARD_FMUV5    = 24,
         VRX_BOARD_BRAIN51  = 30,
         VRX_BOARD_BRAIN52  = 32,
         VRX_BOARD_BRAIN52E = 33,
@@ -107,33 +112,55 @@ public:
     }
 #endif
 
-    // ask if IOMCU is enabled
-    static bool io_enabled(void) {
+    // ask if IOMCU is enabled. This is a uint8_t to allow
+    // developer debugging by setting BRD_IO_ENABLE=100 to avoid the
+    // crc check of IO firmware on startup
+    static uint8_t io_enabled(void) {
 #if AP_FEATURE_BOARD_DETECT
-        return instance?instance->state.io_enable.get():false;
+        return instance?uint8_t(instance->state.io_enable.get()):0;
 #else
-        return false;
+        return 0;
 #endif
     }
 
     // get number of PWM outputs enabled on FMU
     static uint8_t get_pwm_count(void) {
-#if AP_FEATURE_BOARD_DETECT
-        return instance?instance->state.pwm_count.get():4;
+        return instance?instance->pwm_count.get():4;
+    }
+
+#if AP_FEATURE_SAFETY_BUTTON
+    enum board_safety_button_option {
+        BOARD_SAFETY_OPTION_BUTTON_ACTIVE_SAFETY_OFF=1,
+        BOARD_SAFETY_OPTION_BUTTON_ACTIVE_SAFETY_ON=2,
+        BOARD_SAFETY_OPTION_BUTTON_ACTIVE_ARMED=4,
+    };
+
+    // return safety button options. Bits are in enum board_safety_button_option
+    uint16_t get_safety_button_options(void) {
+        return uint16_t(state.safety_option.get());
+    }
+#endif
+
+    // return the value of BRD_SAFETY_MASK
+    uint16_t get_safety_mask(void) const {
+#if AP_FEATURE_BOARD_DETECT || defined(AP_FEATURE_BRD_PWM_COUNT_PARAM)
+        return uint16_t(state.ignore_safety_channels.get());
 #else
         return 0;
 #endif
     }
+
     
 private:
     static AP_BoardConfig *instance;
     
     AP_Int16 vehicleSerialNumber;
-
-#if AP_FEATURE_BOARD_DETECT
+    AP_Int8 pwm_count;
+    
+#if AP_FEATURE_BOARD_DETECT || defined(AP_FEATURE_BRD_PWM_COUNT_PARAM) || AP_FEATURE_SAFETY_BUTTON
     struct {
-        AP_Int8 pwm_count;
         AP_Int8 safety_enable;
+        AP_Int16 safety_option;
         AP_Int32 ignore_safety_channels;
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
         AP_Int8 ser1_rtscts;
@@ -143,7 +170,9 @@ private:
         AP_Int8 board_type;
         AP_Int8 io_enable;
     } state;
+#endif
 
+#if AP_FEATURE_BOARD_DETECT
     static enum px4_board_type px4_configured_board;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
@@ -155,8 +184,6 @@ private:
 #endif
     
 
-    void board_init_safety(void);
-    void board_setup_safety_mask(void);
     void board_setup_drivers(void);
     bool spi_check_register(const char *devname, uint8_t regnum, uint8_t value, uint8_t read_flag = 0x80);
     void validate_board_type(void);
@@ -164,6 +191,11 @@ private:
 
 #endif // AP_FEATURE_BOARD_DETECT
 
+#if AP_FEATURE_SAFETY_BUTTON
+    void board_init_safety(void);
+    void board_setup_safety_mask(void);
+#endif
+    
     void board_setup_uart(void);
     void board_setup_sbus(void);
     void board_setup(void);
@@ -173,7 +205,7 @@ private:
     // target temperarure for IMU in Celsius, or -1 to disable
     AP_Int8 _imu_target_temperature;
 
-#ifdef HAL_RCINPUT_WITH_AP_RADIO
+#if HAL_RCINPUT_WITH_AP_RADIO
     // direct attached radio
     AP_Radio _radio;
 #endif

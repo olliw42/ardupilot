@@ -226,9 +226,9 @@ void ToyMode::update()
     bool power_button = false;
     bool left_change = false;
     
-    uint16_t ch5_in = hal.rcin->read(CH_5);
-    uint16_t ch6_in = hal.rcin->read(CH_6);
-    uint16_t ch7_in = hal.rcin->read(CH_7);
+    uint16_t ch5_in = RC_Channels::get_radio_in(CH_5);
+    uint16_t ch6_in = RC_Channels::get_radio_in(CH_6);
+    uint16_t ch7_in = RC_Channels::get_radio_in(CH_7);
 
     if (copter.failsafe.radio || ch5_in < 900) {
         // failsafe handling is outside the scope of toy mode, it does
@@ -490,9 +490,13 @@ void ToyMode::update()
         break;
 
     case ACTION_MODE_ACRO:
+#if MODE_ACRO_ENABLED == ENABLED
         new_mode = ACRO;
+#else
+        gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: ACRO is disabled");
+#endif
         break;
-        
+
     case ACTION_MODE_ALTHOLD:
         new_mode = ALT_HOLD;
         break;
@@ -538,7 +542,11 @@ void ToyMode::update()
         break;
 
     case ACTION_MODE_THROW:
+#if MODE_THROW_ENABLED == ENABLED
         new_mode = THROW;
+#else
+        gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: THROW is disabled");
+#endif
         break;
 
     case ACTION_MODE_FLIP:
@@ -635,22 +643,28 @@ void ToyMode::update()
     
     if (new_mode != copter.control_mode) {
         load_test.running = false;
+#if AC_FENCE == ENABLED
         copter.fence.enable(false);
+#endif
         if (set_and_remember_mode(new_mode, MODE_REASON_TX_COMMAND)) {
             gcs().send_text(MAV_SEVERITY_INFO, "Tmode: mode %s", copter.flightmode->name4());
             // force fence on in all GPS flight modes
+#if AC_FENCE == ENABLED
             if (copter.flightmode->requires_GPS()) {
                 copter.fence.enable(true);
             }
+#endif
         } else {
             gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: %u FAILED", (unsigned)new_mode);
             if (new_mode == RTL) {
                 // if we can't RTL then land
                 gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: LANDING");
                 set_and_remember_mode(LAND, MODE_REASON_TMODE);
+#if AC_FENCE == ENABLED
                 if (copter.landing_with_GPS()) {
                     copter.fence.enable(true);
                 }
+#endif
             }
         }
     }
@@ -701,7 +715,7 @@ void ToyMode::trim_update(void)
     }
     
     uint16_t chan[4];
-    if (hal.rcin->read(chan, 4) != 4) {
+    if (RC_Channels::get_radio_in(chan, 4) != 4) {
         trim.start_ms = 0;
         return;
     }
@@ -942,7 +956,7 @@ void ToyMode::handle_message(mavlink_message_t *msg)
         // immediately update AP_Notify recording flag
         AP_Notify::flags.video_recording = 1;
     } else if (strncmp(m.name, "WIFICHAN", 10) == 0) {
-#ifdef HAL_RCINPUT_WITH_AP_RADIO
+#if HAL_RCINPUT_WITH_AP_RADIO
         AP_Radio *radio = AP_Radio::instance();
         if (radio) {
             radio->set_wifi_channel(m.value);

@@ -11,98 +11,63 @@ mkdir -p $ROOT/Release/Copter
 mkdir -p $ROOT/Release/Plane
 
 
+make_copter(){
+ local BOARD=$1
+ 
+ cd $ROOT/ArduCopter
+ make f4light-clean
+ make f4light BOARD=$BOARD && (
+
+  cp $ROOT/ArduCopter/$BOARD.bin $ROOT/Release/Copter
+  cp $ROOT/ArduCopter/$BOARD.hex $ROOT/Release/Copter
+  cp $ROOT/ArduCopter/$BOARD.dfu $ROOT/Release/Copter
+  cp $ROOT/ArduCopter/${BOARD}_bl.bin $ROOT/Release/Copter
+  cp $ROOT/ArduCopter/${BOARD}_bl.dfu $ROOT/Release/Copter
+ )
+}
+
+make_plane(){
+ local BOARD=$1
+
+ cd $ROOT/ArduPlane
+ make f4light-clean
+ make f4light VERBOSE=1 BOARD=$BOARD && (
+
+ cp $ROOT/ArduPlane/$BOARD.bin $ROOT/Release/Plane
+ cp $ROOT/ArduPlane/$BOARD.hex $ROOT/Release/Plane
+ cp $ROOT/ArduPlane/$BOARD.dfu $ROOT/Release/Plane
+ cp $ROOT/ArduPlane/${BOARD}_bl.bin $ROOT/Release/Plane
+ cp $ROOT/ArduPlane/${BOARD}_bl.dfu $ROOT/Release/Plane
+ )
+
+}
+
 ( # RevoMini board
- cd $ROOT/ArduCopter
- make f4light-clean
- make f4light VERBOSE=1 BOARD=revomini_Revolution && (
-
- cp $ROOT/ArduCopter/revomini_Revolution.bin $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_Revolution.hex $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_Revolution.dfu $ROOT/Release/Copter
- )
-) && (
- cd $ROOT/ArduPlane
- make f4light-clean
- make f4light VERBOSE=1 BOARD=revomini_Revolution && (
-
- cp $ROOT/ArduPlane/revomini_Revolution.bin $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_Revolution.hex $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_Revolution.dfu $ROOT/Release/Plane
- )
+ make_copter "f4light_Revolution" && \
+ make_plane  "f4light_Revolution"
 ) && ( # AirBotF4 board
- cd $ROOT/ArduCopter
- make f4light-clean
- make f4light VERBOSE=1 BOARD=revomini_Airbot  && (
-
- cp $ROOT/ArduCopter/revomini_Airbot.bin $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_Airbot.hex $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_Airbot.dfu $ROOT/Release/Copter
-
- make f4light-clean
-
- )
-) && (
- cd $ROOT/ArduPlane
- make f4light-clean
- make f4light VERBOSE=1 BOARD=revomini_Airbot && (
-
- cp $ROOT/ArduPlane/revomini_Airbot.bin $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_Airbot.hex $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_Airbot.dfu $ROOT/Release/Plane
-
- make f4light-clean
-
- )
+ make_copter "f4light_Airbot" && \
+ make_plane  "f4light_Airbot"
 ) && ( # Cl_Racing F4 board
- cd $ROOT/ArduCopter
- make f4light-clean
- make f4light VERBOSE=1 BOARD=revo_cl_racing  && (
-
- cp $ROOT/ArduCopter/revo_cl_racing.bin $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revo_cl_racing.hex $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revo_cl_racing.dfu $ROOT/Release/Copter
-
- make f4light-clean
-
- )
-) && (
- cd $ROOT/ArduPlane
- make f4light-clean
- make f4light VERBOSE=1 BOARD=revomini_Airbot && (
-
- cp $ROOT/ArduPlane/revo_cl_racing.bin $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revo_cl_racing.hex $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revo_cl_racing.dfu $ROOT/Release/Plane
-
- make f4light-clean
-
- )
-) && ( # AirBotF4 board
- cd $ROOT/ArduCopter
-# make f4light-clean
- make f4light VERBOSE=1 BOARD=revomini_AirbotV2  && (
-
- cp $ROOT/ArduCopter/revomini_AirbotV2.bin $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_AirbotV2.hex $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_AirbotV2.dfu $ROOT/Release/Copter
-
-
- )
-) && (
- cd $ROOT/ArduPlane
- make f4light-clean
- make f4light VERBOSE=1 BOARD=revomini_AirbotV2 && (
-
- cp $ROOT/ArduPlane/revomini_AirbotV2.bin $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_AirbotV2.hex $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_AirbotV2.dfu $ROOT/Release/Plane
- )
-
+ make_copter "f4light_cl_racing" && \
+ make_plane  "f4light_cl_racing"
+) && ( # AirBotV2 board
+ make_copter "f4light_AirbotV2" && \
+ make_plane  "f4light_AirbotV2"
+) && ( # OmnibusV3 board
+ make_copter "f4light_OmnibusV3" && \
+ make_plane  "f4light_OmnibusV3"
+) && ( # RevoMini board with SD card
+ make_copter "f4light_Revolution_SD" && \
+ make_plane  "f4light_Revolution_SD"
+) && ( # MatekF405_CTR board
+ make_copter "f4light_MatekF405_CTR" && \
+ make_plane  "f4light_MatekF405_CTR"
 ) && (
  cd $ROOT
 
  zip -r latest.zip Release
- git add . -A
+# git add latest.zip
 )
 
 

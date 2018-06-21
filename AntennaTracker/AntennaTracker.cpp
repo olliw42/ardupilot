@@ -38,13 +38,15 @@ const AP_Scheduler::Task Tracker::scheduler_tasks[] = {
     SCHED_TASK(update_GPS,             10,   4000),
     SCHED_TASK(update_compass,         10,   1500),
     SCHED_TASK_CLASS(AP_BattMonitor,    &tracker.battery,   read,           10, 1500),
-    SCHED_TASK(update_barometer,       10,   1500),
+    SCHED_TASK_CLASS(AP_Baro,          &tracker.barometer,  update,         10,   1500),
     SCHED_TASK(gcs_update,             50,   1700),
     SCHED_TASK(gcs_data_stream_send,   50,   3000),
     SCHED_TASK(compass_accumulate,     50,   1500),
     SCHED_TASK_CLASS(AP_Baro,           &tracker.barometer, accumulate,     50,  900),
     SCHED_TASK(ten_hz_logging_loop,    10,    300),
+#if LOGGING_ENABLED == ENABLED
     SCHED_TASK_CLASS(DataFlash_Class,   &tracker.DataFlash, periodic_tasks, 50,  300),
+#endif
     SCHED_TASK_CLASS(AP_InertialSensor, &tracker.ins,       periodic,       50,   50),
     SCHED_TASK_CLASS(AP_Notify,         &tracker.notify,    update,         50,  100),
     SCHED_TASK(check_usb_mux,          10,    300),
@@ -104,12 +106,21 @@ void Tracker::one_second_loop()
         }
         one_second_counter = 0;
     }
+
+    if (!ahrs.home_is_set()) {
+        // set home to current location
+        Location temp_loc;
+        if (ahrs.get_location(temp_loc)) {
+            set_home(temp_loc);
+        }
+        return;
+    }
 }
 
 void Tracker::ten_hz_logging_loop()
 {
     if (should_log(MASK_LOG_IMU)) {
-        DataFlash.Log_Write_IMU(ins);
+        DataFlash.Log_Write_IMU();
     }
     if (should_log(MASK_LOG_ATTITUDE)) {
         Log_Write_Attitude();

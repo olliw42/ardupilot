@@ -58,7 +58,10 @@ imu_types = {
     0x21 : "DEVTYPE_GYR_MPU6000",
     0x22 : "DEVTYPE_GYR_L3GD20",
     0x24 : "DEVTYPE_GYR_MPU9250",
-    0x25 : "DEVTYPE_GYR_I3G4250D"
+    0x25 : "DEVTYPE_GYR_I3G4250D",
+    0x26 : "DEVTYPE_GYR_LSM9DS1",
+    0x27 : "DEVTYPE_INS_ICM20789",
+    0x28 : "DEVTYPE_INS_ICM20689",
 }
 
 decoded_devname = ""
@@ -69,6 +72,6 @@ if opts.compass:
 if opts.imu:
     decoded_devname = imu_types.get(devtype, "UNKNOWN")
 
-print("bus_type:%s(%u)  bus:%u address:%u devtype:%u(0x%x) %s" % (
+print("bus_type:%s(%u)  bus:%u address:%u(0x%x) devtype:%u(0x%x) %s" % (
     bustypes.get(bus_type,"UNKNOWN"), bus_type,
-    bus, address, devtype, devtype, decoded_devname))
+    bus, address, address, devtype, devtype, decoded_devname))

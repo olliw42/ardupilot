@@ -38,7 +38,7 @@ void PPM_parser::init(uint8_t ch){
     last_pulse = {0,0};
 
     _ioc = Scheduler::register_io_completion(FUNCTOR_BIND_MEMBER(&PPM_parser::parse_pulses, void));
-    // TODO Panic on IOC not allocated
+    // TODO Panic on IOC not allocated ?
 
     // callback is called on each edge so must be as fast as possible
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&PPM_parser::start_ioc, void) };
@@ -77,9 +77,9 @@ void PPM_parser::rxIntRC(uint16_t last_value, uint16_t value, bool state)
             _process_ppmsum_pulse( (last_value + value) >>1 ); // process PPM only if no protocols detected
         }
 
-        if((_rc_mode &~BOARD_RC_SBUS_NI) == 0){
+        if((_rc_mode & ~BOARD_RC_SBUS_NI) == 0){
             // test for non-inverted SBUS in 2nd memory structures
-            _process_sbus_pulse(last_value>>1, value>>1, sbus_state[1]);  // was 1 so now is length of 1, last is a length of 0
+            _process_sbus_pulse(value>>1, last_value>>1, sbus_state[1]);  // was 1 so now is length of 1, last is a length of 0
         }
 
     } else { // was 0 so rising
@@ -163,11 +163,11 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, F4Lig
 
     // pull in the low bits
     nlow = bits_s0;          // length of low bits
-    if (nlow + bit_ofs > 12) { // переехали за границу байта?
-        nlow = 12 - bit_ofs;   // остаток этого байта
+    if (nlow + bit_ofs > 12) { // goes over byte boundary?
+        nlow = 12 - bit_ofs;   // remaining part of byte
     }
-    bits_s0 -= nlow;  // непосчитанный остаток нулевых битов
-    state.bit_ofs += nlow; // добить нулями до конца байта
+    bits_s0 -= nlow;  // zero bit residual
+    state.bit_ofs += nlow; // fill by zeros till byte end
 
     if (state.bit_ofs == 25*12 && bits_s0 > 12) { // all frame got and was gap
         // we have a full frame

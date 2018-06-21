@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__) || defined(__CYGWIN64__)
 #include <windows.h>
 #include <time.h>
 #include <mmsystem.h>
@@ -54,7 +54,7 @@ Aircraft::Aircraft(const char *home_str, const char *frame_str) :
     rate_hz(1200.0f),
     autotest_dir(nullptr),
     frame(frame_str),
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__) || defined(__CYGWIN64__)
     min_sleep_time(20000)
 #else
     min_sleep_time(5000)
@@ -151,7 +151,8 @@ bool Aircraft::parse_home(const char *home_str, Location &loc, float &yaw_degree
 float Aircraft::ground_height_difference() const
 {
     float h1, h2;
-    if (sitl->terrain_enable && terrain &&
+    if (sitl &&
+        sitl->terrain_enable && terrain &&
         terrain->height_amsl(home, h1, false) &&
         terrain->height_amsl(location, h2, false)) {
         return h2 - h1;
@@ -429,7 +430,7 @@ void Aircraft::fill_fdm(struct sitl_fdm &fdm)
 
 uint64_t Aircraft::get_wall_time_us() const
 {
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__) || defined(__CYGWIN64__)
     static DWORD tPrev;
     static uint64_t last_ret_us;
     if (tPrev == 0) {

@@ -166,7 +166,7 @@ bool NavEKF3_core::calcGpsGoodToAlign(void)
     if (gpsSpdAccFail) {
         hal.util->snprintf(prearm_fail_string,
                            sizeof(prearm_fail_string),
-                           "GPS speed error %.1f (needs %.1f)", (double)gpsSpdAccuracy, (double)(1.0f*checkScaler));
+                           "GPS speed error %.1f (needs < %.1f)", (double)gpsSpdAccuracy, (double)(1.0f*checkScaler));
         gpsCheckStatus.bad_sAcc = true;
     } else {
         gpsCheckStatus.bad_sAcc = false;
@@ -451,7 +451,7 @@ void NavEKF3_core::detectOptFlowTakeoff(void)
 {
     if (!onGround && !takeOffDetected && (imuSampleTime_ms - timeAtArming_ms) > 1000) {
         // we are no longer confidently on the ground so check the range finder and gyro for signs of takeoff
-        const AP_InertialSensor &ins = _ahrs->get_ins();
+        const AP_InertialSensor &ins = AP::ins();
         Vector3f angRateVec;
         Vector3f gyroBias;
         getGyroBias(gyroBias);

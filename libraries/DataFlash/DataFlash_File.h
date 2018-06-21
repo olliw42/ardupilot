@@ -11,18 +11,6 @@
 #include <AP_HAL/utility/RingBuffer.h>
 #include "DataFlash_Backend.h"
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_QURT
-/*
-  the QURT port has a limited range of system calls available. It
-  cannot provide all the facilities that DataFlash_File wants. It can
-  provide enough to be useful though, which is what
-  DATAFLASH_FILE_MINIMAL is for
- */
-#define DATAFLASH_FILE_MINIMAL 1
-#else
-#define DATAFLASH_FILE_MINIMAL 0
-#endif
-
 class DataFlash_File : public DataFlash_Backend
 {
 public:
@@ -53,13 +41,6 @@ public:
     int16_t get_log_data(uint16_t log_num, uint16_t page, uint32_t offset, uint16_t len, uint8_t *data) override;
     uint16_t get_num_logs() override;
     uint16_t start_new_log(void) override;
-    void LogReadProcess(const uint16_t log_num,
-                        uint16_t start_page, uint16_t end_page, 
-                        print_mode_fn print_mode,
-                        AP_HAL::BetterStream *port) override;
-    void DumpPageInfo(AP_HAL::BetterStream *port) override;
-    void ShowDeviceInfo(AP_HAL::BetterStream *port) override;
-    void ListAvailableLogs(AP_HAL::BetterStream *port) override;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
     void flush(void) override;
@@ -84,6 +65,9 @@ protected:
 
 private:
     int _write_fd;
+    char *_write_filename;
+    uint32_t _last_write_ms;
+    
     int _read_fd;
     uint16_t _read_fd_log_num;
     uint32_t _read_offset;

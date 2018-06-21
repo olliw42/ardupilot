@@ -201,6 +201,11 @@ AP_Airspeed::AP_Airspeed()
         state[i].EAS2TAS = 1;
     }
     AP_Param::setup_object_defaults(this, var_info);
+
+    if (_singleton != nullptr) {
+        AP_HAL::panic("AP_Airspeed must be singleton");
+    }
+    _singleton = this;
 }
 
 
@@ -302,6 +307,7 @@ void AP_Airspeed::calibrate(bool in_startup)
         state[i].cal.sum = 0;
         state[i].cal.read_count = 0;
     }
+    gcs().send_text(MAV_SEVERITY_INFO,"Airspeed calibration started");
 }
 
 /*
@@ -341,6 +347,7 @@ void AP_Airspeed::read(uint8_t i)
     if (!enabled(i) || !sensor[i]) {
         return;
     }
+    bool prev_healthy = state[i].healthy;
     float raw_pressure = get_pressure(i);
     if (state[i].cal.start_ms != 0) {
         update_calibration(i, raw_pressure);
@@ -352,7 +359,14 @@ void AP_Airspeed::read(uint8_t i)
     state[i].corrected_pressure = airspeed_pressure;
 
     // filter before clamping positive
-    state[i].filtered_pressure = 0.7f * state[i].filtered_pressure + 0.3f * airspeed_pressure;
+    if (!prev_healthy) {
+        // if the previous state was not healthy then we should not
+        // use an IIR filter, otherwise a bad reading will last for
+        // some time after the sensor becomees healthy again
+        state[i].filtered_pressure = airspeed_pressure;
+    } else {
+        state[i].filtered_pressure = 0.7f * state[i].filtered_pressure + 0.3f * airspeed_pressure;
+    }
 
     /*
       we support different pitot tube setups so user can choose if
@@ -395,7 +409,7 @@ void AP_Airspeed::read(void)
 #if 1
     // debugging until we get MAVLink support for 2nd airspeed sensor
     if (enabled(1)) {
-        mavlink_msg_named_value_float_send(MAVLINK_COMM_0, AP_HAL::millis(), "AS2", get_airspeed(1));
+        gcs().send_named_float("AS2", get_airspeed(1));
     }
 #endif
 
@@ -449,3 +463,7 @@ bool AP_Airspeed::all_healthy(void) const
     }
     return true;
 }
+
+// singleton instance
+AP_Airspeed *AP_Airspeed::_singleton;
+

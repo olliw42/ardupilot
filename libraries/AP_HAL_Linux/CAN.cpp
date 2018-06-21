@@ -83,7 +83,10 @@ static uavcan::CanFrame makeUavcanFrame(const can_frame& sockcan_frame)
 
 bool CAN::begin(uint32_t bitrate)
 {
-    if (_initialized) return _initialized;
+    if (_initialized) {
+        return _initialized;
+    }
+
     // TODO: Add possibility change bitrate
     _fd = openSocket(HAL_BOARD_CAN_IFACE_NAME);
     if (_fd > 0) {
@@ -371,18 +374,16 @@ int CAN::_read(uavcan::CanFrame& frame, uavcan::UtcTime& ts_utc, bool& loopback)
     auto sockcan_frame = can_frame();
     iov.iov_base = &sockcan_frame;
     iov.iov_len  = sizeof(sockcan_frame);
-
-    struct Control
-    {
-        cmsghdr cm;
-        std::uint8_t data[sizeof(::timeval)];
+    union {
+        uint8_t data[CMSG_SPACE(sizeof(::timeval))];
+        struct cmsghdr align;
     } control;
 
     auto msg = msghdr();
     msg.msg_iov    = &iov;
     msg.msg_iovlen = 1;
-    msg.msg_control = &control;
-    msg.msg_controllen = sizeof(control);
+    msg.msg_control = control.data;
+    msg.msg_controllen = sizeof(control.data);
 
     const int res = recvmsg(_fd, &msg, MSG_DONTWAIT);
     if (res <= 0) {
@@ -539,15 +540,16 @@ int16_t CANManager::select(uavcan::CanSelectMasks& inout_masks,
         IfaceWrapper* pollfd_index_to_iface[uavcan::MaxCanIfaces] = {};
 
         for (unsigned i = 0; i < _ifaces.size(); i++) {
-            if (!_ifaces[i]->isDown()) {
-                pollfds[num_pollfds].fd = _ifaces[i]->getFileDescriptor();
-                pollfds[num_pollfds].events = POLLIN;
-                if (_ifaces[i]->hasReadyTx() || (inout_masks.write & (1U << i))) {
-                    pollfds[num_pollfds].events |= POLLOUT;
-                }
-                pollfd_index_to_iface[num_pollfds] = _ifaces[i].get();
-                num_pollfds++;
+            if (_ifaces[i]->isDown()) {
+                continue;
             }
+            pollfds[num_pollfds].fd = _ifaces[i]->getFileDescriptor();
+            pollfds[num_pollfds].events = POLLIN;
+            if (_ifaces[i]->hasReadyTx() || (inout_masks.write & (1U << i))) {
+                pollfds[num_pollfds].events |= POLLOUT;
+            }
+            pollfd_index_to_iface[num_pollfds] = _ifaces[i].get();
+            num_pollfds++;
         }
 
         if (num_pollfds == 0) {

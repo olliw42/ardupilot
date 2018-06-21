@@ -490,14 +490,13 @@ void BP_Mount_STorM32::find_CAN(void)
     }
 
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-        if (hal.can_mgr[i] != nullptr) {
-            AP_UAVCAN *ap_uavcan = hal.can_mgr[i]->get_UAVCAN();
-            if (ap_uavcan != nullptr) {
-                _ap_uavcan[i] = ap_uavcan;
-                _serial_is_initialised = true; //inform the BP_STorM32 class
+        AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(i);
 
-                ap_uavcan->storm32status_register_listener(this, STORM32_UAVCAN_NODEID); //register listener
-            }
+        if (ap_uavcan != nullptr) {
+            _ap_uavcan[i] = ap_uavcan;
+            _serial_is_initialised = true; //inform the BP_STorM32 class
+
+            ap_uavcan->storm32status_register_listener(this, STORM32_UAVCAN_NODEID); //register listener
         }
     }
 #endif

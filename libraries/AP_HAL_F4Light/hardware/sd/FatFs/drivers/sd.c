@@ -193,7 +193,7 @@ int wait_ready (	/* 1:Ready, 0:Timeout */
 /*-----------------------------------------------------------------------*/
 
 static
-void deselect (void)
+void deselect_cs (void)
 {
     CS_HIGH();		/* Set CS# high */
     xchg_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
@@ -206,7 +206,7 @@ void deselect (void)
 /*-----------------------------------------------------------------------*/
 
 static
-int select (void)	/* 1:OK, 0:Timeout */
+int select_cs (void)	/* 1:OK, 0:Timeout */
 {
     if(!CS_LOW()) { /* take semaphore and Set CS# low */
         return 0;		
@@ -214,7 +214,7 @@ int select (void)	/* 1:OK, 0:Timeout */
     xchg_spi(0xFF);	/* Dummy clock (force DO enabled) */
     if (wait_ready(500)) return 1;	/* Wait for card ready */
 
-    deselect();
+    deselect_cs();
     return 0;	/* Timeout */
 }
 
@@ -321,9 +321,9 @@ uint8_t send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 
 	/* Select the card and wait for ready except to stop multiple block read */
 	if (cmd != CMD12) {
-		deselect();
+		deselect_cs();
 //		spi_yield(); // sync quant so no interrupts when receiving answer
-		if (!select()) {
+		if (!select_cs()) {
 		    return 0xFF;
 		}
 	}
@@ -444,7 +444,7 @@ DSTATUS sd_initialize() {
 	    Stat = STA_NOINIT;
 	}
 
-	deselect();
+	deselect_cs();
 
 	return Stat;
 }
@@ -561,7 +561,7 @@ DRESULT sd_read (
 		    } else {
 		        break;
 		    }
-                    deselect();
+                    deselect_cs();
 		    spi_yield();
 		} while(--count);
 
@@ -589,7 +589,7 @@ DRESULT sd_read (
 		}
 	    }
 	}
-	deselect();
+	deselect_cs();
         if(count==0) return  RES_OK;	/* Return result */
         Stat = STA_NOINIT;        
 	return RES_ERROR;
@@ -658,14 +658,14 @@ DRESULT sd_write (
 	}
 
 	if(count) {
-            deselect();
+            deselect_cs();
             Stat = STA_NOINIT;        
 	    return RES_ERROR;
 	}
 
         uint8_t ret = sd_get_state(); // reset errors
 
-	deselect();
+	deselect_cs();
 	
 	if(ret) return RES_ERROR;
 
@@ -716,7 +716,7 @@ DRESULT sd_ioctl (
 
 	switch (cmd) {
 	case CTRL_SYNC :		/* Wait for end of internal write process of the drive */
-		if (select()) res = RES_OK;
+		if (select_cs()) res = RES_OK;
 		break;
 
 	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (uint32_t) */
@@ -810,7 +810,7 @@ DRESULT sd_ioctl (
 		res = RES_PARERR;
 	}
 
-	deselect();
+	deselect_cs();
     }
     return res;
 }
@@ -869,6 +869,9 @@ void sd_timerproc (void)
 #define JEDEC_DEVICE_ID              0x9F
 #define JEDEC_PAGE_WRITE             0x02
 
+#define JEDEC_WREAR                  0xC5
+#define JEDEC_ENTER_4B_MODE          0xB7
+
 #define JEDEC_BULK_ERASE             0xC7 // full chip erase
 #define JEDEC_SECTOR_ERASE           0x20 // 4k erase
 #define JEDEC_PAGE_ERASE             0xD8 // 64K erase
@@ -891,6 +894,9 @@ static bool flash_died=false;
 static uint8_t df_manufacturer;
 static uint16_t df_device;
 static uint32_t erase_size = BOARD_DATAFLASH_ERASE_SIZE;
+static uint8_t addr_cmd_length = 4;
+static uint8_t addr_cmd_start = 1;
+static bool  addr_4bit = 0;
 
  #if BOARD_DATAFLASH_ERASE_SIZE  >= 65536
    static uint8_t erase_cmd=JEDEC_PAGE_ERASE;
@@ -900,7 +906,7 @@ static uint32_t erase_size = BOARD_DATAFLASH_ERASE_SIZE;
 
 #pragma pack(push,1)
 static struct {
-    uint8_t cmd[4]; // for DMA transfer
+    uint8_t cmd[5]; // for DMA transfer
     uint8_t sector[DF_PAGE_SIZE]; // we ALWAYS can use DMA!
 } buf;
 #pragma pack(pop)
@@ -1006,7 +1012,7 @@ static void ReadManufacturerID()
     // Read manufacturer and ID command...
     buf.cmd[0] = JEDEC_DEVICE_ID;
 
-    spi_spiTransfer(buf.cmd, 1, buf.cmd, 4);
+    spi_spiTransfer(buf.cmd, 1, buf.cmd, addr_cmd_length);
     
     df_manufacturer =  buf.cmd[0];
     df_device       = (buf.cmd[1] << 8) | buf.cmd[2]; //capacity
@@ -1077,6 +1083,15 @@ static void Flash_Jedec_WriteEnable(void){
 }
 
 
+static void Flash_Enter4B_Mode(){ 
+    if (!wait_ready(500)) return;  /* Wait for card ready */
+
+    if (!cs_assert()) return;
+    spi_write(JEDEC_ENTER_4B_MODE);
+    cs_release();
+}
+
+
 static bool read_page( uint8_t *ptr, uint32_t pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
@@ -1084,23 +1099,28 @@ static bool read_page( uint8_t *ptr, uint32_t pageNum){
 
     if (!cs_assert()) return 0;
 
-    buf.cmd[0] = JEDEC_READ_DATA;
-    buf.cmd[1] = (PageAdr >> 16) & 0xff;
-    buf.cmd[2] = (PageAdr >>  8) & 0xff;
-    buf.cmd[3] = (PageAdr >>  0) & 0xff;
+    {    
+        uint8_t i = 0;
 
+        buf.cmd[i++] = JEDEC_READ_DATA;
+        if(addr_4bit) {
+            buf.cmd[i++] = (PageAdr >> 24) & 0xff;
+        }
+        buf.cmd[i++] = (PageAdr >> 16) & 0xff;
+        buf.cmd[i++] = (PageAdr >>  8) & 0xff;
+        buf.cmd[i++] = (PageAdr >>  0) & 0xff;
+    }
     
-    spi_spiTransfer(buf.cmd, 4, buf.sector, DF_PAGE_SIZE);
+    spi_spiTransfer(&buf.cmd[0], addr_cmd_length, buf.sector, DF_PAGE_SIZE);
 
     cs_release();
+
     uint16_t i;
     for(i=0; i<DF_PAGE_SIZE;i++){
         ptr[i] = ~buf.sector[i];    // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
-                                    // original: 0xFF is clear and 0 can be programmed any time
+    }                               // original: 0xFF is clear and 0 can be programmed any time
                                     // inverted: 0 is clear and 1 can be programmed any time
                                     // to mark cluster as used it should be set 1 in the FAT. Also new entries in dirs can be created without RMW
-    }
-
     return 1;
 }
 
@@ -1108,25 +1128,32 @@ static bool read_page( uint8_t *ptr, uint32_t pageNum){
 static bool write_page(const uint8_t *ptr, uint32_t pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
-    uint16_t i;
-    for(i=0; i<DF_PAGE_SIZE;i++){
-        buf.sector[i] = ~ptr[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
+    {
+        uint16_t i;
+        for(i=0; i<DF_PAGE_SIZE;i++){
+            buf.sector[i] = ~ptr[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
+        }
     }
-
+    
     Flash_Jedec_WriteEnable();
 
     if (!cs_assert()) return 0;
 
-    buf.cmd[0] = JEDEC_PAGE_WRITE;
-    buf.cmd[1] = (PageAdr >> 16) & 0xff;
-    buf.cmd[2] = (PageAdr >>  8) & 0xff;
-    buf.cmd[3] = (PageAdr >>  0) & 0xff;
+    uint8_t i = addr_cmd_start;
+
+    buf.cmd[i++] = JEDEC_PAGE_WRITE;
+    if(addr_4bit) {
+        buf.cmd[i++] = (PageAdr >> 24) & 0xff;
+    }
+    buf.cmd[i++] = (PageAdr >> 16) & 0xff;
+    buf.cmd[i++] = (PageAdr >>  8) & 0xff;
+    buf.cmd[i++] = (PageAdr >>  0) & 0xff;
 
 #if 0 
-    write_spi_multi(buf.cmd, 4);
+    write_spi_multi(&buf.cmd[addr_cmd_start], addr_cmd_length);
     write_spi_multi(buf.sector, DF_PAGE_SIZE);
 #else
-    write_spi_multi(buf.cmd, 4 + DF_PAGE_SIZE);
+    write_spi_multi(&buf.cmd[addr_cmd_start], addr_cmd_length + DF_PAGE_SIZE);
 #endif
     cs_release();
     return 1;
@@ -1139,13 +1166,17 @@ static bool erase_page(uint16_t pageNum)
 
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
-    buf.cmd[0] = erase_cmd;
-    buf.cmd[1] = (PageAdr >> 16) & 0xff;
-    buf.cmd[2] = (PageAdr >>  8) & 0xff;
-    buf.cmd[3] = (PageAdr >>  0) & 0xff;
+    uint8_t i=0;
+    buf.cmd[i++] = erase_cmd;
+    if(addr_4bit) {
+        buf.cmd[i++] = (PageAdr >> 24) & 0xff;
+    }
+    buf.cmd[i++] = (PageAdr >> 16) & 0xff;
+    buf.cmd[i++] = (PageAdr >>  8) & 0xff;
+    buf.cmd[i++] = (PageAdr >>  0) & 0xff;
 
     if (!cs_assert()) return 0;
-    write_spi_multi(buf.cmd, 4);
+    write_spi_multi(buf.cmd, addr_cmd_length);
     cs_release();
     return 1;
 }
@@ -1234,6 +1265,13 @@ uint8_t sd_getSectorCount(uint32_t *ptr){
         size = BOARD_DATAFLASH_PAGES; // as defined 
     } 
 
+    if(size>65537) {
+        addr_cmd_length = 5;
+        addr_cmd_start  = 0;
+        addr_4bit       = true;
+        Flash_Enter4B_Mode();
+    }
+
     if(erase_size > MAX_ERASE_SIZE)   size -= (erase_size/DF_PAGE_SIZE); // reserve for RMW ops
         
     *ptr = size / (FAT_SECTOR_SIZE/DF_PAGE_SIZE);    // in 512b blocks
@@ -1263,12 +1301,6 @@ DSTATUS sd_initialize () {
     sd_getSectorCount(&sd_max_sectors);
 
     initialized=1;
-
-#if 0
-    void *task = hal_register_task(sd_flash_eraser, 512); // only for one context
-    hal_set_task_priority(task, 110);                  // 5 higher than IO
-    _flash_erase_task=task;
-#endif
 
     Stat=0;
     return Stat;
@@ -1622,35 +1654,6 @@ DRESULT sd_ioctl (
 
     }
     return res;
-}
-
-
-static void sd_flash_eraser(){
-    while(fe_read_ptr != fe_write_ptr) { // there are samples
-
-        uint32_t  start_sector = flash_erase_queue[fe_read_ptr].b;
-        uint32_t  end_sector   = flash_erase_queue[fe_read_ptr].e;
-
-        fe_read_ptr++;
-        if(fe_read_ptr >= FLASH_ERASE_QUEUE_SIZE) { // move read pointer
-            fe_read_ptr=0;                         // ring
-        }
-
-        uint32_t  block, last_block=-1;
-
-        uint32_t  sector;
-        for(sector=start_sector; sector <= end_sector;sector++){
-            uint32_t  df_sect = sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE);    // sector in DataFlash
-            block = df_sect / (erase_size/DF_PAGE_SIZE);    // number of EraseBlock
-            if(last_block!=block){
-                last_block=block;
-                erase_page(df_sect);
-                putch('.');
-//                    extern void digitalToggle(uint8_t pin);
-//                    digitalToggle(HAL_GPIO_A_LED_PIN);
-            }
-        }
-    }
 }
 
 

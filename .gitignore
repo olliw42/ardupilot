@@ -95,3 +95,6 @@ test.ArduCopter/*
 GPATH
 GRTAGS
 GTAGS
+config.mk
+*.apj
+.gdbinit

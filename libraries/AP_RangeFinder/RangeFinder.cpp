@@ -32,6 +32,9 @@
 #include "AP_RangeFinder_uLanding.h"
 #include "AP_RangeFinder_TeraRangerI2C.h"
 #include "AP_RangeFinder_VL53L0X.h"
+#include "AP_RangeFinder_NMEA.h"
+#include "AP_RangeFinder_Wasp.h"
+#include "AP_RangeFinder_Benewake.h"
 #include <AP_BoardConfig/AP_BoardConfig.h>
 
 extern const AP_HAL::HAL &hal;
@@ -41,7 +44,7 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
     // @Param: _TYPE
     // @DisplayName: Rangefinder type
     // @Description: What type of rangefinder device that is connected
-    // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLiteV2-I2C,5:PX4-PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:uLanding,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X
+    // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLiteV2-I2C,5:PX4-PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:uLanding,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X,17:NMEA,18:WASP-LRF,19:BenewakeTF02,20:BenewakeTFmini
     // @User: Standard
     AP_GROUPINFO("_TYPE",    0, RangeFinder, state[0].type, 0),
 
@@ -164,11 +167,15 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("_ORIENT", 53, RangeFinder, state[0].orientation, ROTATION_PITCH_270),
 
+    // @Group: _
+    // @Path: AP_RangeFinder_Wasp.cpp
+    AP_SUBGROUPVARPTR(drivers[0], "_",  57, RangeFinder, backend_var_info[0]),
+
 #if RANGEFINDER_MAX_INSTANCES > 1
     // @Param: 2_TYPE
     // @DisplayName: Second Rangefinder type
     // @Description: What type of rangefinder device that is connected
-    // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLiteV2-I2C,5:PX4-PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:uLanding,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X
+    // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLiteV2-I2C,5:PX4-PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:uLanding,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X,17:NMEA,18:WASP-LRF,19:BenewakeTF02,20:BenewakeTFmini
     // @User: Advanced
     AP_GROUPINFO("2_TYPE",    12, RangeFinder, state[1].type, 0),
 
@@ -282,6 +289,10 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
     // @Values: 0:Forward, 1:Forward-Right, 2:Right, 3:Back-Right, 4:Back, 5:Back-Left, 6:Left, 7:Forward-Left, 24:Up, 25:Down
     // @User: Advanced
     AP_GROUPINFO("2_ORIENT", 54, RangeFinder, state[1].orientation, ROTATION_PITCH_270),
+
+    // @Group: 2_
+    // @Path: AP_RangeFinder_Wasp.cpp
+    AP_SUBGROUPVARPTR(drivers[1], "2_", 58, RangeFinder, backend_var_info[1]),
 #endif
 
 #if RANGEFINDER_MAX_INSTANCES > 2
@@ -289,7 +300,7 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
     // @Param: 3_TYPE
     // @DisplayName: Third Rangefinder type
     // @Description: What type of rangefinder device that is connected
-    // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLiteV2-I2C,5:PX4-PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:uLanding,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X
+    // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLiteV2-I2C,5:PX4-PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:uLanding,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X,17:NMEA,18:WASP-LRF,19:BenewakeTF02,20:BenewakeTFmini
     // @User: Advanced
     AP_GROUPINFO("3_TYPE",    25, RangeFinder, state[2].type, 0),
 
@@ -403,6 +414,10 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
     // @Values: 0:Forward, 1:Forward-Right, 2:Right, 3:Back-Right, 4:Back, 5:Back-Left, 6:Left, 7:Forward-Left, 24:Up, 25:Down
     // @User: Advanced
     AP_GROUPINFO("3_ORIENT", 55, RangeFinder, state[2].orientation, ROTATION_PITCH_270),
+
+    // @Group: 3_
+    // @Path: AP_RangeFinder_Wasp.cpp
+    AP_SUBGROUPVARPTR(drivers[2], "3_", 59, RangeFinder, backend_var_info[2]),
 #endif
 
 #if RANGEFINDER_MAX_INSTANCES > 3
@@ -410,7 +425,7 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
     // @Param: 4_TYPE
     // @DisplayName: Fourth Rangefinder type
     // @Description: What type of rangefinder device that is connected
-    // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLiteV2-I2C,5:PX4-PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:uLanding,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X
+    // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLiteV2-I2C,5:PX4-PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:uLanding,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X,17:NMEA,18:WASP-LRF,19:BenewakeTF02,20:BenewakeTFmini
     // @User: Advanced
     AP_GROUPINFO("4_TYPE",    37, RangeFinder, state[3].type, 0),
 
@@ -524,10 +539,16 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
     // @Values: 0:Forward, 1:Forward-Right, 2:Right, 3:Back-Right, 4:Back, 5:Back-Left, 6:Left, 7:Forward-Left, 24:Up, 25:Down
     // @User: Advanced
     AP_GROUPINFO("4_ORIENT", 56, RangeFinder, state[3].orientation, ROTATION_PITCH_270),
+
+    // @Group: 4_
+    // @Path: AP_RangeFinder_Wasp.cpp
+    AP_SUBGROUPVARPTR(drivers[3], "4_", 60, RangeFinder, backend_var_info[3]),
 #endif
-    
+
     AP_GROUPEND
 };
+
+const AP_Param::GroupInfo *RangeFinder::backend_var_info[RANGEFINDER_MAX_INSTANCES];
 
 RangeFinder::RangeFinder(AP_SerialManager &_serial_manager, enum Rotation orientation_default) :
     num_instances(0),
@@ -540,6 +561,13 @@ RangeFinder::RangeFinder(AP_SerialManager &_serial_manager, enum Rotation orient
     for (uint8_t i=0; i<RANGEFINDER_MAX_INSTANCES; i++) {
         state[i].orientation.set_default(orientation_default);
     }
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    if (_singleton != nullptr) {
+        AP_HAL::panic("Rangefinder must be singleton");
+    }
+#endif // CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    _singleton = this;
 }
 
 /*
@@ -553,8 +581,10 @@ void RangeFinder::init(void)
         // init called a 2nd time?
         return;
     }
-    for (uint8_t i=0; i<RANGEFINDER_MAX_INSTANCES; i++) {
-        detect_instance(i);
+    for (uint8_t i=0, serial_instance = 0; i<RANGEFINDER_MAX_INSTANCES; i++) {
+        // serial_instance will be increased inside detect_instance
+        // if a serial driver is loaded for this instance
+        detect_instance(i, serial_instance);
         if (drivers[i] != nullptr) {
             // we loaded a driver for this instance, so it must be
             // present (although it may not be healthy)
@@ -607,7 +637,7 @@ bool RangeFinder::_add_backend(AP_RangeFinder_Backend *backend)
 /*
   detect if an instance of a rangefinder is connected. 
  */
-void RangeFinder::detect_instance(uint8_t instance)
+void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
 {
     enum RangeFinder_Type _type = (enum RangeFinder_Type)state[instance].type.get();
     switch (_type) {
@@ -657,7 +687,6 @@ void RangeFinder::detect_instance(uint8_t instance)
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
     case RangeFinder_TYPE_PX4_PWM:
         if (AP_RangeFinder_PX4_PWM::detect()) {
-            state[instance].instance = instance;
             drivers[instance] = new AP_RangeFinder_PX4_PWM(state[instance], _powersave_range, estimated_terrain_height);
         }
         break;
@@ -665,59 +694,77 @@ void RangeFinder::detect_instance(uint8_t instance)
 #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BBBMINI
     case RangeFinder_TYPE_BBB_PRU:
         if (AP_RangeFinder_BBB_PRU::detect()) {
-            state[instance].instance = instance;
             drivers[instance] = new AP_RangeFinder_BBB_PRU(state[instance]);
         }
         break;
 #endif
     case RangeFinder_TYPE_LWSER:
-        if (AP_RangeFinder_LightWareSerial::detect(serial_manager)) {
-            state[instance].instance = instance;
-            drivers[instance] = new AP_RangeFinder_LightWareSerial(state[instance], serial_manager);
+        if (AP_RangeFinder_LightWareSerial::detect(serial_manager, serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_LightWareSerial(state[instance], serial_manager, serial_instance++);
         }
         break;
     case RangeFinder_TYPE_LEDDARONE:
-        if (AP_RangeFinder_LeddarOne::detect(serial_manager)) {
-            state[instance].instance = instance;
-            drivers[instance] = new AP_RangeFinder_LeddarOne(state[instance], serial_manager);
+        if (AP_RangeFinder_LeddarOne::detect(serial_manager, serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_LeddarOne(state[instance], serial_manager, serial_instance++);
         }
         break;
     case RangeFinder_TYPE_ULANDING:
-        if (AP_RangeFinder_uLanding::detect(serial_manager)) {
-            state[instance].instance = instance;
-            drivers[instance] = new AP_RangeFinder_uLanding(state[instance], serial_manager);
+        if (AP_RangeFinder_uLanding::detect(serial_manager, serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_uLanding(state[instance], serial_manager, serial_instance++);
         }
         break;
 #if (CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BEBOP || \
      CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DISCO) && defined(HAVE_LIBIIO)
     case RangeFinder_TYPE_BEBOP:
         if (AP_RangeFinder_Bebop::detect()) {
-            state[instance].instance = instance;
             drivers[instance] = new AP_RangeFinder_Bebop(state[instance]);
         }
         break;
 #endif
     case RangeFinder_TYPE_MAVLink:
         if (AP_RangeFinder_MAVLink::detect()) {
-            state[instance].instance = instance;
             drivers[instance] = new AP_RangeFinder_MAVLink(state[instance]);
         }
         break;
     case RangeFinder_TYPE_MBSER:
-        if (AP_RangeFinder_MaxsonarSerialLV::detect(serial_manager)) {
-            state[instance].instance = instance;
-            drivers[instance] = new AP_RangeFinder_MaxsonarSerialLV(state[instance], serial_manager);
+        if (AP_RangeFinder_MaxsonarSerialLV::detect(serial_manager, serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_MaxsonarSerialLV(state[instance], serial_manager, serial_instance++);
         }
         break;
     case RangeFinder_TYPE_ANALOG:
         // note that analog will always come back as present if the pin is valid
         if (AP_RangeFinder_analog::detect(state[instance])) {
-            state[instance].instance = instance;
             drivers[instance] = new AP_RangeFinder_analog(state[instance]);
+        }
+        break;
+    case RangeFinder_TYPE_NMEA:
+        if (AP_RangeFinder_NMEA::detect(serial_manager, serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_NMEA(state[instance], serial_manager, serial_instance++);
+        }
+        break;
+    case RangeFinder_TYPE_WASP:
+        if (AP_RangeFinder_Wasp::detect(serial_manager, serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_Wasp(state[instance], serial_manager, serial_instance++);
+        }
+        break;
+    case RangeFinder_TYPE_BenewakeTF02:
+        if (AP_RangeFinder_Benewake::detect(serial_manager, serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_Benewake(state[instance], serial_manager, serial_instance++, AP_RangeFinder_Benewake::BENEWAKE_TF02);
+        }
+        break;
+    case RangeFinder_TYPE_BenewakeTFmini:
+        if (AP_RangeFinder_Benewake::detect(serial_manager, serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_Benewake(state[instance], serial_manager, serial_instance++, AP_RangeFinder_Benewake::BENEWAKE_TFmini);
         }
         break;
     default:
         break;
+    }
+
+    // if the backend has some local parameters then make those available in the tree
+    if (drivers[instance] && state[instance].var_info) {
+        backend_var_info[instance] = state[instance].var_info;
+        AP_Param::load_object_from_eeprom(drivers[instance], backend_var_info[instance]);
     }
 }
 
@@ -871,3 +918,5 @@ MAV_DISTANCE_SENSOR RangeFinder::get_mav_distance_sensor_type_orient(enum Rotati
     }
     return backend->get_mav_distance_sensor_type();
 }
+
+RangeFinder *RangeFinder::_singleton;

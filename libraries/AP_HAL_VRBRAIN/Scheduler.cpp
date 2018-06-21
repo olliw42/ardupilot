@@ -105,15 +105,15 @@ void VRBRAINScheduler::create_uavcan_thread()
     pthread_attr_setschedpolicy(&thread_attr, SCHED_FIFO);
 
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-        if (hal.can_mgr[i] != nullptr) {
-            if (hal.can_mgr[i]->get_UAVCAN() != nullptr) {
-                _uavcan_thread_arg *arg = new _uavcan_thread_arg;
-                arg->sched = this;
-                arg->uavcan_number = i;
-
-                pthread_create(&_uavcan_thread_ctx, &thread_attr, &VRBRAINScheduler::_uavcan_thread, arg);
-            }
+        if (AP_UAVCAN::get_uavcan(i) == nullptr) {
+            continue;
         }
+
+        _uavcan_thread_arg *arg = new _uavcan_thread_arg;
+        arg->sched = this;
+        arg->uavcan_number = i;
+
+        pthread_create(&_uavcan_thread_ctx, &thread_attr, &VRBRAINScheduler::_uavcan_thread, arg);
     }
 #endif
 }
@@ -184,22 +184,13 @@ void VRBRAINScheduler::delay(uint16_t ms)
            !_vrbrain_thread_should_exit) {
         delay_microseconds_semaphore(1000);
         if (_min_delay_cb_ms <= ms) {
-            if (_delay_cb) {
-                _delay_cb();
-            }
+            call_delay_cb();
         }
     }
     perf_end(_perf_delay);
     if (_vrbrain_thread_should_exit) {
         exit(1);
     }
-}
-
-void VRBRAINScheduler::register_delay_callback(AP_HAL::Proc proc,
-                                            uint16_t min_time_ms)
-{
-    _delay_cb = proc;
-    _min_delay_cb_ms = min_time_ms;
 }
 
 void VRBRAINScheduler::register_timer_process(AP_HAL::MemberProc proc)
@@ -239,20 +230,6 @@ void VRBRAINScheduler::register_timer_failsafe(AP_HAL::Proc failsafe, uint32_t p
     _failsafe = failsafe;
 }
 
-void VRBRAINScheduler::suspend_timer_procs()
-{
-    _timer_suspended = true;
-}
-
-void VRBRAINScheduler::resume_timer_procs()
-{
-    _timer_suspended = false;
-    if (_timer_event_missed == true) {
-        _run_timers(false);
-        _timer_event_missed = false;
-    }
-}
-
 void VRBRAINScheduler::reboot(bool hold_in_bootloader)
 {
     // disarm motors to ensure they are off during a bootloader upload
@@ -265,22 +242,18 @@ void VRBRAINScheduler::reboot(bool hold_in_bootloader)
     px4_systemreset(hold_in_bootloader);
 }
 
-void VRBRAINScheduler::_run_timers(bool called_from_timer_thread)
+void VRBRAINScheduler::_run_timers()
 {
     if (_in_timer_proc) {
         return;
     }
     _in_timer_proc = true;
 
-    if (!_timer_suspended) {
-        // now call the timer based drivers
-        for (int i = 0; i < _num_timer_procs; i++) {
-            if (_timer_proc[i]) {
-                _timer_proc[i]();
-            }
+    // now call the timer based drivers
+    for (int i = 0; i < _num_timer_procs; i++) {
+        if (_timer_proc[i]) {
+            _timer_proc[i]();
         }
-    } else if (called_from_timer_thread) {
-        _timer_event_missed = true;
     }
 
     // and the failsafe, if one is setup
@@ -311,7 +284,7 @@ void *VRBRAINScheduler::_timer_thread(void *arg)
 
         // run registered timers
         perf_begin(sched->_perf_timers);
-        sched->_run_timers(true);
+        sched->_run_timers();
         perf_end(sched->_perf_timers);
 
         // process any pending RC output requests
@@ -338,12 +311,10 @@ void VRBRAINScheduler::_run_io(void)
     }
     _in_io_proc = true;
 
-    if (!_timer_suspended) {
-        // now call the IO based drivers
-        for (int i = 0; i < _num_io_procs; i++) {
-            if (_io_proc[i]) {
-                _io_proc[i]();
-            }
+    // now call the IO based drivers
+    for (int i = 0; i < _num_io_procs; i++) {
+        if (_io_proc[i]) {
+            _io_proc[i]();
         }
     }
 

@@ -1,17 +1,10 @@
 #include "Copter.h"
 
-/*
- * the home_state has a number of possible values (see enum HomeState in defines.h's)
- *   HOME_UNSET             = home is not set, no GPS positions yet received
- *   HOME_SET_NOT_LOCKED    = home is set to EKF origin or armed location (can be moved)
- *   HOME_SET_AND_LOCKED    = home has been set by user, cannot be moved except by user initiated do-set-home command
- */
-
 // checks if we should update ahrs/RTL home position from the EKF
 void Copter::update_home_from_EKF()
 {
     // exit immediately if home already set
-    if (ap.home_state != HOME_UNSET) {
+    if (ahrs.home_is_set()) {
         return;
     }
 
@@ -35,7 +28,9 @@ void Copter::set_home_to_current_location_inflight() {
             return;
         }
         // we have successfully set AHRS home, set it for SmartRTL
+#if MODE_SMARTRTL_ENABLED == ENABLED
         g2.smart_rtl.set_home(true);
+#endif
     }
 }
 
@@ -48,7 +43,9 @@ bool Copter::set_home_to_current_location(bool lock) {
             return false;
         }
         // we have successfully set AHRS home, set it for SmartRTL
+#if MODE_SMARTRTL_ENABLED == ENABLED
         g2.smart_rtl.set_home(true);
+#endif
         return true;
     }
     return false;
@@ -75,16 +72,19 @@ bool Copter::set_home(const Location& loc, bool lock)
         return false;
     }
 
+    const bool home_was_set = ahrs.home_is_set();
+
     // set ahrs home (used for RTL)
     ahrs.set_home(loc);
 
     // init inav and compass declination
-    if (ap.home_state == HOME_UNSET) {
+    if (!home_was_set) {
         // update navigation scalers.  used to offset the shrinking longitude as we go towards the poles
         scaleLongDown = longitude_scale(loc);
         // record home is set
-        set_home_state(HOME_SET_NOT_LOCKED);
+        Log_Write_Event(DATA_SET_HOME);
 
+#if MODE_AUTO_ENABLED == ENABLED
         // log new home position which mission library will pull from ahrs
         if (should_log(MASK_LOG_CMD)) {
             AP_Mission::Mission_Command temp_cmd;
@@ -92,48 +92,23 @@ bool Copter::set_home(const Location& loc, bool lock)
                 DataFlash.Log_Write_Mission_Cmd(mission, temp_cmd);
             }
         }
+#endif
     }
 
     // lock home position
     if (lock) {
-        set_home_state(HOME_SET_AND_LOCKED);
+        ahrs.lock_home();
     }
 
     // log ahrs home and ekf origin dataflash
-    Log_Write_Home_And_Origin();
+    ahrs.Log_Write_Home_And_Origin();
 
     // send new home and ekf origin to GCS
-    gcs().send_home(loc);
-    gcs().send_ekf_origin(ekf_origin);
+    gcs().send_home();
+    gcs().send_ekf_origin();
 
     // return success
     return true;
-}
-
-// sets ekf_origin if it has not been set.
-//  should only be used when there is no GPS to provide an absolute position
-void Copter::set_ekf_origin(const Location& loc)
-{
-    // check location is valid
-    if (!check_latlng(loc)) {
-        return;
-    }
-
-    // check EKF origin has already been set
-    Location ekf_origin;
-    if (ahrs.get_origin(ekf_origin)) {
-        return;
-    }
-
-    if (!ahrs.set_origin(loc)) {
-        return;
-    }
-
-    // log ahrs home and ekf origin dataflash
-    Log_Write_Home_And_Origin();
-
-    // send ekf origin to GCS
-    gcs().send_ekf_origin(loc);
 }
 
 // far_from_EKF_origin - checks if a location is too far from the EKF origin

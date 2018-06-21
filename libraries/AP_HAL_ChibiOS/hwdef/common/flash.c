@@ -57,6 +57,8 @@
   this driver has been tested with STM32F427 and STM32F412
  */
 
+#ifndef HAL_USE_EMPTY_STORAGE
+
 #ifndef BOARD_FLASH_SIZE
 #error "You must define BOARD_FLASH_SIZE in kbyte"
 #endif
@@ -72,7 +74,7 @@
 // the 2nd bank of flash needs to be handled differently
 #define STM32_FLASH_BANK2_START (STM32_FLASH_BASE+0x00080000)
 
-
+#if defined(STM32F4)
 #if BOARD_FLASH_SIZE == 512
 #define STM32_FLASH_NPAGES  7
 static const uint32_t flash_memmap[STM32_FLASH_NPAGES] = { KB(16), KB(16), KB(16), KB(16), KB(64),
@@ -89,6 +91,24 @@ static const uint32_t flash_memmap[STM32_FLASH_NPAGES] = { KB(16), KB(16), KB(16
                                                            KB(128), KB(128), KB(128), KB(128), KB(128), KB(128), KB(128),
                                                            KB(16), KB(16), KB(16), KB(16), KB(64),
                                                            KB(128), KB(128), KB(128), KB(128), KB(128), KB(128), KB(128)};
+#else
+#error "BOARD_FLASH_SIZE invalid"
+#endif
+
+#elif defined(STM32F7)
+#if BOARD_FLASH_SIZE == 1024
+#define STM32_FLASH_NPAGES  8
+static const uint32_t flash_memmap[STM32_FLASH_NPAGES] = { KB(32), KB(32), KB(32), KB(32), KB(128), KB(256), KB(256), KB(256) };
+
+#elif BOARD_FLASH_SIZE == 2048
+#define STM32_FLASH_NPAGES  12
+static const uint32_t flash_memmap[STM32_FLASH_NPAGES] = { KB(32), KB(32), KB(32), KB(32), KB(128), KB(256), KB(256), KB(256),
+                                                           KB(256), KB(256), KB(256), KB(256) };
+#else
+#error "BOARD_FLASH_SIZE invalid"
+#endif
+#else
+#error "Unsupported processor for flash.c"
 #endif
 
 // keep a cache of the page addresses
@@ -132,8 +152,10 @@ static void stm32_flash_unlock(void)
         FLASH->KEYR = FLASH_KEY2;
     }
 
+#ifdef FLASH_ACR_DCEN
     // disable the data cache - see stm32 errata 2.1.11
     FLASH->ACR &= ~FLASH_ACR_DCEN;
+#endif
 }
 
 void stm32_flash_lock(void)
@@ -141,10 +163,12 @@ void stm32_flash_lock(void)
     stm32_flash_wait_idle();
     FLASH->CR |= FLASH_CR_LOCK;
 
+#ifdef FLASH_ACR_DCEN
     // reset and re-enable the data cache - see stm32 errata 2.1.11
     FLASH->ACR |= FLASH_ACR_DCRST;
     FLASH->ACR &= ~FLASH_ACR_DCRST;
     FLASH->ACR |= FLASH_ACR_DCEN;
+#endif
 }
 
 
@@ -322,3 +346,5 @@ failed:
 #endif
     return -1;
 }
+
+#endif // HAL_USE_EMPTY_STORAGE
