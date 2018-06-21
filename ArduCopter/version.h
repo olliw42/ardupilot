@@ -61,6 +61,8 @@ v0.08:
  - needs moving #include <AP_UAVCAN/AP_UAVCAN.h> to Uc4hNotifyDevice.h
  - 2018.06.21: testflight flamewheel, passed
  - merged into betacopter-develop
+pushed on 21.06.2018as v008-rc1
+
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
 
