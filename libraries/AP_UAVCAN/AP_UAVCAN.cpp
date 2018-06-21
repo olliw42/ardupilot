@@ -375,12 +375,10 @@ static void (*battery_info_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uav
         = { battery_info_st_cb0, battery_info_st_cb1 };
 
 //OW
-// along the lines of battery_info_st_cb
-
 //--- GenericBatteryInfo ---
 // incoming message, by id
 
-static void genericbatteryinfo_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg, uint8_t mgr)
+static void genericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg, uint8_t mgr)
 {
     AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
@@ -400,14 +398,17 @@ static void genericbatteryinfo_st_cb_func(const uavcan::ReceivedDataStructure<ua
     }
 }
 
-static void genericbatteryinfo_st_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg){ genericbatteryinfo_st_cb_func(msg, 0); }
-static void genericbatteryinfo_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg){ genericbatteryinfo_st_cb_func(msg, 1); }
-static void (*genericbatteryinfo_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg) = { genericbatteryinfo_st_cb0, genericbatteryinfo_st_cb1 };
+static void genericbatteryinfo_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg)
+{ genericbatteryinfo_cb_func(msg, 0); }
+static void genericbatteryinfo_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg)
+{ genericbatteryinfo_cb_func(msg, 1); }
+static void (*genericbatteryinfo_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg)
+        = { genericbatteryinfo_cb0, genericbatteryinfo_cb1 };
 
 //--- EscStatus ---
 // incoming message, by id
 
-static void escstatus_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg, uint8_t mgr)
+static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg, uint8_t mgr)
 {
     AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
@@ -429,14 +430,14 @@ static void escstatus_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::equ
     }
 }
 
-static void escstatus_st_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_st_cb_func(msg, 0); }
-static void escstatus_st_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_st_cb_func(msg, 1); }
-static void (*escstatus_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg) = { escstatus_st_cb0, escstatus_st_cb1 };
+static void escstatus_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_cb_func(msg, 0); }
+static void escstatus_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_cb_func(msg, 1); }
+static void (*escstatus_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg) = { escstatus_cb0, escstatus_cb1 };
 
 //--- STorM32Status ---
 // incoming message, by nodeid
 
-static void storm32status_st_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg, uint8_t mgr)
+static void storm32status_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg, uint8_t mgr)
 {
     AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
@@ -477,9 +478,9 @@ static void storm32status_st_cb_func(const uavcan::ReceivedDataStructure<uavcan:
     }
 }
 
-static void storm32status_st_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg){ storm32status_st_cb_func(msg, 0); }
-static void storm32status_st_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg){ storm32status_st_cb_func(msg, 1); }
-static void (*storm32status_st_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg) = { storm32status_st_cb0, storm32status_st_cb1 };
+static void storm32status_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg){ storm32status_cb_func(msg, 0); }
+static void storm32status_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg){ storm32status_cb_func(msg, 1); }
+static void (*storm32status_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::storm32::Status>& msg) = { storm32status_cb0, storm32status_cb1 };
 //OWEND
 
 // publisher interfaces
@@ -731,32 +732,26 @@ bool AP_UAVCAN::try_init(void)
     _led_conf.devices_count = 0;
 
 //OW
-    {
-        uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *st;
-        st = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
-        const int start_res = st->start(genericbatteryinfo_st_cb[_uavcan_i]);
-        if (start_res < 0) {
-            debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
-            return false;
-        }
+    uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *genericbatteryinfo_sub;
+    genericbatteryinfo_sub = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
+    const int genericbatteryinfo_start_res = genericbatteryinfo_sub->start(genericbatteryinfo_cb[_uavcan_i]);
+    if (genericbatteryinfo_start_res < 0) {
+        debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
+        return false;
     }
-    {
-        uavcan::Subscriber<uavcan::equipment::esc::Status> *st;
-        st = new uavcan::Subscriber<uavcan::equipment::esc::Status>(*node);
-        const int start_res = st->start(escstatus_st_cb[_uavcan_i]);
-        if (start_res < 0) {
-            debug_uavcan(1, "UAVCAN EscStatus subscriber start problem\n\r");
-            return false;
-        }
+    uavcan::Subscriber<uavcan::equipment::esc::Status> *escstatus_sub;
+    escstatus_sub = new uavcan::Subscriber<uavcan::equipment::esc::Status>(*node);
+    const int escstatus_start_res = escstatus_sub->start(escstatus_cb[_uavcan_i]);
+    if (escstatus_start_res < 0) {
+        debug_uavcan(1, "UAVCAN EscStatus subscriber start problem\n\r");
+        return false;
     }
-    {
-        uavcan::Subscriber<uavcan::olliw::storm32::Status> *st;
-        st = new uavcan::Subscriber<uavcan::olliw::storm32::Status>(*node);
-        const int start_res = st->start(storm32status_st_cb[_uavcan_i]);
-        if (start_res < 0) {
-            debug_uavcan(1, "UAVCAN Storm32Status subscriber start problem\n\r");
-            return false;
-        }
+    uavcan::Subscriber<uavcan::olliw::storm32::Status> *storm32status_sub;
+    storm32status_sub = new uavcan::Subscriber<uavcan::olliw::storm32::Status>(*node);
+    const int storm32status_start_res = storm32status_sub->start(storm32status_cb[_uavcan_i]);
+    if (storm32status_start_res < 0) {
+        debug_uavcan(1, "UAVCAN Storm32Status subscriber start problem\n\r");
+        return false;
     }
 
     storm32nodespecific_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::storm32::NodeSpecific>(*node);
@@ -1647,7 +1642,7 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
 }
 
 //OW
-// convention i for AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
+// my convention: i for AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
 
 //--- GenericBatteryInfo ---
 // incoming message, by device id
@@ -1811,6 +1806,7 @@ void AP_UAVCAN::escstatus_update_data(uint8_t id)
             };
             df->WriteBlock(&pkt, sizeof(pkt));
         }
+
     }
 }
 

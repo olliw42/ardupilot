@@ -52,6 +52,8 @@ v0.08:
  - use AP_UAVCAN::get_uavcan()
  - adapt uavcan code to latest style in registers
  - change AP_UAVCAN::escstatus_update_data(), follow AP_BLHeli::read_telemetry_packet()
+ - remove _st_
+ - 2018.06.21: submodules Chibio, mavlink updated
 
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
