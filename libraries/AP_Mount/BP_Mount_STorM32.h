@@ -5,14 +5,17 @@
 
 #include "AP_Mount.h"
 #include "AP_Mount_Backend.h"
+//using #if HAL_WITH_UAVCAN doesn't appear to work here, why ???
+#include <AP_UAVCAN/AP_UAVCAN.h>
 #include "STorM32_lib.h"
 
 #define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
+
 //undefine to enable only serial support
-//#define STORM32_USE_UAVCAN
+#define USE_STORM32_UAVCAN
 
 
 //singleton to communicate events & flags to the STorM32 mount
@@ -99,7 +102,7 @@ private:
     uint16_t _rcin_read(uint8_t ch) override;
 
     // internal variables
-#ifdef STORM32_USE_UAVCAN
+#if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     AP_UAVCAN *_ap_uavcan[MAX_NUMBER_OF_CAN_DRIVERS];
 #endif
     AP_HAL::UARTDriver *_uart;

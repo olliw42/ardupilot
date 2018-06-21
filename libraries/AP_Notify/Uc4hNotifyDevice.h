@@ -21,6 +21,10 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include "NotifyDevice.h"
+#include <AP_UAVCAN/AP_UAVCAN.h>
+
+#ifdef USE_UC4H_UAVCAN
+
 
 class Uc4hNotifyDevice: public NotifyDevice {
 public:
@@ -78,3 +82,5 @@ private:
 
     uint16_t _led_task_count; //for fooling around
 };
+
+#endif
