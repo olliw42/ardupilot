@@ -60,6 +60,7 @@ v0.08:
  - USE_UC4H_UAVCAN define to disable/enable all extra UAVCAN stuff
  - needs moving #include <AP_UAVCAN/AP_UAVCAN.h> to Uc4hNotifyDevice.h
  - 2018.06.21: testflight flamewheel, passed
+ - merged into betacopter-develop
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
 
