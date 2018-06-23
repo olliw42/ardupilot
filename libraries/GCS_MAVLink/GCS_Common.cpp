@@ -916,6 +916,10 @@ GCS_MAVLINK::update(uint32_t max_time_us)
             if (alternative.handler(c, mavlink_comm_port[chan])) {
                 alternative.last_alternate_ms = now_ms;
                 gcs_alternative_active[chan] = true;
+//OW
+            } else {
+                gcs_alternative_active[chan] = false; //this is to reenable writes
+//OWEND
             }
             
             /*
@@ -2445,16 +2449,6 @@ void GCS_MAVLINK::send_banner()
     }
 
 //OW
-/*
-    AP_Notify *notify = AP_Notify::instance();
-    if (notify) {
-        notify->bpactions.gcs_connection_detected = true;
-        notify->bpactions.gcs_send_banner = true;
-    }
-*//*
-    AP::bpnotify().actions.gcs_connection_detected = true;
-    AP::bpnotify().actions.gcs_send_banner = true;
-*/
     BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
     if (notify) {
         notify->actions.gcs_connection_detected = true;

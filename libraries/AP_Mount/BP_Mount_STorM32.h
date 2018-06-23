@@ -9,7 +9,7 @@
 #include <AP_UAVCAN/AP_UAVCAN.h>
 #include "STorM32_lib.h"
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //XX 90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
@@ -188,4 +188,11 @@ private:
     void set_target_angles_rad(float pitch_rad, float roll_rad, float yaw_rad, enum MAV_MOUNT_MODE mount_mode);
     void set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_pwm, uint16_t yaw_pwm, enum MAV_MOUNT_MODE mount_mode);
     void send_target_angles(void);
+
+    AP_HAL::UARTDriver *_gcs_uart;
+    bool _gcs_uart_locked;
+    uint16_t _gcs_uart_justhaslocked;
+    void passthrough_install(void);
+    bool passthrough_handler(uint8_t, AP_HAL::UARTDriver *);
+    void passthrough_readback(void);
 };

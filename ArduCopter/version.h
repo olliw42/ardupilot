@@ -63,6 +63,13 @@ v0.08:
  - merged into betacopter-develop
 pushed on 21.06.2018as v008-rc1
 
+ - PX4UARTDriver was missing the lock_port() and write_locked() functions, so added to AP_HAL_PX4 UARTDriver.h/.cpp,
+   closely following AP_HAL_ChibiOS
+   works
+
+
+
+
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
 
