@@ -60,101 +60,6 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
 
 
 //------------------------------------------------------
-// BP_Mount_STorM32 passthrough interface
-//------------------------------------------------------
-
-void BP_Mount_STorM32::passthrough_install(void)
-{
-    gcs().install_alternative_protocol(
-            MAVLINK_COMM_0,
-            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, bool, uint8_t, AP_HAL::UARTDriver *)
-        );
-}
-
-bool BP_Mount_STorM32::passthrough_handler(uint8_t b, AP_HAL::UARTDriver *gcs_uart)
-{
-const char magicopen[] = "\x40""STORM32OPENTUNNEL";
-const char magicclose[] = "@STORM32CLOSETUNNEL";
-const uint16_t magicopen_len = sizeof(magicopen)-1;
-const uint16_t magicclose_len = sizeof(magicclose)-1;
-static uint16_t buf_pos = 0;
-
-    _gcs_uart = gcs_uart;
-
-    if (!_initialised) {
-//        return false;
-    }
-
-    if (hal.util->get_soft_armed()) {
-        // don't allow pass-through when armed
-        if (_gcs_uart_locked) {
-            _gcs_uart->lock_port(0);
-            _gcs_uart_locked = false;
-            return false;
-        }
-        return false;
-    }
-
-    bool valid_packet = false;
-
-    if (!_gcs_uart_locked) {
-        if ((buf_pos < magicopen_len) && (b == magicopen[buf_pos])) {
-            buf_pos++;
-            if ((buf_pos >= magicopen_len) && _gcs_uart->lock_port(STORM32_UART_LOCK_KEY)) {
-                buf_pos = 0;
-                _gcs_uart_locked = true;
-                _gcs_uart_justhaslocked = 5; //count down
-//                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
-//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
-            }
-        } else {
-            buf_pos = 0;
-        }
-    } else {
-        valid_packet = true;
-//        _gcs_uart->write_locked(&b, 1, STORM32_UART_LOCK_KEY);
-        _uart->write(&b, 1); //forward to STorM32
-
-        if ((buf_pos < magicclose_len) && (b == magicclose[buf_pos])) {
-            buf_pos++;
-            if (buf_pos >= magicclose_len) {
-                buf_pos = 0;
-                _uart->lock_port(0);
-                _gcs_uart->lock_port(0);
-                _gcs_uart_locked = false;
-                valid_packet = false;
-            }
-        } else {
-            buf_pos = 0;
-        }
-    }
-
-    return valid_packet;
-}
-
-void BP_Mount_STorM32::passthrough_readback(void)
-{
-    if (!_gcs_uart_locked) {
-        return;
-    }
-
-    uint32_t available = _uart->available();
-
-    if (_gcs_uart_justhaslocked) {
-        for (uint32_t i = 0; i < available; i++) { _uart->read(); }
-        _gcs_uart_justhaslocked--;
-        return;
-    }
-
-    for (uint32_t i = 0; i < available; i++) {
-        uint8_t c = _uart->read();
-        _gcs_uart->write_locked(&c, 1, STORM32_UART_LOCK_KEY);
-    }
-}
-
-
-//------------------------------------------------------
 // BP_Mount_STorM32 interface functions, ArduPilot Mount
 //------------------------------------------------------
 
@@ -195,7 +100,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 // this function must be defined in any case
 void BP_Mount_STorM32::update()
 {
-//    protocol_readback(); //just for debug!!
+//    passthrough_readback(); //just for debug!!
 
     if (!_initialised) {
         find_CAN(); //this only checks for the CAN to be ok, not if there is a gimbal, sets _serial_is_initialised
@@ -811,6 +716,107 @@ bool BP_Mount_STorM32::is_failsafe(void)
     return false;
 }
 
+
+//------------------------------------------------------
+// BP_Mount_STorM32 passthrough interface
+//------------------------------------------------------
+
+void BP_Mount_STorM32::passthrough_install(void)
+{
+    gcs().install_alternative_protocol(
+            MAVLINK_COMM_0,
+            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, bool, uint8_t, AP_HAL::UARTDriver *)
+        );
+}
+
+bool BP_Mount_STorM32::passthrough_handler(uint8_t b, AP_HAL::UARTDriver *gcs_uart)
+{
+const char magicopen[] =  "\xFA\x0E\xD2""STORM32CONNECT""\x33\x34";
+const char magicclose[] = "\xF9\x11\xD2""STORM32DISCONNECT""\x33\x34";
+//const char magicopen[] =  "@STORM32OPENTUNNEL";
+//const char magicclose[] = "@STORM32CLOSETUNNEL";
+static uint16_t buf_pos = 0;
+
+    _gcs_uart = gcs_uart;
+
+    if (!_initialised) {
+//        return false;
+    }
+
+    if (hal.util->get_soft_armed()) {
+        // don't allow pass-through when armed
+        if (_gcs_uart_locked) {
+            _gcs_uart->lock_port(0);
+            _gcs_uart_locked = false;
+            return false;
+        }
+        return false;
+    }
+
+    bool valid_packet = false;
+
+    if (!_gcs_uart_locked) {
+        if ((buf_pos < (sizeof(magicopen)-1)) && (b == magicopen[buf_pos])) {
+            buf_pos++;
+            if ((buf_pos >= (sizeof(magicopen)-1)) && _gcs_uart->lock_port(STORM32_UART_LOCK_KEY)) {
+                buf_pos = 0;
+                _gcs_uart_locked = true;
+                _gcs_uart_justhaslocked = 5; //count down
+//                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
+//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
+//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
+            }
+        } else {
+            buf_pos = 0;
+        }
+    } else {
+        valid_packet = true;
+//        _gcs_uart->write_locked(&b, 1, STORM32_UART_LOCK_KEY);
+        _uart->write(&b, 1); //forward to STorM32
+
+        if ((buf_pos < (sizeof(magicclose)-1)) && (b == magicclose[buf_pos])) {
+            buf_pos++;
+            if (buf_pos >= (sizeof(magicclose)-1)) {
+//                char s[30] = "\nSTORM32 TUNNEL CLOSED\n\0";
+//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
+//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
+                buf_pos = 0;
+                _gcs_uart->lock_port(0);
+                _gcs_uart_locked = false;
+                valid_packet = false;
+            }
+        } else {
+            buf_pos = 0;
+        }
+    }
+
+    return valid_packet;
+}
+
+void BP_Mount_STorM32::passthrough_readback(void)
+{
+const char magicack[] = "\xFB\x01\x96\x00\x62\x2E";
+
+    if (!_gcs_uart_locked) {
+        return;
+    }
+
+    uint32_t available = _uart->available();
+
+    if (_gcs_uart_justhaslocked) {
+        for (uint32_t i = 0; i < available; i++) { _uart->read(); } //this is to catch late responses from STorM32
+        _gcs_uart_justhaslocked--;
+        if (_gcs_uart_justhaslocked == 0 ) {
+            _gcs_uart->write_locked((uint8_t*)magicack, (sizeof(magicack)-1), STORM32_UART_LOCK_KEY); //acknowledge connect RCCMD
+        }
+        return;
+    }
+
+    for (uint32_t i = 0; i < available; i++) {
+        uint8_t c = _uart->read();
+        _gcs_uart->write_locked(&c, 1, STORM32_UART_LOCK_KEY);
+    }
+}
 
 
 
