@@ -79,7 +79,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
         if (_uart) {
             _serial_is_initialised = true; //tell the STorM32_lib class
             //we do not set _initialised = true, since we first need to pass find_gimbal()
-            passthrough_install();
+            passthrough_install(serial_manager);
         } else {
             _serial_is_initialised = false; //tell the BP_STorM32 class, should not be needed, just to play it safe
             _mount_type = AP_Mount::Mount_Type_None; //this prevents many things from happening, safety guard
@@ -100,7 +100,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 // this function must be defined in any case
 void BP_Mount_STorM32::update()
 {
-//    passthrough_readback(); //just for debug!!
+    passthrough_readback(); //just for debug!!
 
     if (!_initialised) {
         find_CAN(); //this only checks for the CAN to be ok, not if there is a gimbal, sets _serial_is_initialised
@@ -110,7 +110,7 @@ void BP_Mount_STorM32::update()
     }
 
     send_text_to_gcs();
-    passthrough_readback();
+//XX    passthrough_readback();
 }
 
 
@@ -721,10 +721,20 @@ bool BP_Mount_STorM32::is_failsafe(void)
 // BP_Mount_STorM32 passthrough interface
 //------------------------------------------------------
 
-void BP_Mount_STorM32::passthrough_install(void)
+void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manager)
 {
+    uint8_t serial_no = 1;
+
+    mavlink_channel_t mav_chan;
+/*    if (!serial_manager.get_mavlink_channel_for_serial(serial_no, mav_chan)) {
+        mav_chan = MAVLINK_COMM_0;
+        //return;
+    }*/
+
+    mav_chan = MAVLINK_COMM_1;
+
     gcs().install_alternative_protocol(
-            MAVLINK_COMM_0,
+            mav_chan, //MAVLINK_COMM_1, //mav_chan, //MAVLINK_COMM_0,
             FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, bool, uint8_t, AP_HAL::UARTDriver *)
         );
 }
@@ -744,6 +754,7 @@ static uint16_t buf_pos = 0;
     }
 
     if (hal.util->get_soft_armed()) {
+        buf_pos = 0;
         // don't allow pass-through when armed
         if (_gcs_uart_locked) {
             _gcs_uart->lock_port(0);
@@ -756,15 +767,16 @@ static uint16_t buf_pos = 0;
     bool valid_packet = false;
 
     if (!_gcs_uart_locked) {
+        if( b == magicopen[0] ) buf_pos = 0;
         if ((buf_pos < (sizeof(magicopen)-1)) && (b == magicopen[buf_pos])) {
             buf_pos++;
             if ((buf_pos >= (sizeof(magicopen)-1)) && _gcs_uart->lock_port(STORM32_UART_LOCK_KEY)) {
                 buf_pos = 0;
                 _gcs_uart_locked = true;
                 _gcs_uart_justhaslocked = 5; //count down
-//                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
-//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
+                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
+                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
+                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
             }
         } else {
             buf_pos = 0;
@@ -774,12 +786,13 @@ static uint16_t buf_pos = 0;
 //        _gcs_uart->write_locked(&b, 1, STORM32_UART_LOCK_KEY);
         _uart->write(&b, 1); //forward to STorM32
 
+        if( b == magicclose[0] ) buf_pos = 0;
         if ((buf_pos < (sizeof(magicclose)-1)) && (b == magicclose[buf_pos])) {
             buf_pos++;
             if (buf_pos >= (sizeof(magicclose)-1)) {
-//                char s[30] = "\nSTORM32 TUNNEL CLOSED\n\0";
-//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
+                char s[30] = "\nSTORM32 TUNNEL CLOSED\n\0";
+                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
+                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
                 buf_pos = 0;
                 _gcs_uart->lock_port(0);
                 _gcs_uart_locked = false;

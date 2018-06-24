@@ -429,6 +429,33 @@ bool AP_SerialManager::protocol_match(enum SerialProtocol protocol1, enum Serial
     return false;
 }
 
+//OW
+bool AP_SerialManager::get_mavlink_channel_for_serial(uint8_t serial_no, mavlink_channel_t& mav_chan) const
+{
+    if (serial_no >= SERIALMANAGER_NUM_PORTS) {
+        return false; //no such SERIAL
+    }
+
+    if (!protocol_match(SerialProtocol_MAVLink, (enum SerialProtocol)state[serial_no].protocol.get())) {
+        return false; //is not MAVLINK
+    }
+
+    // we run through the SerialManager list to determine the instance which is associated to the specified SERIAL
+    // once we have the instance, we can get the mavlink channel using get_mavlink_channel()
+
+    int8_t instance = -1; //the instance runs from 0, 1, 2,...
+    for(uint8_t i = 0; i <= serial_no; i++) {
+        if (protocol_match(SerialProtocol_MAVLink, (enum SerialProtocol)state[i].protocol.get())) {
+            instance++;
+        }
+    }
+    if (instance < 0) {
+        return false; //no MAVLINK protocol found
+    }
+
+    return get_mavlink_channel(SerialProtocol_MAVLink, instance, mav_chan);
+}
+//OWEND
 
 namespace AP {
 

@@ -903,6 +903,11 @@ GCS_MAVLINK::update(uint32_t max_time_us)
     uint16_t nbytes = comm_get_available(chan);
     for (uint16_t i=0; i<nbytes; i++)
     {
+//OW
+// why not mavlink_comm_port[chan]->read() ???
+// it indeed appears that _port is identical to mavlink_comm_port[chan], and one of them is thus superfluous
+// lousy programming
+//OWEND
         const uint8_t c = (uint8_t)_port->read();
         const uint32_t protocol_timeout = 4000;
         

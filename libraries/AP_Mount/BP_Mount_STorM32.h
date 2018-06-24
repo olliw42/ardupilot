@@ -192,7 +192,7 @@ private:
     AP_HAL::UARTDriver *_gcs_uart;
     bool _gcs_uart_locked;
     uint16_t _gcs_uart_justhaslocked;
-    void passthrough_install(void);
+    void passthrough_install(const AP_SerialManager& serial_manager);
     bool passthrough_handler(uint8_t, AP_HAL::UARTDriver *);
     void passthrough_readback(void);
 };
