@@ -930,6 +930,8 @@ GCS_MAVLINK::update(uint32_t max_time_us)
 // why is _port->read() used in the above, not mavlink_comm_port[chan]->read() ???
 // it indeed appears that _port is identical to mavlink_comm_port[chan], and one of them is thus superfluous
 // lousy programming
+// the enclosed timeout only triggers if a new char is received, if not it blocks forever and e.g. a heartbeat is not emitted
+// not good, so don't use
         if (storm32.handler) {
 
             if (storm32.handler(c, mavlink_comm_port[chan])) {

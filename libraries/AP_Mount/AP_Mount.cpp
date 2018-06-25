@@ -397,8 +397,9 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Param: STRM_PTSER
     // @DisplayName: STorM32 PassThru Serial
     // @Description: STorM32 PassThru Serial
-    // @Values: -1:None, 0:SR0 = USB, 1:SR1 = Telem1
+    // @Values: -1:None, 0:SR0, 1:SR1
     // @User: Standard
+    // @RebootRequired: True
     AP_GROUPINFO("_STRM_PTSER",       50, AP_Mount, state[0]._storm32_passthru_serialno, -1),
 //OWEND
 
