@@ -540,6 +540,11 @@ private:
         uint32_t last_alternate_ms;
         bool active;
     } alternative;
+//OW
+    struct {
+        GCS_MAVLINK::protocol_handler_fn_t handler;
+    } storm32;
+//OWEND
 
     // state associated with offboard transport lag correction
     struct {
@@ -632,6 +637,9 @@ public:
     
     // install an alternative protocol handler
     bool install_alternative_protocol(mavlink_channel_t chan, GCS_MAVLINK::protocol_handler_fn_t handler);
+//OW
+    bool install_storm32_protocol(mavlink_channel_t chan, GCS_MAVLINK::protocol_handler_fn_t handler);
+//OWEND
     
 private:
 

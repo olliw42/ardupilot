@@ -63,5 +63,15 @@ bool GCS::install_alternative_protocol(mavlink_channel_t c, GCS_MAVLINK::protoco
     return true;
 }
 
+//OW
+bool GCS::install_storm32_protocol(mavlink_channel_t c, GCS_MAVLINK::protocol_handler_fn_t handler)
+{
+    if (c >= num_gcs()) {
+        return false;
+    }
+    chan(c).storm32.handler = handler;
+    return true;
+}
+//OWEND
 
 #undef FOR_EACH_ACTIVE_CHANNEL

@@ -744,7 +744,8 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
 
 //    mav_chan = MAVLINK_COMM_1;
 
-    bool installed = gcs().install_alternative_protocol(
+//    bool installed = gcs().install_alternative_protocol(
+    bool installed = gcs().install_storm32_protocol(
             mav_chan, //MAVLINK_COMM_1, //mav_chan, //MAVLINK_COMM_0,
             FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, bool, uint8_t, AP_HAL::UARTDriver *)
         );
