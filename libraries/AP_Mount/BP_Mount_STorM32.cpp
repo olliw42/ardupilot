@@ -10,7 +10,7 @@
 extern const AP_HAL::HAL& hal;
 
 // key for locking UART for exclusive use, preventing any other writes
-#define STORM32_UART_LOCK_KEY 0x20180622 //0x32426771
+#define STORM32_UART_LOCK_KEY 0x32426771
 
 
 //that's the notify class
@@ -100,7 +100,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 // this function must be defined in any case
 void BP_Mount_STorM32::update()
 {
-    passthrough_readback(); //just for debug!!
+    passthrough_readback(); //just for debug!! we can remove its initialized check by calling it at the end
 
     if (!_initialised) {
         find_CAN(); //this only checks for the CAN to be ok, not if there is a gimbal, sets _serial_is_initialised
@@ -721,22 +721,41 @@ bool BP_Mount_STorM32::is_failsafe(void)
 // BP_Mount_STorM32 passthrough interface
 //------------------------------------------------------
 
+//I tried to simply use e.g. MAVLINK_COMM_1, in a hope this would make it work over Telem1, but it somehow didn't
+// Why??
+// num_gcs() appears to be identical to MAVLINK_COMM_NUM_BUFFERS, at least for Copter
+// and GCS::setup_uarts() sets them all up, as many as Mavlink serials are there
+// indeed, the protocol gets installed also for MAVLINK_COMM_1, but somehow it doesn't work??
+// it somehow seems as if the handler is simply never called
+// I have tested that MAVLINK_COMM_1 is indeed the telem1
+// if I don't use the line (now_ms - alternative.last_mavlink_ms > protocol_timeout) it works
+// it seems that SiK emits mavlink stuff
+// also, there are plenty of late comming Mavlink messages going out, needs to be handle in GUI since no flush functions available
+
 void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manager)
 {
-    uint8_t serial_no = 1;
+    uint8_t serial_no = 0; //tested to work for no = 0 <=> MAVLINK_COMM_0 and no = 1 <=> MAVLINK_COMM_1
 
     mavlink_channel_t mav_chan;
-/*    if (!serial_manager.get_mavlink_channel_for_serial(serial_no, mav_chan)) {
-        mav_chan = MAVLINK_COMM_0;
-        //return;
-    }*/
+    if (!serial_manager.get_mavlink_channel_for_serial(serial_no, mav_chan)) {
+        //mav_chan = MAVLINK_COMM_0;
+        return;
+    }
 
-    mav_chan = MAVLINK_COMM_1;
+//    mav_chan = MAVLINK_COMM_1;
 
-    gcs().install_alternative_protocol(
+    bool installed = gcs().install_alternative_protocol(
             mav_chan, //MAVLINK_COMM_1, //mav_chan, //MAVLINK_COMM_0,
             FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, bool, uint8_t, AP_HAL::UARTDriver *)
         );
+
+/*    if (installed) {
+        char s[64] = "\nSTORM32 PROTOCOL INSTALLED\n\0";
+       _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
+    } else {
+        char s[64] = "\nSTORM32 PROTOCOL INSTALL FAILED\n\0";
+       _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
+    }*/
 }
 
 bool BP_Mount_STorM32::passthrough_handler(uint8_t b, AP_HAL::UARTDriver *gcs_uart)
@@ -746,6 +765,12 @@ const char magicclose[] = "\xF9\x11\xD2""STORM32DISCONNECT""\x33\x34";
 //const char magicopen[] =  "@STORM32OPENTUNNEL";
 //const char magicclose[] = "@STORM32CLOSETUNNEL";
 static uint16_t buf_pos = 0;
+
+/*    if (_gcs_uart == nullptr) {
+        char s[64] = "\nSTORM32 PROTOCOL HANDLER CALLED\n\0";
+        gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
+        _uart->write((uint8_t*)s, strlen(s));
+    }*/
 
     _gcs_uart = gcs_uart;
 
@@ -764,6 +789,9 @@ static uint16_t buf_pos = 0;
         return false;
     }
 
+//    _uart->write(&b, 1); //forward to STorM32
+//    return true;
+
     bool valid_packet = false;
 
     if (!_gcs_uart_locked) {
@@ -774,25 +802,26 @@ static uint16_t buf_pos = 0;
                 buf_pos = 0;
                 _gcs_uart_locked = true;
                 _gcs_uart_justhaslocked = 5; //count down
-                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
-                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
+//                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
+//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
+//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
             }
         } else {
             buf_pos = 0;
         }
     } else {
         valid_packet = true;
-//        _gcs_uart->write_locked(&b, 1, STORM32_UART_LOCK_KEY);
-        _uart->write(&b, 1); //forward to STorM32
+        if (!_gcs_uart_justhaslocked) {
+            _uart->write(&b, 1); //forward to STorM32
+        }
 
         if( b == magicclose[0] ) buf_pos = 0;
         if ((buf_pos < (sizeof(magicclose)-1)) && (b == magicclose[buf_pos])) {
             buf_pos++;
             if (buf_pos >= (sizeof(magicclose)-1)) {
-                char s[30] = "\nSTORM32 TUNNEL CLOSED\n\0";
-                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
+//                char s[30] = "\nSTORM32 TUNNEL CLOSED\n\0";
+//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
+//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
                 buf_pos = 0;
                 _gcs_uart->lock_port(0);
                 _gcs_uart_locked = false;
@@ -810,6 +839,10 @@ void BP_Mount_STorM32::passthrough_readback(void)
 {
 const char magicack[] = "\xFB\x01\x96\x00\x62\x2E";
 
+    if (!_initialised) {
+//        return;
+    }
+
     if (!_gcs_uart_locked) {
         return;
     }
@@ -817,6 +850,11 @@ const char magicack[] = "\xFB\x01\x96\x00\x62\x2E";
     uint32_t available = _uart->available();
 
     if (_gcs_uart_justhaslocked) {
+        //sadly, the UartDriver API does not provide functional flush functions, bad API
+        // so, we can't clean up late Mavlink messages which occur on e.g. SiK telemetry links, and need to handle that in the GUI
+        // also, this stupid loop is needed to at least clean up late messages from the STorM32
+        // maybe I should add that at some point to UARTDriver.h, at least for PX4&ChibiOS, where it is easily possible with
+        // the ByteStream functions _writebuf.clear(), _readbuf.clear()
         for (uint32_t i = 0; i < available; i++) { _uart->read(); } //this is to catch late responses from STorM32
         _gcs_uart_justhaslocked--;
         if (_gcs_uart_justhaslocked == 0 ) {
