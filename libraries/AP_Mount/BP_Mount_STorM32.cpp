@@ -730,11 +730,19 @@ bool BP_Mount_STorM32::is_failsafe(void)
 // I have tested that MAVLINK_COMM_1 is indeed the telem1
 // if I don't use the line (now_ms - alternative.last_mavlink_ms > protocol_timeout) it works
 // it seems that SiK emits mavlink stuff
-// also, there are plenty of late comming Mavlink messages going out, needs to be handle in GUI since no flush functions available
+// also, there are plenty of late coming Mavlink messages going out, needs to be handle in GUI since no flush functions available
 
 void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manager)
 {
-    uint8_t serial_no = 0; //tested to work for no = 0 <=> MAVLINK_COMM_0 and no = 1 <=> MAVLINK_COMM_1
+    int8_t serial_no = _state._storm32_passthru_serialno.get();
+
+    if ((serial_no < 0) || (serial_no >= SERIALMANAGER_NUM_PORTS)) {
+        return;
+    }
+
+//    uint8_t serial_no = param_serial_no;
+
+//    uint8_t serial_no = 0; //tested to work for no = 0 <=> MAVLINK_COMM_0 and no = 1 <=> MAVLINK_COMM_1
 
     mavlink_channel_t mav_chan;
     if (!serial_manager.get_mavlink_channel_for_serial(serial_no, mav_chan)) {
@@ -745,7 +753,7 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
 //    mav_chan = MAVLINK_COMM_1;
 
 //    bool installed = gcs().install_alternative_protocol(
-    bool installed = gcs().install_storm32_protocol(
+    gcs().install_storm32_protocol(
             mav_chan, //MAVLINK_COMM_1, //mav_chan, //MAVLINK_COMM_0,
             FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, bool, uint8_t, AP_HAL::UARTDriver *)
         );
@@ -854,8 +862,8 @@ const char magicack[] = "\xFB\x01\x96\x00\x62\x2E";
         //sadly, the UartDriver API does not provide functional flush functions, bad API
         // so, we can't clean up late Mavlink messages which occur on e.g. SiK telemetry links, and need to handle that in the GUI
         // also, this stupid loop is needed to at least clean up late messages from the STorM32
-        // maybe I should add that at some point to UARTDriver.h, at least for PX4&ChibiOS, where it is easily possible with
-        // the ByteStream functions _writebuf.clear(), _readbuf.clear()
+        // maybe I should add flushes at some point to UARTDriver.h, at least for PX4&ChibiOS, where it is easily possible with
+        // the ByteBuffer functions _writebuf.clear(), _readbuf.clear()
         for (uint32_t i = 0; i < available; i++) { _uart->read(); } //this is to catch late responses from STorM32
         _gcs_uart_justhaslocked--;
         if (_gcs_uart_justhaslocked == 0 ) {
