@@ -66,8 +66,11 @@ pushed on 21.06.2018as v008-rc1
  - PX4UARTDriver was missing the lock_port() and write_locked() functions, so added to AP_HAL_PX4 UARTDriver.h/.cpp,
    closely following AP_HAL_ChibiOS
    works
-
-
+ - function get_mavlink_channel_for-serial() added to AP_SerialManager.h/AP_SerialManager.cpp
+ - new parameter to set SerialNo added to AP_Mount.h/Mount.cpp
+ - storm32 alternative protocol added to GCS.h, GCS.cpp, GCS_Common.cpp
+ - 2018.06.26: flight tested with flamewheel, passed
+ - branch of passthru-differentCOMMs
 
 
 

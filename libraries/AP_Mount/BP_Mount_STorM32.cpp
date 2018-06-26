@@ -56,6 +56,12 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
 
     _target_to_send = false;
     _target_mode_last = MAV_MOUNT_MODE_RETRACT;
+
+    _gcs_uart = nullptr;
+    _gcs_uart_locked = false;
+    _gcs_uart_justhaslocked = 0;
+    _gcs_uart_serialno = 0;
+    _send_gcs_passthru_installed = false;
 }
 
 
@@ -613,6 +619,13 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
         _send_armeddisarmed = false;
         gcs().send_text(MAV_SEVERITY_INFO, (_armed) ? "  STorM32: ARMED" : "  STorM32: DISARMED" );
     }
+
+    if (_send_gcs_passthru_installed) {
+        _send_gcs_passthru_installed = false;
+        char s[64] = "  STorM32: Passthrough installed on SR0\0";
+        s[38] = _gcs_uart_serialno + '0';
+        gcs().send_text(MAV_SEVERITY_INFO, s );
+    }
 }
 
 
@@ -744,8 +757,10 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
 
 //    uint8_t serial_no = 0; //tested to work for no = 0 <=> MAVLINK_COMM_0 and no = 1 <=> MAVLINK_COMM_1
 
+    _gcs_uart_serialno = serial_no;
+
     mavlink_channel_t mav_chan;
-    if (!serial_manager.get_mavlink_channel_for_serial(serial_no, mav_chan)) {
+    if (!serial_manager.get_mavlink_channel_for_serial(_gcs_uart_serialno, mav_chan)) {
         //mav_chan = MAVLINK_COMM_0;
         return;
     }
@@ -753,10 +768,12 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
 //    mav_chan = MAVLINK_COMM_1;
 
 //    bool installed = gcs().install_alternative_protocol(
-    gcs().install_storm32_protocol(
+    bool installed = gcs().install_storm32_protocol(
             mav_chan, //MAVLINK_COMM_1, //mav_chan, //MAVLINK_COMM_0,
             FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, bool, uint8_t, AP_HAL::UARTDriver *)
         );
+
+    if (installed) { _send_gcs_passthru_installed = true; }
 
 /*    if (installed) {
         char s[64] = "\nSTORM32 PROTOCOL INSTALLED\n\0";
