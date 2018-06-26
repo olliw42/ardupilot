@@ -61,7 +61,7 @@ v0.08:
  - needs moving #include <AP_UAVCAN/AP_UAVCAN.h> to Uc4hNotifyDevice.h
  - 2018.06.21: testflight flamewheel, passed
  - merged into betacopter-develop
-pushed on 21.06.2018as v008-rc1
+pushed on 21.06.2018 as v008-rc1
 
  - PX4UARTDriver was missing the lock_port() and write_locked() functions, so added to AP_HAL_PX4 UARTDriver.h/.cpp,
    closely following AP_HAL_ChibiOS
