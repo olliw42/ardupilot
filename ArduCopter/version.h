@@ -61,8 +61,7 @@ v0.08:
  - needs moving #include <AP_UAVCAN/AP_UAVCAN.h> to Uc4hNotifyDevice.h
  - 2018.06.21: testflight flamewheel, passed
  - merged into betacopter-develop
-pushed on 21.06.2018as v008-rc1
-
+pushed on 21.06.2018 as v008-rc1
  - PX4UARTDriver was missing the lock_port() and write_locked() functions, so added to AP_HAL_PX4 UARTDriver.h/.cpp,
    closely following AP_HAL_ChibiOS
    works
@@ -71,6 +70,10 @@ pushed on 21.06.2018as v008-rc1
  - storm32 alternative protocol added to GCS.h, GCS.cpp, GCS_Common.cpp
  - 2018.06.26: flight tested with flamewheel, passed
  - branch of passthru-differentCOMMs
+pushed on 26.06.2018 as passthru
+ - change protocol_handler() to return an uint8_t instead of bool,
+   and adapt the logic in GCS_MAVLINK::update() accordingly
+   tested on pixracer/v4 for SR0
 
 
 
@@ -83,7 +86,6 @@ v0.07:
  - UC4HNOTIFYTYPE_RGBLEDS deprecated, and code removed
 flight tested with flame wheel 14.Apr.2018
 prepare release
-
 
 v0.06:
 APM_Config.h: 1x
@@ -105,7 +107,6 @@ AP_BattMonitor_UAVCAN.h: added
 AP_BattMonitor_UAVCAN.cpp: added
 AP_UAVCAN.cpp: 7x
 AP_UAVCAN.h: 3x
-
 
 - AP_Mount_STorM32_UAVCAN renamed to BP_Mount_STorM32
 - BP_STorM32.h/cpp: changes to LinkV2
