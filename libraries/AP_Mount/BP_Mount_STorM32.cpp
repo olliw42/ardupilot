@@ -116,7 +116,6 @@ void BP_Mount_STorM32::update()
     }
 
     send_text_to_gcs();
-//XX    passthrough_readback();
 }
 
 
@@ -754,10 +753,6 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
         return;
     }
 
-//    uint8_t serial_no = param_serial_no;
-
-//    uint8_t serial_no = 0; //tested to work for no = 0 <=> MAVLINK_COMM_0 and no = 1 <=> MAVLINK_COMM_1
-
     _gcs_uart_serialno = serial_no;
 
     mavlink_channel_t mav_chan;
@@ -766,23 +761,12 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
         return;
     }
 
-//    mav_chan = MAVLINK_COMM_1;
-
-//    bool installed = gcs().install_alternative_protocol(
     bool installed = gcs().install_storm32_protocol(
-            mav_chan, //MAVLINK_COMM_1, //mav_chan, //MAVLINK_COMM_0,
+            mav_chan,
             FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, AP_HAL::UARTDriver *)
         );
 
     if (installed) { _send_gcs_passthru_installed = true; }
-
-/*    if (installed) {
-        char s[64] = "\nSTORM32 PROTOCOL INSTALLED\n\0";
-       _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
-    } else {
-        char s[64] = "\nSTORM32 PROTOCOL INSTALL FAILED\n\0";
-       _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
-    }*/
 }
 
 
@@ -790,15 +774,7 @@ uint8_t BP_Mount_STorM32::passthrough_handler(uint8_t b, AP_HAL::UARTDriver *gcs
 {
 const char magicopen[] =  "\xFA\x0E\xD2""STORM32CONNECT""\x33\x34";
 const char magicclose[] = "\xF9\x11\xD2""STORM32DISCONNECT""\x33\x34";
-//const char magicopen[] =  "@STORM32OPENTUNNEL";
-//const char magicclose[] = "@STORM32CLOSETUNNEL";
 static uint16_t buf_pos = 0;
-
-/*    if (_gcs_uart == nullptr) {
-        char s[64] = "\nSTORM32 PROTOCOL HANDLER CALLED\n\0";
-        gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-        _uart->write((uint8_t*)s, strlen(s));
-    }*/
 
     _gcs_uart = gcs_uart;
 
@@ -817,9 +793,6 @@ static uint16_t buf_pos = 0;
         return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
     }
 
-//    _uart->write(&b, 1); //forward to STorM32
-//    return true;
-
     uint8_t valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_NONE;
 
     if (!_gcs_uart_locked) {
@@ -830,9 +803,6 @@ static uint16_t buf_pos = 0;
                 buf_pos = 0;
                 _gcs_uart_locked = true;
                 _gcs_uart_justhaslocked = 5; //count down
-//                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
-//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
             }
         } else {
             buf_pos = 0;
@@ -847,9 +817,6 @@ static uint16_t buf_pos = 0;
         if ((buf_pos < (sizeof(magicclose)-1)) && (b == magicclose[buf_pos])) {
             buf_pos++;
             if (buf_pos >= (sizeof(magicclose)-1)) {
-//                char s[30] = "\nSTORM32 TUNNEL CLOSED\n\0";
-//                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
                 buf_pos = 0;
                 _gcs_uart->lock_port(0);
                 _gcs_uart_locked = false;
