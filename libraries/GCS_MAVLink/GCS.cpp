@@ -64,12 +64,12 @@ bool GCS::install_alternative_protocol(mavlink_channel_t c, GCS_MAVLINK::protoco
 }
 
 //OW
-bool GCS::install_storm32_protocol(mavlink_channel_t c, GCS_MAVLINK::protocol_handler_fn_t handler)
+bool GCS::install_storm32_protocol(mavlink_channel_t c, GCS_MAVLINK::protocol_handler_uint8fn_t handler)
 {
     if (c >= num_gcs()) {
         return false;
     }
-    chan(c).storm32.handler = handler;
+    chan(c).storm32.handler = handler; //allow overwriting it by whoever is the last
     return true;
 }
 //OWEND

@@ -116,7 +116,6 @@ void BP_Mount_STorM32::update()
     }
 
     send_text_to_gcs();
-//XX    passthrough_readback();
 }
 
 
@@ -745,6 +744,7 @@ bool BP_Mount_STorM32::is_failsafe(void)
 // it seems that SiK emits mavlink stuff
 // also, there are plenty of late coming Mavlink messages going out, needs to be handle in GUI since no flush functions available
 
+//this is called only when Mount_Type_STorM32_Native, so this doesn't have to be checked here
 void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manager)
 {
     int8_t serial_no = _state._storm32_passthru_serialno.get();
@@ -757,18 +757,20 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
 
     mavlink_channel_t mav_chan;
     if (!serial_manager.get_mavlink_channel_for_serial(_gcs_uart_serialno, mav_chan)) {
+        //mav_chan = MAVLINK_COMM_0;
         return;
     }
 
     bool installed = gcs().install_storm32_protocol(
             mav_chan,
-            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, bool, uint8_t, AP_HAL::UARTDriver *)
+            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, AP_HAL::UARTDriver *)
         );
 
     if (installed) { _send_gcs_passthru_installed = true; }
 }
 
-bool BP_Mount_STorM32::passthrough_handler(uint8_t b, AP_HAL::UARTDriver *gcs_uart)
+
+uint8_t BP_Mount_STorM32::passthrough_handler(uint8_t b, AP_HAL::UARTDriver *gcs_uart)
 {
 const char magicopen[] =  "\xFA\x0E\xD2""STORM32CONNECT""\x33\x34";
 const char magicclose[] = "\xF9\x11\xD2""STORM32DISCONNECT""\x33\x34";
@@ -777,7 +779,7 @@ static uint16_t buf_pos = 0;
     _gcs_uart = gcs_uart;
 
     if (!_initialised) {
-        return false;
+//        return false;
     }
 
     if (hal.util->get_soft_armed()) {
@@ -786,12 +788,12 @@ static uint16_t buf_pos = 0;
         if (_gcs_uart_locked) {
             _gcs_uart->lock_port(0);
             _gcs_uart_locked = false;
-            return false;
+            return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
         }
-        return false;
+        return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
     }
 
-    bool valid_packet = false;
+    uint8_t valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_NONE;
 
     if (!_gcs_uart_locked) {
         if( b == magicopen[0] ) buf_pos = 0;
@@ -806,7 +808,7 @@ static uint16_t buf_pos = 0;
             buf_pos = 0;
         }
     } else {
-        valid_packet = true;
+        valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_VALIDPACKET;
         if (!_gcs_uart_justhaslocked) {
             _uart->write(&b, 1); //forward to STorM32
         }
@@ -818,7 +820,7 @@ static uint16_t buf_pos = 0;
                 buf_pos = 0;
                 _gcs_uart->lock_port(0);
                 _gcs_uart_locked = false;
-                valid_packet = false;
+                valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_CLOSE;
             }
         } else {
             buf_pos = 0;
@@ -828,12 +830,13 @@ static uint16_t buf_pos = 0;
     return valid_packet;
 }
 
+
 void BP_Mount_STorM32::passthrough_readback(void)
 {
 const char magicack[] = "\xFB\x01\x96\x00\x62\x2E";
 
     if (!_initialised) {
-        return;
+//        return;
     }
 
     if (!_gcs_uart_locked) {

@@ -933,12 +933,16 @@ GCS_MAVLINK::update(uint32_t max_time_us)
 // the enclosed timeout only triggers if a new char is received, if not it blocks forever and e.g. a heartbeat is not emitted
 // not good, so don't use
         if (storm32.handler) {
+            uint8_t res = storm32.handler(c, mavlink_comm_port[chan]);
 
-            if (storm32.handler(c, mavlink_comm_port[chan])) {
+            if ((res == PROTOCOLHANDLER_VALIDPACKET) || (res == PROTOCOLHANDLER_OPENED)) {
                 gcs_alternative_active[chan] = true;
                 continue;
-            } else {
+            } else if (res == PROTOCOLHANDLER_CLOSE) {
                 gcs_alternative_active[chan] = false; //this is to reenable writes
+                continue;
+            } else {
+                gcs_alternative_active[chan] = false; //should not be needed, but just to play it safe
             }
         }
 //OWEND

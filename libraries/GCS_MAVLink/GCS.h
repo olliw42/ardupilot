@@ -235,6 +235,16 @@ public:
 
     // alternative protocol function handler
     FUNCTOR_TYPEDEF(protocol_handler_fn_t, bool, uint8_t, AP_HAL::UARTDriver *);
+//OW
+    //a bool is not sufficient to communicate the number of possible actions
+    enum PROTOCOLHANDLERENUM {
+        PROTOCOLHANDLER_NONE = 0,
+        PROTOCOLHANDLER_OPENED, //the port has been taken over, e.g. because a valid packet or a key word has been detected
+        PROTOCOLHANDLER_VALIDPACKET, //a valid packet has been received
+        PROTOCOLHANDLER_CLOSE //the port has been released, e.g. because an invalid packet or a key word has been detected
+    };
+    FUNCTOR_TYPEDEF(protocol_handler_uint8fn_t, uint8_t, uint8_t, AP_HAL::UARTDriver *);
+//OWEND
 
     struct stream_entries {
         const streams stream_id;
@@ -542,7 +552,7 @@ private:
     } alternative;
 //OW
     struct {
-        GCS_MAVLINK::protocol_handler_fn_t handler;
+        GCS_MAVLINK::protocol_handler_uint8fn_t handler;
     } storm32;
 //OWEND
 
@@ -638,7 +648,7 @@ public:
     // install an alternative protocol handler
     bool install_alternative_protocol(mavlink_channel_t chan, GCS_MAVLINK::protocol_handler_fn_t handler);
 //OW
-    bool install_storm32_protocol(mavlink_channel_t chan, GCS_MAVLINK::protocol_handler_fn_t handler);
+    bool install_storm32_protocol(mavlink_channel_t chan, GCS_MAVLINK::protocol_handler_uint8fn_t handler);
 //OWEND
     
 private:

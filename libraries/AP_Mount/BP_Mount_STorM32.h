@@ -9,7 +9,7 @@
 #include <AP_UAVCAN/AP_UAVCAN.h>
 #include "STorM32_lib.h"
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //0 //XX 90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //XX 90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
@@ -195,6 +195,6 @@ private:
     uint8_t _gcs_uart_serialno; //only for notification
     bool _send_gcs_passthru_installed; //only for notification
     void passthrough_install(const AP_SerialManager& serial_manager);
-    bool passthrough_handler(uint8_t, AP_HAL::UARTDriver *);
+    uint8_t passthrough_handler(uint8_t, AP_HAL::UARTDriver *);
     void passthrough_readback(void);
 };
