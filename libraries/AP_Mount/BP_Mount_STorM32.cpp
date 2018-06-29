@@ -820,8 +820,15 @@ static uint16_t buf_pos = 0;
 //    _uart->write(&b, 1); //forward to STorM32
 //    return true;
 
+    uint32_t now_ms = AP_HAL::millis();
+
     if (ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_TMO) {
-        return GCS_MAVLINK::PROTOCOLHANDLER_NONE; //we do not yet support timeout
+        if (_gcs.uart_locked && (now_ms - _gcs.last_received_ms > 4000)) {
+            _gcs.uart->lock_port(0);
+            _gcs.uart_locked = false;
+            return GCS_MAVLINK::PROTOCOLHANDLER_CLOSE;
+        }
+        return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
     }
 
     //from here on it is the handler for ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_TMO
@@ -837,6 +844,7 @@ static uint16_t buf_pos = 0;
                 buf_pos = 0;
                 _gcs.uart_locked = true;
                 _gcs.uart_justhaslocked = 5; //count down
+                _gcs.last_received_ms = now_ms;
 //                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
 //                _gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
 //                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
@@ -846,6 +854,7 @@ static uint16_t buf_pos = 0;
         }
     } else {
         valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_VALIDPACKET;
+        _gcs.last_received_ms = now_ms;
         if (!_gcs.uart_justhaslocked) {
             _uart->write(&b, 1); //forward to STorM32
         }
