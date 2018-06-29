@@ -781,7 +781,7 @@ static uint16_t buf_pos = 0;
     if (!_initialised) {
 //        return false;
     }
-
+/* NOOO
     if (hal.util->get_soft_armed()) {
         buf_pos = 0;
         // don't allow pass-through when armed
@@ -792,7 +792,7 @@ static uint16_t buf_pos = 0;
         }
         return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
     }
-
+*/
     uint8_t valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_NONE;
 
     if (!_gcs_uart_locked) {
