@@ -771,7 +771,7 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
 //    bool installed = gcs().install_alternative_protocol(
     bool installed = gcs().install_storm32_protocol(
             mav_chan, //MAVLINK_COMM_1, //mav_chan, //MAVLINK_COMM_0,
-            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, AP_HAL::UARTDriver *)
+            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, uint8_t, AP_HAL::UARTDriver *)
         );
 
     if (installed) { _send_gcs_passthru_installed = true; }
@@ -786,7 +786,7 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
 }
 
 
-uint8_t BP_Mount_STorM32::passthrough_handler(uint8_t b, AP_HAL::UARTDriver *gcs_uart)
+uint8_t BP_Mount_STorM32::passthrough_handler(uint8_t ioctl, uint8_t b, AP_HAL::UARTDriver *gcs_uart)
 {
 const char magicopen[] =  "\xFA\x0E\xD2""STORM32CONNECT""\x33\x34";
 const char magicclose[] = "\xF9\x11\xD2""STORM32DISCONNECT""\x33\x34";
@@ -820,10 +820,17 @@ static uint16_t buf_pos = 0;
 //    _uart->write(&b, 1); //forward to STorM32
 //    return true;
 
+    if (ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_TMO) {
+        return GCS_MAVLINK::PROTOCOLHANDLER_NONE; //we do not yet support timeout
+    }
+
+    //from here on it is the handler for ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_TMO
+    // since that's the only possible case left, we don't need an if
+
     uint8_t valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_NONE;
 
     if (!_gcs_uart_locked) {
-        if( b == magicopen[0] ) buf_pos = 0;
+        if (b == magicopen[0]) buf_pos = 0;
         if ((buf_pos < (sizeof(magicopen)-1)) && (b == magicopen[buf_pos])) {
             buf_pos++;
             if ((buf_pos >= (sizeof(magicopen)-1)) && _gcs_uart->lock_port(STORM32_UART_LOCK_KEY)) {
@@ -843,7 +850,7 @@ static uint16_t buf_pos = 0;
             _uart->write(&b, 1); //forward to STorM32
         }
 
-        if( b == magicclose[0] ) buf_pos = 0;
+        if (b == magicclose[0]) buf_pos = 0;
         if ((buf_pos < (sizeof(magicclose)-1)) && (b == magicclose[buf_pos])) {
             buf_pos++;
             if (buf_pos >= (sizeof(magicclose)-1)) {
