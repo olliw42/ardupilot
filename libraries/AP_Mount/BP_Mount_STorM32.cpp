@@ -57,11 +57,11 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
     _target_to_send = false;
     _target_mode_last = MAV_MOUNT_MODE_RETRACT;
 
-    _gcs_uart = nullptr;
-    _gcs_uart_locked = false;
-    _gcs_uart_justhaslocked = 0;
-    _gcs_uart_serialno = 0;
-    _send_gcs_passthru_installed = false;
+    _pt.uart = nullptr;
+    _pt.uart_locked = false;
+    _pt.uart_justhaslocked = 0;
+    _pt.uart_serialno = 0;
+    _pt.send_passthru_installed = false;
 }
 
 
@@ -619,10 +619,10 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
         gcs().send_text(MAV_SEVERITY_INFO, (_armed) ? "  STorM32: ARMED" : "  STorM32: DISARMED" );
     }
 
-    if (_send_gcs_passthru_installed) {
-        _send_gcs_passthru_installed = false;
+    if (_pt.send_passthru_installed) {
+        _pt.send_passthru_installed = false;
         char s[64] = "  STorM32: Passthrough installed on SR0\0";
-        s[38] = _gcs_uart_serialno + '0';
+        s[38] = _pt.uart_serialno + '0';
         gcs().send_text(MAV_SEVERITY_INFO, s );
     }
 }
@@ -634,7 +634,7 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
 
 size_t BP_Mount_STorM32::_serial_txspace(void)
 {
-    if (_gcs_uart_locked) return 0;
+    if (_pt.uart_locked) return 0;
 
 #if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
@@ -650,7 +650,7 @@ size_t BP_Mount_STorM32::_serial_txspace(void)
 
 size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8_t priority)
 {
-    if (_gcs_uart_locked) return 0;
+    if (_pt.uart_locked) return 0;
 
 #if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
@@ -671,7 +671,7 @@ size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8
 
 uint32_t BP_Mount_STorM32::_serial_available(void)
 {
-    if (_gcs_uart_locked) return 0;
+    if (_pt.uart_locked) return 0;
 
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return 0;
@@ -685,7 +685,7 @@ uint32_t BP_Mount_STorM32::_serial_available(void)
 
 int16_t BP_Mount_STorM32::_serial_read(void)
 {
-    if (_gcs_uart_locked) return 0;
+    if (_pt.uart_locked) return 0;
 
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return 0;
@@ -753,73 +753,81 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
         return;
     }
 
-    _gcs_uart_serialno = serial_no;
+    _pt.uart_serialno = serial_no;
 
     mavlink_channel_t mav_chan;
-    if (!serial_manager.get_mavlink_channel_for_serial(_gcs_uart_serialno, mav_chan)) {
-        //mav_chan = MAVLINK_COMM_0;
+    if (!serial_manager.get_mavlink_channel_for_serial(_pt.uart_serialno, mav_chan)) {
         return;
     }
 
     bool installed = gcs().install_storm32_protocol(
             mav_chan,
-            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, AP_HAL::UARTDriver *)
+            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, uint8_t, AP_HAL::UARTDriver *)
         );
 
-    if (installed) { _send_gcs_passthru_installed = true; }
+    if (installed) { _pt.send_passthru_installed = true; }
 }
 
 
-uint8_t BP_Mount_STorM32::passthrough_handler(uint8_t b, AP_HAL::UARTDriver *gcs_uart)
+uint8_t BP_Mount_STorM32::passthrough_handler(uint8_t ioctl, uint8_t b, AP_HAL::UARTDriver *gcs_uart)
 {
 const char magicopen[] =  "\xFA\x0E\xD2""STORM32CONNECT""\x33\x34";
 const char magicclose[] = "\xF9\x11\xD2""STORM32DISCONNECT""\x33\x34";
 static uint16_t buf_pos = 0;
 
-    _gcs_uart = gcs_uart;
+    _pt.uart = gcs_uart;
 
     if (!_initialised) {
-//        return false;
+        return false;
     }
-/* NOOO
+/* NOO
     if (hal.util->get_soft_armed()) {
         buf_pos = 0;
         // don't allow pass-through when armed
-        if (_gcs_uart_locked) {
-            _gcs_uart->lock_port(0);
-            _gcs_uart_locked = false;
+        if (_pt.uart_locked) {
+            _pt.uart->lock_port(0);
+            _pt.uart_locked = false;
             return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
         }
         return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
+    } */
+
+    if (ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_UNLOCK) {
+        _pt.uart->lock_port(0);
+        _pt.uart_locked = false;
+        return GCS_MAVLINK::PROTOCOLHANDLER_CLOSE;
     }
-*/
+
+    //from here on it is the handler for ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_CHARRECEIVED
+    // since that's the only possible case left, we don't need an if
+
     uint8_t valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_NONE;
 
-    if (!_gcs_uart_locked) {
-        if( b == magicopen[0] ) buf_pos = 0;
+    if (!_pt.uart_locked) {
+        if (b == magicopen[0]) buf_pos = 0;
         if ((buf_pos < (sizeof(magicopen)-1)) && (b == magicopen[buf_pos])) {
             buf_pos++;
-            if ((buf_pos >= (sizeof(magicopen)-1)) && _gcs_uart->lock_port(STORM32_UART_LOCK_KEY)) {
+            if ((buf_pos >= (sizeof(magicopen)-1)) && _pt.uart->lock_port(STORM32_UART_LOCK_KEY)) {
                 buf_pos = 0;
-                _gcs_uart_locked = true;
-                _gcs_uart_justhaslocked = 5; //count down
+                _pt.uart_locked = true;
+                _pt.uart_justhaslocked = 5; //count down
             }
         } else {
             buf_pos = 0;
         }
     } else {
         valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_VALIDPACKET;
-        if (!_gcs_uart_justhaslocked) {
+        if (!_pt.uart_justhaslocked) {
             _uart->write(&b, 1); //forward to STorM32
         }
 
-        if( b == magicclose[0] ) buf_pos = 0;
+        if (b == magicclose[0]) buf_pos = 0;
         if ((buf_pos < (sizeof(magicclose)-1)) && (b == magicclose[buf_pos])) {
             buf_pos++;
             if (buf_pos >= (sizeof(magicclose)-1)) {
                 buf_pos = 0;
-                _gcs_uart->lock_port(0);
-                _gcs_uart_locked = false;
+                _pt.uart->lock_port(0);
+                _pt.uart_locked = false;
                 valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_CLOSE;
             }
         } else {
@@ -836,32 +844,32 @@ void BP_Mount_STorM32::passthrough_readback(void)
 const char magicack[] = "\xFB\x01\x96\x00\x62\x2E";
 
     if (!_initialised) {
-//        return;
+        return;
     }
 
-    if (!_gcs_uart_locked) {
+    if (!_pt.uart_locked) {
         return;
     }
 
     uint32_t available = _uart->available();
 
-    if (_gcs_uart_justhaslocked) {
+    if (_pt.uart_justhaslocked) {
         //sadly, the UartDriver API does not provide functional flush functions, bad API
         // so, we can't clean up late Mavlink messages which occur on e.g. SiK telemetry links, and need to handle that in the GUI
         // also, this stupid loop is needed to at least clean up late messages from the STorM32
         // maybe I should add flushes at some point to UARTDriver.h, at least for PX4&ChibiOS, where it is easily possible with
         // the ByteBuffer functions _writebuf.clear(), _readbuf.clear()
         for (uint32_t i = 0; i < available; i++) { _uart->read(); } //this is to catch late responses from STorM32
-        _gcs_uart_justhaslocked--;
-        if (_gcs_uart_justhaslocked == 0 ) {
-            _gcs_uart->write_locked((uint8_t*)magicack, (sizeof(magicack)-1), STORM32_UART_LOCK_KEY); //acknowledge connect RCCMD
+        _pt.uart_justhaslocked--;
+        if (_pt.uart_justhaslocked == 0 ) {
+            _pt.uart->write_locked((uint8_t*)magicack, (sizeof(magicack)-1), STORM32_UART_LOCK_KEY); //acknowledge connect RCCMD
         }
         return;
     }
 
     for (uint32_t i = 0; i < available; i++) {
         uint8_t c = _uart->read();
-        _gcs_uart->write_locked(&c, 1, STORM32_UART_LOCK_KEY);
+        _pt.uart->write_locked(&c, 1, STORM32_UART_LOCK_KEY);
     }
 }
 

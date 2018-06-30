@@ -241,9 +241,12 @@ public:
         PROTOCOLHANDLER_NONE = 0,
         PROTOCOLHANDLER_OPENED, //the port has been taken over, e.g. because a valid packet or a key word has been detected
         PROTOCOLHANDLER_VALIDPACKET, //a valid packet has been received
-        PROTOCOLHANDLER_CLOSE //the port has been released, e.g. because an invalid packet or a key word has been detected
+        PROTOCOLHANDLER_CLOSE, //the port has been released, e.g. because an invalid packet or a key word has been detected
+
+        PROTOCOLHANDLER_IOCTL_UNLOCK = 128,
+        PROTOCOLHANDLER_IOCTL_CHARRECEIVED,
     };
-    FUNCTOR_TYPEDEF(protocol_handler_uint8fn_t, uint8_t, uint8_t, AP_HAL::UARTDriver *);
+    FUNCTOR_TYPEDEF(protocol_handler_uint8fn_t, uint8_t, uint8_t, uint8_t, AP_HAL::UARTDriver *);
 //OWEND
 
     struct stream_entries {
@@ -553,6 +556,7 @@ private:
 //OW
     struct {
         GCS_MAVLINK::protocol_handler_uint8fn_t handler;
+        uint32_t last_alternate_ms;
     } storm32;
 //OWEND
 

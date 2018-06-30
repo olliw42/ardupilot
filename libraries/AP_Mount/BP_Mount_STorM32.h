@@ -189,12 +189,14 @@ private:
     void set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_pwm, uint16_t yaw_pwm, enum MAV_MOUNT_MODE mount_mode);
     void send_target_angles(void);
 
-    AP_HAL::UARTDriver *_gcs_uart;
-    bool _gcs_uart_locked;
-    uint16_t _gcs_uart_justhaslocked;
-    uint8_t _gcs_uart_serialno; //only for notification
-    bool _send_gcs_passthru_installed; //only for notification
+    struct {
+        AP_HAL::UARTDriver *uart;
+        bool uart_locked;
+        uint16_t uart_justhaslocked;
+        uint8_t uart_serialno; //only for notification
+        bool send_passthru_installed; //only for notification
+    } _pt;
     void passthrough_install(const AP_SerialManager& serial_manager);
-    uint8_t passthrough_handler(uint8_t, AP_HAL::UARTDriver *);
+    uint8_t passthrough_handler(uint8_t ioctl, uint8_t b, AP_HAL::UARTDriver *gcs_uart);
     void passthrough_readback(void);
 };

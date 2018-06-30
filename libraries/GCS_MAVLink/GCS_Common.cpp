@@ -899,6 +899,15 @@ GCS_MAVLINK::update(uint32_t max_time_us)
 
     status.packet_rx_drop_count = 0;
 
+//OW
+// sadly the UARTDriver api doesn't offer a is_locked() function, so we have that ioctl
+// this works because the STorM32 GUI emits periodically
+    if (storm32.handler && gcs_alternative_active[chan] && (now_ms - storm32.last_alternate_ms > 4000)) {
+        storm32.handler(PROTOCOLHANDLER_IOCTL_UNLOCK, '\0', mavlink_comm_port[chan]);
+        gcs_alternative_active[chan] = false; //this is to reenable writes
+    }
+//OWEND
+
     // process received bytes
     uint16_t nbytes = comm_get_available(chan);
     for (uint16_t i=0; i<nbytes; i++)
@@ -933,16 +942,17 @@ GCS_MAVLINK::update(uint32_t max_time_us)
 // the enclosed timeout only triggers if a new char is received, if not it blocks forever and e.g. a heartbeat is not emitted
 // not good, so don't use
         if (storm32.handler) {
-            uint8_t res = storm32.handler(c, mavlink_comm_port[chan]);
+            uint8_t res = storm32.handler(PROTOCOLHANDLER_IOCTL_CHARRECEIVED, c, mavlink_comm_port[chan]);
 
             if ((res == PROTOCOLHANDLER_VALIDPACKET) || (res == PROTOCOLHANDLER_OPENED)) {
+                storm32.last_alternate_ms = now_ms;
                 gcs_alternative_active[chan] = true;
                 continue;
             } else if (res == PROTOCOLHANDLER_CLOSE) {
                 gcs_alternative_active[chan] = false; //this is to reenable writes
                 continue;
             } else {
-                gcs_alternative_active[chan] = false; //should not be needed, but just to play it safe
+                gcs_alternative_active[chan] = false; //should not be needed, but play it safe
             }
         }
 //OWEND
