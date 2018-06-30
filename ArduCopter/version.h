@@ -74,7 +74,12 @@ pushed on 26.06.2018 as passthru
  - change protocol_handler() to return an uint8_t instead of bool,
    and adapt the logic in GCS_MAVLINK::update() accordingly
    tested on pixracer/v4 for SR0
-
+ - change protocol_handler() by an ioctl parameter
+ - change loop in GCS_common and handler to yield a timeout
+ - bug: disable armed check
+   tested on pixracer/v4 for SR0
+ - 2018.06.30: testflight flamewheel, passed
+pushed on 30.06.2018 as passthru
 
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
