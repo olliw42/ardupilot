@@ -792,7 +792,7 @@ static uint16_t buf_pos = 0;
     _pt.uart = gcs_uart;
 
     if (!_initialised) {
-//        return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
+        return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
     }
 
 /* NOO
