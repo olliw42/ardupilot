@@ -398,9 +398,17 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @DisplayName: STorM32 PassThru Serial
     // @Description: STorM32 PassThru Serial
     // @Values: -1:None, 0:SR0, 1:SR1
-    // @User: Standard
     // @RebootRequired: True
+    // @User: Standard
     AP_GROUPINFO("_STRM_PTSER",       50, AP_Mount, state[0]._storm32_passthru_serialno, -1),
+
+    // @Param: _STRM_BM
+    // @DisplayName: STorM32 Bitmask
+    // @Description: Bitmask to enable/disable various options
+    // @Values: 0:default
+    // @RebootRequired: True
+    // @User: Standard
+    AP_GROUPINFO("_STRM_BM", 51, AP_Mount, state[0]._storm32_bitmask, 0),
 //OWEND
 
     AP_GROUPEND

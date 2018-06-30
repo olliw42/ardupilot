@@ -191,6 +191,7 @@ protected:
 
 //OW
         AP_Int8         _storm32_passthru_serialno;
+		AP_Int8         _storm32_bitmask;
 //OWEND
 
         MAV_MOUNT_MODE  _mode;              // current mode (see MAV_MOUNT_MODE enum)
