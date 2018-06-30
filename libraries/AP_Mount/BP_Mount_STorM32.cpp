@@ -128,7 +128,6 @@ void BP_Mount_STorM32::update()
     }
 
     send_text_to_gcs();
-//XX    passthrough_readback();
 }
 
 
@@ -860,7 +859,7 @@ void BP_Mount_STorM32::passthrough_readback(void)
 const char magicack[] = "\xFB\x01\x96\x00\x62\x2E";
 
     if (!_initialised) {
-//        return;
+        return;
     }
 
     if (!_pt.uart_locked) {
