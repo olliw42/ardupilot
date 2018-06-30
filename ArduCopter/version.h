@@ -83,7 +83,7 @@ pushed on 30.06.2018 as passthru
  - PASSTHRU_ALLOWED added to bitmask, bitmask renumbered, in preperation of STRM_BM parameter
  - finally remove verbose debug comments
  - parameter STRM_BM added, BM=1 tested on flamewheel on ground, works nicely
-
+released on 30.06.2018 as betacopter v008
 
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
