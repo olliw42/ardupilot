@@ -803,7 +803,7 @@ static uint16_t buf_pos = 0;
     _pt.uart = gcs_uart;
 
     if (!_initialised) {
-//        return false;
+//        return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
     }
 /* NOO
     if (hal.util->get_soft_armed()) {
