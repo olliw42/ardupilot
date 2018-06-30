@@ -9,7 +9,7 @@
 #include <AP_UAVCAN/AP_UAVCAN.h>
 #include "STorM32_lib.h"
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
