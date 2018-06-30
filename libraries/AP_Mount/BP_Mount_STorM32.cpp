@@ -72,6 +72,18 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
 // init - performs any required initialisation for this instance
 void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 {
+    //the parameter bitmask is such that zero is default, but the bitmask flags are both positive and negative active
+    // so we need to translate
+    // do this first, so that e.g. passthrough_install() gets the correct info
+    uint8_t param_bitmask = _state._storm32_bitmask.get();
+    if (param_bitmask & GET_PWM_TARGET_FROM_RADIO) _bitmask |= GET_PWM_TARGET_FROM_RADIO; //enable
+
+    if (param_bitmask & SEND_STORM32LINK_V2) _bitmask &=~ SEND_STORM32LINK_V2; //disable
+    if (param_bitmask & SEND_CMD_SETINPUTS) _bitmask &=~ SEND_CMD_SETINPUTS; //disable
+    if (param_bitmask & SEND_CMD_DOCAMERA) _bitmask &=~ SEND_CMD_DOCAMERA; //disable
+
+    if (param_bitmask & PASSTHRU_ALLOWED) _bitmask &=~ PASSTHRU_ALLOWED; //disable
+
     //from instance we can determine its type, we keep it here since that's easier/shorter
     _mount_type = _frontend.get_mount_type(_instance);
 
@@ -99,15 +111,6 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 
     set_mode((enum MAV_MOUNT_MODE)_state._default_mode.get()); //set mode to default value set by user via parameter
     _target_mode_last = _state._mode;
-
-    //the parameter bitmask is such that zero is default, but the bitmask flags are both positive and negative active
-    // so we need to translate
-    uint8_t param_bitmask = _state._storm32_bitmask.get();
-    _bitmask = SEND_STORM32LINK_V2 | SEND_CMD_SETINPUTS | SEND_CMD_DOCAMERA; //this is the default
-    if (param_bitmask & SEND_STORM32LINK_V2) _bitmask &=~ SEND_STORM32LINK_V2; //disable
-    if (param_bitmask & SEND_CMD_SETINPUTS) _bitmask &=~ SEND_CMD_SETINPUTS; //disable
-    if (param_bitmask & SEND_CMD_DOCAMERA) _bitmask &=~ SEND_CMD_DOCAMERA; //disable
-    if (param_bitmask & GET_PWM_TARGET_FROM_RADIO) _bitmask |= GET_PWM_TARGET_FROM_RADIO; //enable
 }
 
 
@@ -115,7 +118,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 // this function must be defined in any case
 void BP_Mount_STorM32::update()
 {
-    passthrough_readback(); //just for debug!! we can remove its initialized check by calling it at the end
+    passthrough_readback(); //just for debug! we can remove its initialized check by calling it at the end
 
     if (!_initialised) {
         find_CAN(); //this only checks for the CAN to be ok, not if there is a gimbal, sets _serial_is_initialised
@@ -246,8 +249,6 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
 {
     uint16_t pitch_pwm, roll_pwm, yaw_pwm;
 
-    bool get_pwm_target_from_radio = (_bitmask & GET_PWM_TARGET_FROM_RADIO) ? true : false;
-
     // flag to trigger sending target angles to gimbal
     bool send_ef_target = false;
     bool send_pwm_target = false;
@@ -260,7 +261,7 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
         case MAV_MOUNT_MODE_RETRACT:
             {
                 const Vector3f &target = _state._retract_angles.get();
-                _angle_ef_target_rad.x = radians(target.x);
+                _angle_ef_target_rad.x = radians(target.x); //values don't matter since recenter is triggered
                 _angle_ef_target_rad.y = radians(target.y);
                 _angle_ef_target_rad.z = radians(target.z);
                 send_ef_target = true;
@@ -271,7 +272,7 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
         case MAV_MOUNT_MODE_NEUTRAL:
             {
                 const Vector3f &target = _state._neutral_angles.get();
-                _angle_ef_target_rad.x = radians(target.x);
+                _angle_ef_target_rad.x = radians(target.x); //values don't matter since recenter is triggered
                 _angle_ef_target_rad.y = radians(target.y);
                 _angle_ef_target_rad.z = radians(target.z);
                 send_ef_target = true;
@@ -284,10 +285,10 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
             send_ef_target = true;
             break;
 
-        // RC radio manual angle control, but with stabilization from the AHRS
+        // RC radio manual angle control, but with stabilization from the AHRS (?? is the latter comment correct ??)
         case MAV_MOUNT_MODE_RC_TARGETING:
             // update targets using pilot's rc inputs
-            if (get_pwm_target_from_radio) {
+            if (_bitmask & GET_PWM_TARGET_FROM_RADIO) {
                 get_pwm_target_angles_from_radio(&pitch_pwm, &roll_pwm, &yaw_pwm);
                 send_pwm_target = true;
             } else {
@@ -752,7 +753,7 @@ bool BP_Mount_STorM32::is_failsafe(void)
 // I have tested that MAVLINK_COMM_1 is indeed the telem1
 // if I don't use the line (now_ms - alternative.last_mavlink_ms > protocol_timeout) it works
 // it seems that SiK emits mavlink stuff
-// also, there are plenty of late coming Mavlink messages going out, needs to be handle in GUI since no flush functions available
+// also, there are plenty of late coming Mavlink messages going out, needs to be handled in GUI since no flush functions available
 
 //this is called only when Mount_Type_STorM32_Native, so this doesn't have to be checked here
 void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manager)
