@@ -80,7 +80,8 @@ pushed on 26.06.2018 as passthru
    tested on pixracer/v4 for SR0
  - 2018.06.30: testflight flamewheel, passed
 pushed on 30.06.2018 as passthru
-
+ - PASSTHRU_ALLOWED added to bitmask, bitmask renumbered, in preperation of STRM_BM parameter
+ - finally remove verbose debug comments
 
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?

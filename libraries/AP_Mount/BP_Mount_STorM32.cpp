@@ -49,7 +49,7 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
 
-    _bitmask = SEND_STORM32LINK_V2 | SEND_CMD_SETINPUTS | SEND_CMD_DOCAMERA;
+    _bitmask = SEND_STORM32LINK_V2 | SEND_CMD_SETINPUTS | SEND_CMD_DOCAMERA | PASSTHRU_ALLOWED;
 
     _status.pitch_deg = _status.roll_deg = _status.yaw_deg = 0.0f;
     _status_updated = false;
@@ -748,41 +748,29 @@ bool BP_Mount_STorM32::is_failsafe(void)
 //this is called only when Mount_Type_STorM32_Native, so this doesn't have to be checked here
 void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manager)
 {
+    if ((_bitmask & PASSTHRU_ALLOWED) == 0) {
+        return;
+    }
+
     int8_t serial_no = _state._storm32_passthru_serialno.get();
 
     if ((serial_no < 0) || (serial_no >= SERIALMANAGER_NUM_PORTS)) {
         return;
     }
 
-//    uint8_t serial_no = param_serial_no;
-
-//    uint8_t serial_no = 0; //tested to work for no = 0 <=> MAVLINK_COMM_0 and no = 1 <=> MAVLINK_COMM_1
-
     _pt.uart_serialno = serial_no;
 
     mavlink_channel_t mav_chan;
     if (!serial_manager.get_mavlink_channel_for_serial(_pt.uart_serialno, mav_chan)) {
-        //mav_chan = MAVLINK_COMM_0;
         return;
     }
 
-//    mav_chan = MAVLINK_COMM_1;
-
-//    bool installed = gcs().install_alternative_protocol(
     bool installed = gcs().install_storm32_protocol(
-            mav_chan, //MAVLINK_COMM_1, //mav_chan, //MAVLINK_COMM_0,
+            mav_chan,
             FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, uint8_t, AP_HAL::UARTDriver *)
         );
 
     if (installed) { _pt.send_passthru_installed = true; }
-
-/*    if (installed) {
-        char s[64] = "\nSTORM32 PROTOCOL INSTALLED\n\0";
-       _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
-    } else {
-        char s[64] = "\nSTORM32 PROTOCOL INSTALL FAILED\n\0";
-       _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
-    }*/
 }
 
 
@@ -790,21 +778,14 @@ uint8_t BP_Mount_STorM32::passthrough_handler(uint8_t ioctl, uint8_t b, AP_HAL::
 {
 const char magicopen[] =  "\xFA\x0E\xD2""STORM32CONNECT""\x33\x34";
 const char magicclose[] = "\xF9\x11\xD2""STORM32DISCONNECT""\x33\x34";
-//const char magicopen[] =  "@STORM32OPENTUNNEL";
-//const char magicclose[] = "@STORM32CLOSETUNNEL";
 static uint16_t buf_pos = 0;
-
-/*    if (_pt.uart == nullptr) {
-        char s[64] = "\nSTORM32 PROTOCOL HANDLER CALLED\n\0";
-        gcs_uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-        _uart->write((uint8_t*)s, strlen(s));
-    }*/
 
     _pt.uart = gcs_uart;
 
     if (!_initialised) {
 //        return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
     }
+
 /* NOO
     if (hal.util->get_soft_armed()) {
         buf_pos = 0;
@@ -816,9 +797,6 @@ static uint16_t buf_pos = 0;
         }
         return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
     } */
-
-//    _uart->write(&b, 1); //forward to STorM32
-//    return true;
 
     if (ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_UNLOCK) {
         _pt.uart->lock_port(0);
@@ -839,9 +817,6 @@ static uint16_t buf_pos = 0;
                 buf_pos = 0;
                 _pt.uart_locked = true;
                 _pt.uart_justhaslocked = 5; //count down
-//                char s[30] = "\nSTORM32 TUNNEL OPENED\n\0";
-//                _pt.uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
             }
         } else {
             buf_pos = 0;
@@ -856,9 +831,6 @@ static uint16_t buf_pos = 0;
         if ((buf_pos < (sizeof(magicclose)-1)) && (b == magicclose[buf_pos])) {
             buf_pos++;
             if (buf_pos >= (sizeof(magicclose)-1)) {
-//                char s[30] = "\nSTORM32 TUNNEL CLOSED\n\0";
-//                _pt.uart->write_locked((uint8_t*)s, strlen(s), STORM32_UART_LOCK_KEY);
-//                _uart->write((uint8_t*)s, strlen(s)); //forward to STorM32
                 buf_pos = 0;
                 _pt.uart->lock_port(0);
                 _pt.uart_locked = false;

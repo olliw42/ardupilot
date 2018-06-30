@@ -138,10 +138,11 @@ private:
 
     // bit mask, allows to enable/disable particular functions/features
     enum BITMASKENUM {
-        SEND_STORM32LINK_V2 = 0x01,
-        SEND_CMD_SETINPUTS = 0x02,
-        GET_PWM_TARGET_FROM_RADIO = 0x04,
+        GET_PWM_TARGET_FROM_RADIO = 0x01,
+        SEND_STORM32LINK_V2 = 0x02,
+        SEND_CMD_SETINPUTS = 0x04,
         SEND_CMD_DOCAMERA = 0x08,
+        PASSTHRU_ALLOWED = 0x80,
     };
     uint16_t _bitmask; //this mask is to control some functions
 
