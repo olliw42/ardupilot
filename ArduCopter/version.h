@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v008"
+#define THISFIRMWARE "BetaCopter V3.6-dev v009"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -27,6 +27,9 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 */
 
 /*
+v0.09:
+
+
 v0.08:
  - added changes from STorM32nativeonly branch
  - replace AP_Notify mechanism with own singleton -> changes also in: GCS_Common.cpp, AP_Camera.h
@@ -83,7 +86,6 @@ pushed on 30.06.2018 as passthru
  - PASSTHRU_ALLOWED added to bitmask, bitmask renumbered, in preperation of STRM_BM parameter
  - finally remove verbose debug comments
  - parameter STRM_BM added, BM=1 tested on flamewheel on ground, works nicely
-
 
 
 TODO: GenericBatteryInfo with Wh, or use BatteryInfo in some "dirty" way?
