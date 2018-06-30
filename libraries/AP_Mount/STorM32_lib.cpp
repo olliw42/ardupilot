@@ -428,3 +428,18 @@ bool STorM32_lib::message_received(void)
     return false;
 }
 
+/* Comments as regards to v0.96:
+
+has no F9 handling
+=> findGimbal may yield response in case of error, should not matter since ID is checked
+=> task loop must be quite different, since every command responses, and commands can't be interlaced
+
+bug in v0.96 (also checked v0.90,v080)
+CmdGetVersionStr response with ID GetData (=5) and not ID GetVersionStr (=2)
+might be actually useful to identify version in findGimbal
+
+CmdSetInputs is not existing
+CmdStorm32Link is not existing
+
+CmdGetData yields a different data format
+*/
