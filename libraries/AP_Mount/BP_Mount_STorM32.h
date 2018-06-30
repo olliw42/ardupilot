@@ -195,7 +195,6 @@ private:
         uint16_t uart_justhaslocked;
         uint8_t uart_serialno; //only for notification
         bool send_passthru_installed; //only for notification
-        uint32_t last_received_ms;
     } _pt;
     void passthrough_install(const AP_SerialManager& serial_manager);
     uint8_t passthrough_handler(uint8_t ioctl, uint8_t b, AP_HAL::UARTDriver *gcs_uart);

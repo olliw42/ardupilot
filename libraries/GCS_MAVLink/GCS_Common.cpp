@@ -901,7 +901,8 @@ GCS_MAVLINK::update(uint32_t max_time_us)
 
 //OW
 // sadly the UARTDriver api doesn't offer a is_locked() function, so we have to defer the timeout handling to the protocol handler
-    if (storm32.handler && (storm32.handler(PROTOCOLHANDLER_IOCTL_TMO, '\0', mavlink_comm_port[chan]) == PROTOCOLHANDLER_CLOSE)) {
+    if (storm32.handler && gcs_alternative_active[chan] && (now_ms - storm32.last_alternate_ms > 4000)) {
+        storm32.handler(PROTOCOLHANDLER_IOCTL_UNLOCK, '\0', mavlink_comm_port[chan]);
         gcs_alternative_active[chan] = false; //this is to reenable writes
     }
 //OWEND
@@ -943,6 +944,7 @@ GCS_MAVLINK::update(uint32_t max_time_us)
             uint8_t res = storm32.handler(PROTOCOLHANDLER_IOCTL_CHARRECEIVED, c, mavlink_comm_port[chan]);
 
             if ((res == PROTOCOLHANDLER_VALIDPACKET) || (res == PROTOCOLHANDLER_OPENED)) {
+                storm32.last_alternate_ms = now_ms;
                 gcs_alternative_active[chan] = true;
                 continue;
             } else if (res == PROTOCOLHANDLER_CLOSE) {
