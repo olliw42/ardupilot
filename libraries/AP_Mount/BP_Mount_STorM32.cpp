@@ -89,6 +89,15 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 
     set_mode((enum MAV_MOUNT_MODE)_state._default_mode.get()); //set mode to default value set by user via parameter
     _target_mode_last = _state._mode;
+
+    //the parameter bitmask is such that zero is default, but the bitmask flags are both positive and negative active
+    // so we need to translate
+    uint8_t param_bitmask = _state._storm32_bitmask.get();
+    _bitmask = SEND_STORM32LINK_V2 | SEND_CMD_SETINPUTS | SEND_CMD_DOCAMERA; //this is the default
+    if (param_bitmask & SEND_STORM32LINK_V2) _bitmask &=~ SEND_STORM32LINK_V2; //disable
+    if (param_bitmask & SEND_CMD_SETINPUTS) _bitmask &=~ SEND_CMD_SETINPUTS; //disable
+    if (param_bitmask & SEND_CMD_DOCAMERA) _bitmask &=~ SEND_CMD_DOCAMERA; //disable
+    if (param_bitmask & GET_PWM_TARGET_FROM_RADIO) _bitmask |= GET_PWM_TARGET_FROM_RADIO; //enable
 }
 
 
