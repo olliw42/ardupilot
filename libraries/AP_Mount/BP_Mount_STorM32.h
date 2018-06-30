@@ -9,7 +9,7 @@
 #include <AP_UAVCAN/AP_UAVCAN.h>
 #include "STorM32_lib.h"
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
 #define STORM32_UAVCAN_NODEID           71 //parameter? can't this be auto-detected?
 
@@ -138,10 +138,11 @@ private:
 
     // bit mask, allows to enable/disable particular functions/features
     enum BITMASKENUM {
-        SEND_STORM32LINK_V2 = 0x01,
-        SEND_CMD_SETINPUTS = 0x02,
-        GET_PWM_TARGET_FROM_RADIO = 0x04,
+        GET_PWM_TARGET_FROM_RADIO = 0x01,
+        SEND_STORM32LINK_V2 = 0x02,
+        SEND_CMD_SETINPUTS = 0x04,
         SEND_CMD_DOCAMERA = 0x08,
+        PASSTHRU_ALLOWED = 0x80,
     };
     uint16_t _bitmask; //this mask is to control some functions
 
@@ -188,4 +189,15 @@ private:
     void set_target_angles_rad(float pitch_rad, float roll_rad, float yaw_rad, enum MAV_MOUNT_MODE mount_mode);
     void set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_pwm, uint16_t yaw_pwm, enum MAV_MOUNT_MODE mount_mode);
     void send_target_angles(void);
+
+    struct {
+        AP_HAL::UARTDriver *uart;
+        bool uart_locked;
+        uint16_t uart_justhaslocked;
+        uint8_t uart_serialno; //only for notification
+        bool send_passthru_installed; //only for notification
+    } _pt;
+    void passthrough_install(const AP_SerialManager& serial_manager);
+    uint8_t passthrough_handler(uint8_t ioctl, uint8_t b, AP_HAL::UARTDriver *gcs_uart);
+    void passthrough_readback(void);
 };

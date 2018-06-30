@@ -9,6 +9,9 @@
 
 extern const AP_HAL::HAL& hal;
 
+// key for locking UART for exclusive use, preventing any other writes
+#define STORM32_UART_LOCK_KEY 0x32426771
+
 
 //that's the notify class
 // singleton to communicate events & flags to the STorM32 mount
@@ -46,13 +49,19 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
 
-    _bitmask = SEND_STORM32LINK_V2 | SEND_CMD_SETINPUTS | SEND_CMD_DOCAMERA;
+    _bitmask = SEND_STORM32LINK_V2 | SEND_CMD_SETINPUTS | SEND_CMD_DOCAMERA | PASSTHRU_ALLOWED;
 
     _status.pitch_deg = _status.roll_deg = _status.yaw_deg = 0.0f;
     _status_updated = false;
 
     _target_to_send = false;
     _target_mode_last = MAV_MOUNT_MODE_RETRACT;
+
+    _pt.uart = nullptr;
+    _pt.uart_locked = false;
+    _pt.uart_justhaslocked = 0;
+    _pt.uart_serialno = 0;
+    _pt.send_passthru_installed = false;
 }
 
 
@@ -63,6 +72,18 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount &frontend, AP_Mount::mount_state &st
 // init - performs any required initialisation for this instance
 void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 {
+    //the parameter bitmask is such that zero is default, but the bitmask flags are both positive and negative active
+    // so we need to translate
+    // do this first, so that e.g. passthrough_install() gets the correct info
+    uint8_t param_bitmask = _state._storm32_bitmask.get();
+    if (param_bitmask & GET_PWM_TARGET_FROM_RADIO) _bitmask |= GET_PWM_TARGET_FROM_RADIO; //enable
+
+    if (param_bitmask & SEND_STORM32LINK_V2) _bitmask &=~ SEND_STORM32LINK_V2; //disable
+    if (param_bitmask & SEND_CMD_SETINPUTS) _bitmask &=~ SEND_CMD_SETINPUTS; //disable
+    if (param_bitmask & SEND_CMD_DOCAMERA) _bitmask &=~ SEND_CMD_DOCAMERA; //disable
+
+    if (param_bitmask & PASSTHRU_ALLOWED) _bitmask &=~ PASSTHRU_ALLOWED; //disable
+
     //from instance we can determine its type, we keep it here since that's easier/shorter
     _mount_type = _frontend.get_mount_type(_instance);
 
@@ -76,6 +97,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
         if (_uart) {
             _serial_is_initialised = true; //tell the STorM32_lib class
             //we do not set _initialised = true, since we first need to pass find_gimbal()
+            passthrough_install(serial_manager);
         } else {
             _serial_is_initialised = false; //tell the BP_STorM32 class, should not be needed, just to play it safe
             _mount_type = AP_Mount::Mount_Type_None; //this prevents many things from happening, safety guard
@@ -96,6 +118,8 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 // this function must be defined in any case
 void BP_Mount_STorM32::update()
 {
+    passthrough_readback(); //just for debug! we can remove its initialized check by calling it at the end
+
     if (!_initialised) {
         find_CAN(); //this only checks for the CAN to be ok, not if there is a gimbal, sets _serial_is_initialised
         find_gimbal_uavcan(); //this searches for a gimbal on CAN
@@ -224,8 +248,6 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
 {
     uint16_t pitch_pwm, roll_pwm, yaw_pwm;
 
-    bool get_pwm_target_from_radio = (_bitmask & GET_PWM_TARGET_FROM_RADIO) ? true : false;
-
     // flag to trigger sending target angles to gimbal
     bool send_ef_target = false;
     bool send_pwm_target = false;
@@ -238,7 +260,7 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
         case MAV_MOUNT_MODE_RETRACT:
             {
                 const Vector3f &target = _state._retract_angles.get();
-                _angle_ef_target_rad.x = radians(target.x);
+                _angle_ef_target_rad.x = radians(target.x); //values don't matter since recenter is triggered
                 _angle_ef_target_rad.y = radians(target.y);
                 _angle_ef_target_rad.z = radians(target.z);
                 send_ef_target = true;
@@ -249,7 +271,7 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
         case MAV_MOUNT_MODE_NEUTRAL:
             {
                 const Vector3f &target = _state._neutral_angles.get();
-                _angle_ef_target_rad.x = radians(target.x);
+                _angle_ef_target_rad.x = radians(target.x); //values don't matter since recenter is triggered
                 _angle_ef_target_rad.y = radians(target.y);
                 _angle_ef_target_rad.z = radians(target.z);
                 send_ef_target = true;
@@ -262,10 +284,10 @@ void BP_Mount_STorM32::set_target_angles_bymountmode(void)
             send_ef_target = true;
             break;
 
-        // RC radio manual angle control, but with stabilization from the AHRS
+        // RC radio manual angle control, but with stabilization from the AHRS (?? is the latter comment correct ??)
         case MAV_MOUNT_MODE_RC_TARGETING:
             // update targets using pilot's rc inputs
-            if (get_pwm_target_from_radio) {
+            if (_bitmask & GET_PWM_TARGET_FROM_RADIO) {
                 get_pwm_target_angles_from_radio(&pitch_pwm, &roll_pwm, &yaw_pwm);
                 send_pwm_target = true;
             } else {
@@ -606,6 +628,13 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
         _send_armeddisarmed = false;
         gcs().send_text(MAV_SEVERITY_INFO, (_armed) ? "  STorM32: ARMED" : "  STorM32: DISARMED" );
     }
+
+    if (_pt.send_passthru_installed) {
+        _pt.send_passthru_installed = false;
+        char s[64] = "  STorM32: Passthrough installed on SR0\0";
+        s[38] = _pt.uart_serialno + '0';
+        gcs().send_text(MAV_SEVERITY_INFO, s );
+    }
 }
 
 
@@ -615,6 +644,8 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
 
 size_t BP_Mount_STorM32::_serial_txspace(void)
 {
+    if (_pt.uart_locked) return 0;
+
 #if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return 1000;
@@ -629,6 +660,8 @@ size_t BP_Mount_STorM32::_serial_txspace(void)
 
 size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8_t priority)
 {
+    if (_pt.uart_locked) return 0;
+
 #if defined USE_STORM32_UAVCAN && defined USE_UC4H_UAVCAN
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
@@ -648,6 +681,8 @@ size_t BP_Mount_STorM32::_serial_write(const uint8_t *buffer, size_t size, uint8
 
 uint32_t BP_Mount_STorM32::_serial_available(void)
 {
+    if (_pt.uart_locked) return 0;
+
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return 0;
     }
@@ -660,6 +695,8 @@ uint32_t BP_Mount_STorM32::_serial_available(void)
 
 int16_t BP_Mount_STorM32::_serial_read(void)
 {
+    if (_pt.uart_locked) return 0;
+
     if (_mount_type == AP_Mount::Mount_Type_STorM32_UAVCAN) {
         return 0;
     }
@@ -701,6 +738,155 @@ bool BP_Mount_STorM32::is_failsafe(void)
     return false;
 }
 
+
+//------------------------------------------------------
+// BP_Mount_STorM32 passthrough interface
+//------------------------------------------------------
+
+//I tried to simply use e.g. MAVLINK_COMM_1, in a hope this would make it work over Telem1, but it somehow didn't
+// Why??
+// num_gcs() appears to be identical to MAVLINK_COMM_NUM_BUFFERS, at least for Copter
+// and GCS::setup_uarts() sets them all up, as many as Mavlink serials are there
+// indeed, the protocol gets installed also for MAVLINK_COMM_1, but somehow it doesn't work??
+// it somehow seems as if the handler is simply never called
+// I have tested that MAVLINK_COMM_1 is indeed the telem1
+// if I don't use the line (now_ms - alternative.last_mavlink_ms > protocol_timeout) it works
+// it seems that SiK emits mavlink stuff
+// also, there are plenty of late coming Mavlink messages going out, needs to be handled in GUI since no flush functions available
+
+//this is called only when Mount_Type_STorM32_Native, so this doesn't have to be checked here
+void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manager)
+{
+    if ((_bitmask & PASSTHRU_ALLOWED) == 0) {
+        return;
+    }
+
+    int8_t serial_no = _state._storm32_passthru_serialno.get();
+
+    if ((serial_no < 0) || (serial_no >= SERIALMANAGER_NUM_PORTS)) {
+        return;
+    }
+
+    _pt.uart_serialno = serial_no;
+
+    mavlink_channel_t mav_chan;
+    if (!serial_manager.get_mavlink_channel_for_serial(_pt.uart_serialno, mav_chan)) {
+        return;
+    }
+
+    bool installed = gcs().install_storm32_protocol(
+            mav_chan,
+            FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, uint8_t, AP_HAL::UARTDriver *)
+        );
+
+    if (installed) { _pt.send_passthru_installed = true; }
+}
+
+
+uint8_t BP_Mount_STorM32::passthrough_handler(uint8_t ioctl, uint8_t b, AP_HAL::UARTDriver *gcs_uart)
+{
+const char magicopen[] =  "\xFA\x0E\xD2""STORM32CONNECT""\x33\x34";
+const char magicclose[] = "\xF9\x11\xD2""STORM32DISCONNECT""\x33\x34";
+static uint16_t buf_pos = 0;
+
+    _pt.uart = gcs_uart;
+
+    if (!_initialised) {
+        return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
+    }
+
+/* NOO
+    if (hal.util->get_soft_armed()) {
+        buf_pos = 0;
+        // don't allow pass-through when armed
+        if (_pt.uart_locked) {
+            _pt.uart->lock_port(0);
+            _pt.uart_locked = false;
+            return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
+        }
+        return GCS_MAVLINK::PROTOCOLHANDLER_NONE;
+    } */
+
+    if (ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_UNLOCK) {
+        _pt.uart->lock_port(0);
+        _pt.uart_locked = false;
+        return GCS_MAVLINK::PROTOCOLHANDLER_CLOSE;
+    }
+
+    //from here on it is the handler for ioctl == GCS_MAVLINK::PROTOCOLHANDLER_IOCTL_CHARRECEIVED
+    // since that's the only possible case left, we don't need an if
+
+    uint8_t valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_NONE;
+
+    if (!_pt.uart_locked) {
+        if (b == magicopen[0]) buf_pos = 0;
+        if ((buf_pos < (sizeof(magicopen)-1)) && (b == magicopen[buf_pos])) {
+            buf_pos++;
+            if ((buf_pos >= (sizeof(magicopen)-1)) && _pt.uart->lock_port(STORM32_UART_LOCK_KEY)) {
+                buf_pos = 0;
+                _pt.uart_locked = true;
+                _pt.uart_justhaslocked = 5; //count down
+            }
+        } else {
+            buf_pos = 0;
+        }
+    } else {
+        valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_VALIDPACKET;
+        if (!_pt.uart_justhaslocked) {
+            _uart->write(&b, 1); //forward to STorM32
+        }
+
+        if (b == magicclose[0]) buf_pos = 0;
+        if ((buf_pos < (sizeof(magicclose)-1)) && (b == magicclose[buf_pos])) {
+            buf_pos++;
+            if (buf_pos >= (sizeof(magicclose)-1)) {
+                buf_pos = 0;
+                _pt.uart->lock_port(0);
+                _pt.uart_locked = false;
+                valid_packet = GCS_MAVLINK::PROTOCOLHANDLER_CLOSE;
+            }
+        } else {
+            buf_pos = 0;
+        }
+    }
+
+    return valid_packet;
+}
+
+
+void BP_Mount_STorM32::passthrough_readback(void)
+{
+const char magicack[] = "\xFB\x01\x96\x00\x62\x2E";
+
+    if (!_initialised) {
+        return;
+    }
+
+    if (!_pt.uart_locked) {
+        return;
+    }
+
+    uint32_t available = _uart->available();
+
+    if (_pt.uart_justhaslocked) {
+        //sadly, the UartDriver API does not provide functional flush functions, bad API
+        // so, we can't clean up late Mavlink messages which occur on e.g. SiK telemetry links, and need to handle that in the GUI
+        // also, this stupid loop is needed to at least clean up late messages from the STorM32
+        // maybe I should add flushes at some point to UARTDriver.h, at least for PX4&ChibiOS, where it is easily possible with
+        // the ByteBuffer functions _writebuf.clear(), _readbuf.clear()
+        for (uint32_t i = 0; i < available; i++) { _uart->read(); } //this is to catch late responses from STorM32
+        _pt.uart_justhaslocked--;
+        if (_pt.uart_justhaslocked == 0 ) {
+            _pt.uart->write_locked((uint8_t*)magicack, (sizeof(magicack)-1), STORM32_UART_LOCK_KEY); //acknowledge connect RCCMD
+        }
+        return;
+    }
+
+    for (uint32_t i = 0; i < available; i++) {
+        uint8_t c = _uart->read();
+        _pt.uart->write_locked(&c, 1, STORM32_UART_LOCK_KEY);
+    }
+}
 
 
 
