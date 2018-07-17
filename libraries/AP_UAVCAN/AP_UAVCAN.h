@@ -21,6 +21,8 @@
 #include <uavcan/equipment/indication/RGB565.hpp>
 //OW
 #include "Notify.hpp"
+#include "newtunnel/Broadcast.hpp" //#include <uavcan/tunnel/Broadcast.hpp>
+#include "BP_UavcanTunnelManager.h"
 //OWEND
 
 #ifndef UAVCAN_NODE_POOL_SIZE
@@ -357,8 +359,30 @@ private:
         AP_HAL::Semaphore* sem;
     } _uc4hnotify;
 
+    // --- tunnel.Broadcast ---
+    // incoming message, by channel_id
+    // the handling of the channel_id is done by the BP_UavcanTunnelManager class!
+    // we write directly to this class, so nothing to keep here
+
+    // --- tunnel.Broadcast ---
+    // outgoing message
+    // the handling is simple since most is done in the BP_UavcanTunnelManager class! we just fetch a ptr to data
+public:
+    bool tunnelbroadcast_out_sem_take();
+    void tunnelbroadcast_out_sem_give();
+    void tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uint8_t channel_id, uint8_t* buffer, uint8_t buffer_len, uint8_t priority);
+
+private:
+    struct {
+        uavcan::tunnel::Broadcast msg[TUNNELMANAGER_NUM_CHANNELS];
+        uavcan::TransferPriority priority[TUNNELMANAGER_NUM_CHANNELS];
+        bool to_send[TUNNELMANAGER_NUM_CHANNELS];
+        AP_HAL::Semaphore* sem;
+    } _tunnelbroadcast_out;
+
     // --- outgoing message handler ---
     void uc4h_do_cyclic(uint64_t current_time_ms);
+    void tunnelbroadcast_out_do_cyclic(void);
 //OWEND
 };
 

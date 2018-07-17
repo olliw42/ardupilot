@@ -46,7 +46,6 @@
 //and to place the new .hpp into the AP_UAVCAN library folder
 #include "GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
-#include "Notify.hpp"
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -401,12 +400,9 @@ static void genericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<uavca
     }
 }
 
-static void genericbatteryinfo_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg)
-{ genericbatteryinfo_cb_func(msg, 0); }
-static void genericbatteryinfo_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg)
-{ genericbatteryinfo_cb_func(msg, 1); }
-static void (*genericbatteryinfo_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg)
-        = { genericbatteryinfo_cb0, genericbatteryinfo_cb1 };
+static void genericbatteryinfo_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg){ genericbatteryinfo_cb_func(msg, 0); }
+static void genericbatteryinfo_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg){ genericbatteryinfo_cb_func(msg, 1); }
+static void (*genericbatteryinfo_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg) = { genericbatteryinfo_cb0, genericbatteryinfo_cb1 };
 
 //--- EscStatus ---
 // incoming message, by id
@@ -437,10 +433,35 @@ static void escstatus_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment:
 static void escstatus_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_cb_func(msg, 1); }
 static void (*escstatus_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg) = { escstatus_cb0, escstatus_cb1 };
 
+// --- tunnel.Broadcast ---
+// incoming message
+
+static void tunnelbroadcast_cb_func(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg, uint8_t mgr)
+{
+    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    //different to usual: we do write here directly to the BP_UavcanTunnelManager class
+    BP_UavcanTunnelManager* tunnelmgr = BP_UavcanTunnelManager::instance();
+    if (tunnelmgr) {
+        tunnelmgr->write_to_channel(msg.channel_id, &(msg.buffer[0]), msg.buffer.size());
+    }
+}
+
+static void tunnelbroadcast_cb0(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg){ tunnelbroadcast_cb_func(msg, 0); }
+static void tunnelbroadcast_cb1(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg){ tunnelbroadcast_cb_func(msg, 1); }
+static void (*tunnelbroadcast_cb[2])(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg) = { tunnelbroadcast_cb0, tunnelbroadcast_cb1 };
+
+
 // publisher interfaces
 //--- Notify ---
 // outgoing message
 static uavcan::Publisher<uavcan::olliw::uc4h::Notify>* uc4hnotify_array[MAX_NUMBER_OF_CAN_DRIVERS];
+// --- tunnel.Broadcast ---
+// outgoing message
+static uavcan::Publisher<uavcan::tunnel::Broadcast>* tunnelbroadcast_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
 
 // further stuff for outgoing messages
 const uavcan::TransferPriority TwoLowerThanHighest(uavcan::TransferPriority::NumericallyMin + 2);
@@ -522,6 +543,11 @@ AP_UAVCAN::AP_UAVCAN() :
     // --- Uc4hNotifyc ---
     _uc4hnotify.to_send = false;
     _uc4hnotify.sem = hal.util->new_semaphore();
+
+    // --- tunnel.Broadcast in ---
+    // nothing to do
+    // --- tunnel.Broadcast out ---
+    _tunnelbroadcast_out.sem = hal.util->new_semaphore();
 //OWEND
 
     debug_uavcan(2, "AP_UAVCAN constructed\n\r");
@@ -681,9 +707,21 @@ bool AP_UAVCAN::try_init(void)
         return false;
     }
 
+    uavcan::Subscriber<uavcan::tunnel::Broadcast> *tunnelbroadcast_sub;
+    tunnelbroadcast_sub = new uavcan::Subscriber<uavcan::tunnel::Broadcast>(*node);
+    const int tunnelbroadcast_start_res = tunnelbroadcast_sub->start(tunnelbroadcast_cb[_uavcan_i]);
+    if (tunnelbroadcast_start_res < 0) {
+        debug_uavcan(1, "UAVCAN tunnel::Broadcast subscriber start problem\n\r");
+        return false;
+    }
+
     uc4hnotify_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::uc4h::Notify>(*node);
     uc4hnotify_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
     uc4hnotify_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower);
+
+    tunnelbroadcast_out_array[_uavcan_i] = new uavcan::Publisher<uavcan::tunnel::Broadcast>(*node);
+    tunnelbroadcast_out_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+    tunnelbroadcast_out_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower); //this will be overwritten later
 //OWEND
 
     /*
@@ -855,6 +893,7 @@ void AP_UAVCAN::do_cyclic(void)
 
 //OW
     uint64_t current_time_ms = AP_HAL::millis64();
+    tunnelbroadcast_out_do_cyclic(); //give it preference
     uc4h_do_cyclic(current_time_ms);
 //OWEND
 }
@@ -1775,6 +1814,65 @@ void AP_UAVCAN::uc4h_do_cyclic(uint64_t current_time_ms)
 
         _uc4hnotify.to_send = false;
         uc4hnotify_sem_give();
+    }
+}
+
+// --- tunnel.Broadcast ---
+// outgoing message
+
+bool AP_UAVCAN::tunnelbroadcast_out_sem_take()
+{
+    bool sem_ret = _tunnelbroadcast_out.sem->take(10);
+    if (!sem_ret) {
+        debug_uavcan(1, "AP_UAVCAN tunnelbroadcast Out semaphore fail\n\r");
+    }
+    return sem_ret;
+}
+
+
+void AP_UAVCAN::tunnelbroadcast_out_sem_give()
+{
+    _tunnelbroadcast_out.sem->give();
+}
+
+
+void AP_UAVCAN::tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uint8_t channel_id, uint8_t* buffer, uint8_t buffer_len, uint8_t priority)
+{
+    if (_tunnelbroadcast_out.sem->take(1)) { //why 1 and not 10 here?
+
+//        _tunnelbroadcast_out.msg.protocol = ???
+
+        _tunnelbroadcast_out.msg[tunnel_index].channel_id = channel_id;
+        _tunnelbroadcast_out.msg[tunnel_index].buffer.resize(buffer_len);
+        for (uint8_t i = 0; i < buffer_len; i++) {
+            _tunnelbroadcast_out.msg[tunnel_index].buffer[i] = buffer[i];
+        }
+
+        _tunnelbroadcast_out.priority[tunnel_index] = uavcan::TransferPriority::MiddleLower;
+
+        _tunnelbroadcast_out.to_send[tunnel_index] = true;
+        tunnelbroadcast_out_sem_give();
+    }
+}
+
+//one frame per cycle is ca 800 Hz x 60 bytes = 48000 bytes/s
+// a CAN frame is 131 bits max => 7633 franmes/s max = ca 61 kbytes/s max
+// => this consumes already 79% of the available bandwidth !!!
+void AP_UAVCAN::tunnelbroadcast_out_do_cyclic(void)
+{
+    if (tunnelbroadcast_out_array[_uavcan_i] == nullptr) {
+        return;
+    }
+
+    for (uint8_t i=0; i<TUNNELMANAGER_NUM_CHANNELS; i++) {
+        if (_tunnelbroadcast_out.to_send[i] && tunnelbroadcast_out_sem_take()) {
+
+            tunnelbroadcast_out_array[_uavcan_i]->setPriority(_tunnelbroadcast_out.priority[i]);
+            tunnelbroadcast_out_array[_uavcan_i]->broadcast(_tunnelbroadcast_out.msg[i]);
+
+            _tunnelbroadcast_out.to_send[i] = false;
+            tunnelbroadcast_out_sem_give();
+        }
     }
 }
 //OWEND
