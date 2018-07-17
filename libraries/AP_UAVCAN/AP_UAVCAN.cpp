@@ -1782,12 +1782,12 @@ void AP_UAVCAN::uc4hnotify_sem_give()
 // the msg is copied into two fields, so, double work for nothing, "performance killer"
 void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len)
 {
-    if( _uc4hnotify.sem->take(1) ){
+    if (_uc4hnotify.sem->take(1)) {
 
         _uc4hnotify.msg.type = type;
         _uc4hnotify.msg.subtype = subtype;
         _uc4hnotify.msg.payload.resize(payload_len);
-        for(uint8_t i = 0; i < payload_len; i++){
+        for (uint8_t i = 0; i < payload_len; i++) {
             _uc4hnotify.msg.payload[i] = payload[i];
         }
 
@@ -1836,6 +1836,12 @@ void AP_UAVCAN::tunnelbroadcast_out_sem_give()
 }
 
 
+bool AP_UAVCAN::tunnelbroadcast_is_to_send(uint8_t tunnel_index)
+{
+    return _tunnelbroadcast_out.to_send[tunnel_index];
+}
+
+
 void AP_UAVCAN::tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uint8_t channel_id, uint8_t* buffer, uint8_t buffer_len, uint8_t priority)
 {
     if (_tunnelbroadcast_out.sem->take(1)) { //why 1 and not 10 here?
@@ -1864,7 +1870,7 @@ void AP_UAVCAN::tunnelbroadcast_out_do_cyclic(void)
         return;
     }
 
-    for (uint8_t i=0; i<TUNNELMANAGER_NUM_CHANNELS; i++) {
+    for (uint8_t i = 0; i < TUNNELMANAGER_NUM_CHANNELS; i++) {
         if (_tunnelbroadcast_out.to_send[i] && tunnelbroadcast_out_sem_take()) {
 
             tunnelbroadcast_out_array[_uavcan_i]->setPriority(_tunnelbroadcast_out.priority[i]);

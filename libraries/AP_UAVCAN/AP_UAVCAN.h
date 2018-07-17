@@ -370,6 +370,7 @@ private:
 public:
     bool tunnelbroadcast_out_sem_take();
     void tunnelbroadcast_out_sem_give();
+    bool tunnelbroadcast_is_to_send(uint8_t tunnel_index);
     void tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uint8_t channel_id, uint8_t* buffer, uint8_t buffer_len, uint8_t priority);
 
 private:

@@ -55,6 +55,7 @@ private:
     } ;
     struct tunnel_frame _frame;
 
+    bool is_to_send(uint8_t tunnel_index);
     void send_to_CAN(uint8_t tunnel_index, tunnel_frame* frameptr);
 };
 

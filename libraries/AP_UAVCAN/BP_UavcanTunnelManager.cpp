@@ -20,7 +20,7 @@ BP_UavcanTunnelManager::BP_UavcanTunnelManager()
 
     _num_channels = 0;
     
-    for (uint8_t i=0; i<TUNNELMANAGER_NUM_CHANNELS; i++) {
+    for (uint8_t i = 0; i < TUNNELMANAGER_NUM_CHANNELS; i++) {
         _channel[i].backend = nullptr; //this is used to indicate a free/unused slot!! we don't use type, as it makes it easier
         _channel[i].type = TunnelType_None;
     }
@@ -30,14 +30,14 @@ BP_UavcanTunnelManager::BP_UavcanTunnelManager()
 AP_HAL::UARTDriver* BP_UavcanTunnelManager::register_uart(uint8_t channel_id)
 {
     //check if channel_id is already in use
-    for (uint8_t i=0; i<TUNNELMANAGER_NUM_CHANNELS; i++) {
+    for (uint8_t i = 0; i < TUNNELMANAGER_NUM_CHANNELS; i++) {
         if ((_channel[i].backend != nullptr) && (_channel[i].channel_id == channel_id)) { //slot is in use and has same channel_id
             return nullptr;
         }
     }
 
     //find empty place and register
-    for (uint8_t i=0; i<TUNNELMANAGER_NUM_CHANNELS; i++) {
+    for (uint8_t i = 0; i < TUNNELMANAGER_NUM_CHANNELS; i++) {
         if (_channel[i].backend == nullptr) { //no channel registered in this slot, a free place has been found
 
             TunnelUARTDriver* uart = new TunnelUARTDriver(); //created on heap, long lived
@@ -63,7 +63,7 @@ AP_HAL::UARTDriver* BP_UavcanTunnelManager::register_uart(uint8_t channel_id)
 // it writes the received buffer to the specified channel
 void BP_UavcanTunnelManager::write_to_channel(uint8_t channel_id, const uint8_t* buffer, size_t size)
 {
-    for (uint8_t i=0; i<TUNNELMANAGER_NUM_CHANNELS; i++) {
+    for (uint8_t i = 0; i < TUNNELMANAGER_NUM_CHANNELS; i++) {
 
         if (_channel[i].backend == nullptr) continue; //no channel registered in this slot
 
@@ -79,8 +79,8 @@ void BP_UavcanTunnelManager::write_to_channel(uint8_t channel_id, const uint8_t*
 // it thereby respects the timeout and max buffer size
 // give every channel a slot and chance!
 
-//this can lose frames if the CANbus is too empty top send out the max TUNNELMANAGER_NUM_CHANNELS frames within 2.5ms
-// we would want tunnelbroadcast_send() to return info if successful, but this all is not that easy, so be happy
+//this can lose frames if the CANbus is too busy to send out the max TUNNELMANAGER_NUM_CHANNELS frames within 2.5 ms
+// the current approach is quite robust, but probably isn't 100% foolproof
 
 //one frame per update is ca 400 Hz x 60 bytes = 24000 bytes/s
 // a CAN frame is 131 bits max => 7633 frames/s max = ca 61 kbytes/s max
@@ -90,11 +90,19 @@ void BP_UavcanTunnelManager::write_to_channel(uint8_t channel_id, const uint8_t*
 
 void BP_UavcanTunnelManager::update_fast(void)
 {
-    for (uint8_t i=0; i<TUNNELMANAGER_NUM_CHANNELS; i++) {
+    //crude approach: if only one frame has not yet been send, postpone all. THIS WORKS
+    // I tested, the finer method works too with 'p'
+
+    for (uint8_t i = 0; i < TUNNELMANAGER_NUM_CHANNELS; i++) {
 
         if (_channel[i].backend == nullptr) continue; //no channel registered in this slot
 
         uint32_t now_ms = AP_HAL::millis();
+
+        if (is_to_send(i)) {
+            _channel[i].last_received_ms = now_ms;
+            continue;
+        }
 
         uint32_t available = _channel[i].backend->tx_num_available();
 
@@ -102,7 +110,7 @@ void BP_UavcanTunnelManager::update_fast(void)
             //nothing received
             _channel[i].last_received_ms = now_ms; //clear it, so that the timeout starts with a first received char after a blank period
         } else {
-            if ((available >= 60) || ((now_ms - _channel[i].last_received_ms) >= TUNNELMANAGER_RXTIMEOUT_MS) ){
+            if ((available >= 60) || ((now_ms - _channel[i].last_received_ms) >= TUNNELMANAGER_RXTIMEOUT_MS)) {
 
                 if (available > 60) available = 60; //limit to 60 chars max
 
@@ -122,8 +130,8 @@ void BP_UavcanTunnelManager::update_fast(void)
 
 void BP_UavcanTunnelManager::send_to_CAN(uint8_t tunnel_index, tunnel_frame* frameptr)
 {
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-        AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(i);
+    for (uint8_t ci = 0; ci < MAX_NUMBER_OF_CAN_DRIVERS; ci++) {
+        AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(ci);
         if (ap_uavcan != nullptr) {
             ap_uavcan->tunnelbroadcast_send(tunnel_index, frameptr->protocol, frameptr->channel_id, frameptr->buffer, frameptr->buffer_len, 0);
         }
@@ -131,4 +139,14 @@ void BP_UavcanTunnelManager::send_to_CAN(uint8_t tunnel_index, tunnel_frame* fra
 }
 
 
+bool BP_UavcanTunnelManager::is_to_send(uint8_t tunnel_index)
+{
+    for (uint8_t ci = 0; ci < MAX_NUMBER_OF_CAN_DRIVERS; ci++) {
+        AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(ci);
+        if (ap_uavcan != nullptr) {
+            if (ap_uavcan->tunnelbroadcast_is_to_send(tunnel_index)) return true; //one of the channels is not yet done
+        }
+    }
+    return false;
+}
 
