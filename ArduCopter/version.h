@@ -28,6 +28,13 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 
 /*
 v0.09:
+I've decided to split branches into
+* 3.6.0-rc6 v009s, which is based on ArduCopter and includes "only" everything except of any UAVCAN stuff
+* 3.6-dev v009, which is based on master, and includes really everything
+ - merge master of 16.07.2018, using master-bcdev-merge method
+# Conflicts:
+#   libraries/GCS_MAVLink/GCS.h
+compiles fine for v4, so merge
 
 
 v0.08:
