@@ -77,8 +77,7 @@ public:
         Mount_Type_SToRM32 = 4,         /// SToRM32 mount using MAVLink protocol
         Mount_Type_SToRM32_serial = 5,   /// SToRM32 mount using custom serial protocol
 //OW
-        Mount_Type_STorM32_UAVCAN = 83,
-        Mount_Type_STorM32_Native = 84,
+        Mount_Type_STorM32_Native = 83,
 //OWEND
     };
 

@@ -35,7 +35,7 @@ bool STorM32_lib::is_normal_state(uint16_t state)
 //------------------------------------------------------
 
 // 33 bytes = 2865us @ 115200bps
-void STorM32_lib::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
+void STorM32_lib::send_cmd_storm32link_v2(const AP_AHRS_TYPE& ahrs)
 {
     if (!_serial_is_initialised) {
         return;
@@ -76,7 +76,7 @@ void STorM32_lib::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     ahrs.get_filter_status(nav_status);
 
     // copter.letmeget_motors_armed(); can be replaced by notify->flags.armed,  works identically:
-    AP_Notify *notify = AP_Notify::instance();
+    AP_Notify* notify = AP_Notify::instance();
 
     if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
     if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
@@ -234,7 +234,7 @@ void STorM32_lib::send_cmd_setinputs(void)
 }
 
 // 19 bytes = 1650us @ 115200bps
-void STorM32_lib::send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs)
+void STorM32_lib::send_cmd_sethomelocation(const AP_AHRS_TYPE& ahrs)
 {
     if (!_serial_is_initialised) {
         return;
