@@ -27,7 +27,11 @@
 #include <GCS_MAVLink/GCS_MAVLink.h>
 
 // we have hal.uartA to hal.uartG
-#define SERIALMANAGER_NUM_PORTS 7
+//OW
+//#define SERIALMANAGER_NUM_PORTS 7
+#define SERIALMANAGER_NUM_TUNNELPORTS   3
+#define SERIALMANAGER_NUM_PORTS         (7+3) //=10
+//OWEND
 
  // console default baud rates and buffer sizes
 #ifdef HAL_SERIAL0_BAUD_DEFAULT
@@ -155,6 +159,9 @@ private:
         AP_Int32 baud;
         AP_HAL::UARTDriver* uart;
     } state[SERIALMANAGER_NUM_PORTS];
+//OW
+    AP_Int8 channel_id[SERIALMANAGER_NUM_TUNNELPORTS];
+//OWEND
 
     // search through managed serial connections looking for the
     // instance-nth UART which is running protocol protocol
