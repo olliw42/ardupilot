@@ -11,7 +11,10 @@ class AP_BattMonitor_UAVCAN : public AP_BattMonitor_Backend
 public:
 
     enum BattMonitor_UAVCAN_Type {
-        UAVCAN_BATTERY_INFO = 0
+        UAVCAN_BATTERY_INFO = 0,
+//OW
+        UAVCAN_GENERICBATTERY_INFO = 83,
+//OWEND
     };
 
     /// Constructor
@@ -27,6 +30,9 @@ public:
     }
 
     void handle_bi_msg(float voltage, float current, float temperature) override;
+//OW
+    void handle_genericbatteryinfo_msg(float voltage, float current, float charge) override;
+//OWEND
 
 protected:
     BattMonitor_UAVCAN_Type _type;
