@@ -152,6 +152,10 @@
  #include <AP_Devo_Telem/AP_Devo_Telem.h>
 #endif
 
+#if OSD_ENABLED == ENABLED
+ #include <AP_OSD/AP_OSD.h>
+#endif
+
 #if ADVANCED_FAILSAFE == ENABLED
  # include "afs_copter.h"
 #endif
@@ -277,7 +281,7 @@ private:
 #endif
 
     // Arming/Disarming mangement class
-    AP_Arming_Copter arming{ahrs, compass, battery, inertial_nav};
+    AP_Arming_Copter arming;
 
     // Optical flow sensor
 #if OPTFLOW == ENABLED
@@ -316,7 +320,7 @@ private:
             uint8_t logging_started         : 1; // 6       // true if dataflash logging has started
             uint8_t land_complete           : 1; // 7       // true if we have detected a landing
             uint8_t new_radio_frame         : 1; // 8       // Set true if we have new PWM data to act on from the Radio
-            uint8_t usb_connected           : 1; // 9       // true if APM is powered from USB connection
+            uint8_t usb_connected_unused    : 1; // 9       // UNUSED
             uint8_t rc_receiver_present     : 1; // 10      // true if we have an rc receiver present (i.e. if we've ever received an update
             uint8_t compass_mot             : 1; // 11      // true if we are currently performing compassmot calibration
             uint8_t motor_test              : 1; // 12      // true if we are currently performing the motors test
@@ -362,15 +366,6 @@ private:
         uint8_t count;
         uint8_t ch_flag;
     } aux_debounce[(CH_12 - CH_7)+1];
-
-    typedef struct {
-        bool running;
-        float max_speed;
-        float alt_delta;
-        uint32_t start_ms;
-    } takeoff_state_t;
-    takeoff_state_t takeoff_state;
-
     // altitude below which we do no navigation in auto takeoff
     float auto_takeoff_no_nav_alt_cm;
 
@@ -456,6 +451,10 @@ private:
     AP_DEVO_Telem devo_telemetry{ahrs};
 #endif
 
+#if OSD_ENABLED == ENABLED
+    AP_OSD osd;
+#endif
+    
     // Variables for extended status MAVLink messages
     uint32_t control_sensors_present;
     uint32_t control_sensors_enabled;
@@ -467,7 +466,6 @@ private:
     float target_rangefinder_alt;   // desired altitude in cm above the ground
     bool target_rangefinder_alt_used; // true if mode is using target_rangefinder_alt
     int32_t baro_alt;            // barometer altitude in cm above home
-    float baro_climbrate;        // barometer climbrate in cm/s
     LowPassFilterVector3f land_accel_ef_filter; // accelerations for land and crash detector tests
 
     // filtered pilot's throttle input used to cancel landing if throttle held high
@@ -834,7 +832,7 @@ private:
     // motors.cpp
     void arm_motors_check();
     void auto_disarm_check();
-    bool init_arm_motors(bool arming_from_gcs, bool do_arming_checks=true);
+    bool init_arm_motors(AP_Arming::ArmingMethod method, bool do_arming_checks=true);
     void init_disarm_motors();
     void motors_output();
     void lost_vehicle_check();
@@ -917,19 +915,12 @@ private:
     bool ekf_position_ok();
     bool optflow_position_ok();
     void update_auto_armed();
-    void check_usb_mux(void);
     bool should_log(uint32_t mask);
     void set_default_frame_class();
     MAV_TYPE get_frame_mav_type();
     const char* get_frame_string();
     void allocate_motors(void);
 
-    // takeoff.cpp
-    bool current_mode_has_user_takeoff(bool must_navigate);
-    bool do_user_takeoff(float takeoff_alt_cm, bool must_navigate);
-    void takeoff_timer_start(float alt_cm);
-    void takeoff_stop();
-    void takeoff_get_climb_rates(float& pilot_climb_rate, float& takeoff_climb_rate);
     void auto_takeoff_set_start_alt(void);
     void auto_takeoff_attitude_run(float target_yaw_rate);
 

@@ -179,7 +179,7 @@ private:
 #endif
 
     // Arming/Disarming management class
-    AP_Arming_Rover arming{ahrs, compass, battery, g2.fence};
+    AP_Arming_Rover arming;
 
     AP_L1_Control L1_controller{ahrs, nullptr};
 
@@ -500,18 +500,19 @@ private:
     // sensors.cpp
     void init_compass(void);
     void compass_accumulate(void);
-    void init_rangefinder(void);
     void init_beacon();
     void init_visual_odom();
     void update_visual_odom();
     void update_wheel_encoder();
     void compass_cal_update(void);
+    void compass_save(void);
     void accel_cal_update(void);
     void read_rangefinders(void);
     void init_proximity();
     void update_sensor_status_flags(void);
 
     // Steering.cpp
+    bool use_pivot_steering_at_next_WP(float yaw_error_cd);
     bool use_pivot_steering(float yaw_error_cd);
     void set_servos(void);
 
@@ -556,6 +557,10 @@ private:
 public:
     void mavlink_delay_cb();
     void failsafe_check();
+
+    // BalanceBot.cpp
+    void balancebot_pitch_control(float &, bool);
+    bool is_balancebot() const;
 
     void update_soft_armed();
     // Motor test

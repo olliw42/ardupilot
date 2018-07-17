@@ -291,7 +291,7 @@ void AP_AHRS_NavEKF::update_EKF3(void)
 void AP_AHRS_NavEKF::update_SITL(void)
 {
     if (_sitl == nullptr) {
-        _sitl = (SITL::SITL *)AP_Param::find_object("SIM_");
+        _sitl = AP::sitl();
         if (_sitl == nullptr) {
             return;
         }
@@ -1050,8 +1050,7 @@ AP_AHRS_NavEKF::EKF_TYPE AP_AHRS_NavEKF::active_EKF_type(void) const
                   accept EKF as healthy to allow arming. Once we reach
                   speed the EKF should get yaw alignment
                 */
-                if (filt_state.flags.pred_horiz_pos_abs &&
-                    filt_state.flags.pred_horiz_pos_rel) {
+                if (filt_state.flags.gps_quality_good) {
                     return ret;
                 }
             }

@@ -133,24 +133,11 @@ void AP_IOMCU::init(void)
     if (!boardconfig || boardconfig->io_enabled() == 1) {
         check_crc();
     }
-        
-    thread_ctx = chThdCreateFromHeap(NULL,
-                                     THD_WORKING_AREA_SIZE(1024),
-                                     "IOMCU",
-                                     183,
-                                     thread_start,
-                                     this);
-    if (thread_ctx == nullptr) {
+
+    if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_IOMCU::thread_main, void), "IOMCU",
+                                      1024, AP_HAL::Scheduler::PRIORITY_BOOST, 1)) {
         AP_HAL::panic("Unable to allocate IOMCU thread");
     }
-}
-
-/*
-  static function to enter thread_main()
- */
-void AP_IOMCU::thread_start(void *ctx)
-{
-    ((AP_IOMCU *)ctx)->thread_main();
 }
 
 /*
@@ -656,20 +643,18 @@ bool AP_IOMCU::check_crc(void)
 {
     // flash size minus 4k bootloader
 	const uint32_t flash_size = 0x10000 - 0x1000;
-    uint32_t fw_size;
     
-    fw = AP_ROMFS::find_file(fw_name, fw_size);
+    fw = AP_ROMFS::find_decompress(fw_name, fw_size);
     if (!fw) {
         hal.console->printf("failed to find %s\n", fw_name);
         return false;
     }
     uint32_t crc = crc_crc32(0, fw, fw_size);
 
-    // pad to max size
-	while (fw_size < flash_size) {
+    // pad CRC to max size
+	for (uint32_t i=0; i<flash_size-fw_size; i++) {
 		uint8_t b = 0xff;
 		crc = crc_crc32(crc, &b, 1);
-		fw_size++;
 	}
 
     uint32_t io_crc = 0;
@@ -677,16 +662,22 @@ bool AP_IOMCU::check_crc(void)
         io_crc == crc) {
         hal.console->printf("IOMCU: CRC ok\n");
         crc_is_ok = true;
+        free(fw);
+        fw = nullptr;
         return true;
     }
 
     const uint16_t magic = REBOOT_BL_MAGIC;
     write_registers(PAGE_SETUP, PAGE_REG_SETUP_REBOOT_BL, 1, &magic);
 
-    if (!upload_fw(fw_name)) {
+    if (!upload_fw()) {
+        free(fw);
+        fw = nullptr;
         AP_BoardConfig::sensor_config_error("Failed to update IO firmware");
     }
     
+    free(fw);
+    fw = nullptr;
     return false;
 }
 

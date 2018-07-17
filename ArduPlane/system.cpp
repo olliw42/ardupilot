@@ -103,7 +103,7 @@ void Plane::init_ardupilot()
     barometer.init();
 
     // initialise rangefinder
-    init_rangefinder();
+    rangefinder.init();
 
     // initialise battery monitoring
     battery.init();
@@ -120,6 +120,10 @@ void Plane::init_ardupilot()
 #endif
 #if DEVO_TELEM_ENABLED == ENABLED
     devo_telemetry.init(serial_manager);
+#endif
+
+#if OSD_ENABLED == ENABLED
+    osd.init();
 #endif
 
 #if LOGGING_ENABLED == ENABLED
@@ -180,7 +184,7 @@ void Plane::init_ardupilot()
 
     quadplane.setup();
 
-    AP_Param::reload_defaults_file();
+    AP_Param::reload_defaults_file(true);
     
     startup_ground();
 

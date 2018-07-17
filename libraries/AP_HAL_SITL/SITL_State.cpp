@@ -73,12 +73,12 @@ void SITL_State::_sitl_setup(const char *home_str)
     fprintf(stdout, "Starting SITL input\n");
 
     // find the barometer object if it exists
-    _sitl = (SITL::SITL *)AP_Param::find_object("SIM_");
-    _barometer = (AP_Baro *)AP_Param::find_object("GND_");
-    _ins = (AP_InertialSensor *)AP_Param::find_object("INS_");
-    _compass = (Compass *)AP_Param::find_object("COMPASS_");
+    _sitl = AP::sitl();
+    _barometer = AP_Baro::get_instance();
+    _ins = AP_InertialSensor::get_instance();
+    _compass = Compass::get_singleton();
 #if AP_TERRAIN_AVAILABLE
-    _terrain = (AP_Terrain *)AP_Param::find_object("TERRAIN_");
+    _terrain = reinterpret_cast<AP_Terrain *>(AP_Param::find_object("TERRAIN_"));
 #endif
 
     if (_sitl != nullptr) {
@@ -185,7 +185,11 @@ void SITL_State::_fdm_input_step(void)
 void SITL_State::wait_clock(uint64_t wait_time_usec)
 {
     while (AP_HAL::micros64() < wait_time_usec) {
-        _fdm_input_step();
+        if (hal.scheduler->in_main_thread()) {
+            _fdm_input_step();
+        } else {
+            usleep(1000);
+        }
     }
 }
 

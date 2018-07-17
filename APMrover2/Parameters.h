@@ -341,6 +341,12 @@ public:
 
     // pivot turn rate
     AP_Int16 pivot_turn_rate;
+
+    // pitch angle at 100% throttle
+    AP_Float bal_pitch_max;
+
+    // pitch/roll angle for crash check
+    AP_Int8 crash_angle;
 };
 
 extern const AP_Param::Info var_info[];

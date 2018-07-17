@@ -176,7 +176,7 @@ const AP_Param::Info Rover::var_info[] = {
     GSCALAR(fs_crash_check, "FS_CRASH_CHECK",    FS_CRASH_DISABLE),
 
     // @Param: RNGFND_TRIGGR_CM
-    // @DisplayName: Rangefinder trigger distance
+    // @DisplayName: Object avoidance trigger distance
     // @Description: The distance from an obstacle in centimeters at which the rangefinder triggers a turn to avoid the obstacle
     // @Units: cm
     // @Range: 0 1000
@@ -185,8 +185,8 @@ const AP_Param::Info Rover::var_info[] = {
     GSCALAR(rangefinder_trigger_cm,   "RNGFND_TRIGGR_CM",    100),
 
     // @Param: RNGFND_TURN_ANGL
-    // @DisplayName: Rangefinder trigger angle
-    // @Description: The course deviation in degrees to apply while avoiding an obstacle detected with the rangefinder. A positive number means to turn right, and a negative angle means to turn left.
+    // @DisplayName: Object avoidance turn aggressiveness and direction
+    // @Description: The aggressiveness and direction of turn to avoid an obstacle.  Large positive or negative values (i.e. -450 or 450) cause turns up to the vehicle's maximum lateral acceleration (TURN_MAX_G) while values near zero cause gentle turns. Positive means to turn right, negative means turn left.
     // @Units: deg
     // @Range: -450 450
     // @Increment: 1
@@ -194,7 +194,7 @@ const AP_Param::Info Rover::var_info[] = {
     GSCALAR(rangefinder_turn_angle,   "RNGFND_TURN_ANGL",    45),
 
     // @Param: RNGFND_TURN_TIME
-    // @DisplayName: Rangefinder turn time
+    // @DisplayName: Object avoidance turn time
     // @Description: The amount of time in seconds to apply the RNGFND_TURN_ANGL after detecting an obstacle.
     // @Units: s
     // @Range: 0 100
@@ -203,7 +203,7 @@ const AP_Param::Info Rover::var_info[] = {
     GSCALAR(rangefinder_turn_time,    "RNGFND_TURN_TIME",     1.0f),
 
     // @Param: RNGFND_DEBOUNCE
-    // @DisplayName: Rangefinder debounce count
+    // @DisplayName: Object avoidance rangefinder debounce count
     // @Description: The number of 50Hz rangefinder hits needed to trigger an obstacle avoidance event. If you get a lot of false rangefinder events then raise this number, but if you make it too large then it will cause lag in detecting obstacles, which could cause you go hit the obstacle.
     // @Range: 1 100
     // @Increment: 1
@@ -522,7 +522,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Param: FRAME_CLASS
     // @DisplayName: Frame Class
     // @Description: Frame Class
-    // @Values: 0:Undefined,1:Rover,2:Boat
+    // @Values: 0:Undefined,1:Rover,2:Boat,3:BalanceBot
     // @User: Standard
     AP_GROUPINFO("FRAME_CLASS", 16, ParametersG2, frame_class, 1),
 
@@ -546,6 +546,25 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("PIVOT_TURN_RATE", 20, ParametersG2, pivot_turn_rate, 90),
+
+    // @Param: BAL_PITCH_MAX
+    // @DisplayName: BalanceBot Maximum Pitch
+    // @Description: Pitch angle in degrees at 100% throttle
+    // @Units: deg
+    // @Range: 0 5
+    // @Increment: 0.1
+    // @User: Standard
+    AP_GROUPINFO("BAL_PITCH_MAX", 21, ParametersG2, bal_pitch_max, 5),
+
+    // @Param: CRASH_ANGLE
+    // @DisplayName: Crash Angle
+    // @Description: Pitch/Roll angle limit in degrees for crash check. Zero disables check
+    // @Units: deg
+    // @Range: 0 60
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("CRASH_ANGLE", 22, ParametersG2, crash_angle, 0),
+
 
     AP_GROUPEND
 };
@@ -622,6 +641,10 @@ void Rover::load_parameters(void)
 
     SRV_Channels::set_default_function(CH_1, SRV_Channel::k_steering);
     SRV_Channels::set_default_function(CH_3, SRV_Channel::k_throttle);
+
+    if (is_balancebot()) {
+        g2.crash_angle.set_default(30);
+    }
 
     const uint8_t old_rc_keys[14] = { Parameters::k_param_rc_1_old,  Parameters::k_param_rc_2_old,
                                       Parameters::k_param_rc_3_old,  Parameters::k_param_rc_4_old,

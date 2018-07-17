@@ -141,6 +141,7 @@ public:
     // send text to display
     void send_text(const char *str);
     const char* get_text() const { return _send_text; }
+    uint32_t get_text_updated_millis() const {return _send_text_updated_millis; }
 
     static const struct AP_Param::GroupInfo var_info[];
     uint8_t get_buzz_pin() const  { return _buzzer_pin; }
@@ -148,6 +149,8 @@ public:
 private:
 
     static AP_Notify *_instance;
+
+    void add_backend_helper(NotifyDevice *backend);
 
     // parameters
     AP_Int8 _rgb_led_brightness;

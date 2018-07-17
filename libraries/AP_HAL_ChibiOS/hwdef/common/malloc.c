@@ -31,7 +31,13 @@
 #include <stdarg.h>
 #include "stm32_util.h"
 
+#if CH_CFG_USE_HEAP == TRUE
+
 #define MIN_ALIGNMENT 8
+
+#ifdef HAL_NO_CCM
+#undef CCM_RAM_SIZE_KB
+#endif
 
 #if defined(CCM_RAM_SIZE_KB)
 static memory_heap_t ccm_heap;
@@ -161,3 +167,5 @@ size_t mem_available(void)
     
     return totalp;
 }
+
+#endif // CH_CFG_USE_HEAP
