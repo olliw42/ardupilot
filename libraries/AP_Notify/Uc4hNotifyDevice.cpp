@@ -1,45 +1,24 @@
-/*
-   Generic RGBLed driver
-*/
-
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-*/
-
-
 #include <AP_HAL/AP_HAL.h>
 #include <AP_GPS/AP_GPS.h>
-//#include <AP_UAVCAN/AP_UAVCAN.h>
 #include "Uc4hNotifyDevice.h"
 #include "AP_Notify.h"
-
-#ifdef USE_UC4H_UAVCAN
 
 extern const AP_HAL::HAL& hal;
 
 
-Uc4hNotifyDevice::Uc4hNotifyDevice():
-    _healthy(false),
-    _task_time_last(0),
-    _flags_updated(false),
-    _text_updated(false),
-    _sync_time_last(0),
-    _sync_updated(false)
+Uc4hNotifyDevice::Uc4hNotifyDevice()
 {
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
         _ap_uavcan[i] = nullptr;
     }
 
-//    memset(&_notify_message_data, 0, sizeof(_notify_message_data));
+    _healthy = false;
+    _task_time_last = 0;
+    _flags_updated = false;
+    _text_updated = false;
+    _sync_time_last = 0;
+    _sync_updated = false;
+
     strcpy(_text_data, "");
 }    
 
@@ -79,7 +58,7 @@ void Uc4hNotifyDevice::find_CAN(void)
 
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
         if (hal.can_mgr[i] != nullptr) {
-            AP_UAVCAN *ap_uavcan = hal.can_mgr[i]->get_UAVCAN();
+            AP_UAVCAN* ap_uavcan = hal.can_mgr[i]->get_UAVCAN();
             if (ap_uavcan != nullptr) {
                 _ap_uavcan[i] = ap_uavcan;
                 _healthy = true;
@@ -187,8 +166,6 @@ void Uc4hNotifyDevice::update_text(void)
     strcpy(_text_data, p);
     _text_updated = true;
 }
-
-#endif
 
 
 

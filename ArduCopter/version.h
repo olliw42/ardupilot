@@ -35,6 +35,11 @@ I've decided to split branches into
 # Conflicts:
 #   libraries/GCS_MAVLink/GCS.h
 compiles fine for v4, so merge
+ - merge in all bec36 v009s stuff, doesn't compile since some UAVCAN functions are now missing
+ - remove all STorM32 UAVCAn message stuff, leaves only GenericBatteryInfo & Notify & ESC status, remove USE_UC4H_UAVCAN
+   corrections to get it to compile, override in Uc4hNotifyDevice.h, inits in Uc4hNotifyDevice.cpp
+
+TODO: make systematic use of new get_uavcan()
 
 
 v0.08:

@@ -5,10 +5,6 @@
 #ifndef AP_UAVCAN_H_
 #define AP_UAVCAN_H_
 
-//OW
-#define USE_UC4H_UAVCAN
-//OWEND
-
 #include <uavcan/uavcan.hpp>
 
 #include <AP_HAL/CAN.h>
@@ -20,16 +16,12 @@
 #include <AP_Baro/AP_Baro_Backend.h>
 #include <AP_Compass/AP_Compass.h>
 #include <AP_BattMonitor/AP_BattMonitor_Backend.h>
-//OW
-#ifdef USE_UC4H_UAVCAN
-#include <AP_Mount/BP_Mount_STorM32.h>
-#include "NodeSpecific.hpp"
-#include "Notify.hpp"
-#endif
-//OWEND
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
+//OW
+#include "Notify.hpp"
+//OWEND
 
 #ifndef UAVCAN_NODE_POOL_SIZE
 #define UAVCAN_NODE_POOL_SIZE 8192
@@ -51,7 +43,6 @@
 //OW
 #define AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER 4
 #define AP_UAVCAN_ESCSTATUS_MAX_NUMBER 8
-#define AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER 1 //we accept only one gimbal
 //OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
@@ -297,7 +288,6 @@ public:
     }
 
 //OW
-#ifdef USE_UC4H_UAVCAN
     // --- GenericBatteryInfo ---
     // incoming message, by device id
 public:
@@ -352,49 +342,6 @@ private:
         EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
     } _escstatus;
 
-    // --- STorM32Status ---
-    // incoming message, by node id
-public:
-    struct STorM32Status_Data {
-        uint8_t mode; //must be 0 currently
-        uint8_t frame; //must be 0 currently
-        bool anglequaternion_tag; //0: angles, 1: quaternion
-        float orientation_angles_rad[3]; //roll, pitch, yaw
-        float orientation_q[4]; //x,y,z,w
-        float angular_velocity[3]; //x,y,z
-        //private
-        bool angular_velocity_available; //tells if velocity has been sent
-    };
-    uint8_t storm32status_register_listener(BP_Mount_STorM32* new_listener, uint8_t id);
-    void storm32status_remove_listener(BP_Mount_STorM32* rem_listener);
-    STorM32Status_Data* storm32status_getptrto_data(uint8_t id);
-    void storm32status_update_data(uint8_t id);
-
-private:
-    struct {
-        uint16_t id[AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER];
-        uint16_t id_taken[AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER];
-        uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
-        BP_Mount_STorM32* listeners[AP_UAVCAN_MAX_LISTENERS];
-        STorM32Status_Data data[AP_UAVCAN_STORM32GIMBAL_MAX_NUMBER];
-    } _storm32status;
-
-
-    // --- STorM32NodeSpecific ---
-    // outgoing message
-public:
-    bool storm32nodespecific_sem_take();
-    void storm32nodespecific_sem_give();
-    void storm32nodespecific_send(uint8_t* payload, uint8_t payload_len, uint8_t priority);
-
-private:
-    struct {
-        uavcan::olliw::storm32::NodeSpecific msg;
-        uavcan::TransferPriority priority;
-        bool to_send;
-        AP_HAL::Semaphore* sem;
-    } _storm32nodespecific;
-
     // --- Uc4hNotify ---
     // outgoing message
 public:
@@ -411,9 +358,7 @@ private:
     } _uc4hnotify;
 
     // --- outgoing message handler ---
-    void storm32_do_cyclic(uint64_t current_time_ms);
     void uc4h_do_cyclic(uint64_t current_time_ms);
-#endif
 //OWEND
 };
 
