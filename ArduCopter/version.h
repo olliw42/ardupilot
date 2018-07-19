@@ -40,7 +40,8 @@ compiles fine for v4, so merge
    corrections to get it to compile, override in Uc4hNotifyDevice.h, inits in Uc4hNotifyDevice.cpp
  - bring in uc-uartbridge07sq, compiles out of the box
    works on the bench, has problems with 'p' though
-
+ - much improved tunnel frame loss prevention, issue showed up in passthru for 'p' command, works fine now in practice
+ - serial UAVCAN tunnel baudrate setting added
 
 TODO: make systematic use of new get_uavcan()
 
