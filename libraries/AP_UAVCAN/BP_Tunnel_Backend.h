@@ -16,7 +16,7 @@ public:
 
     //uart specific API, should be overridden by uart childs
     virtual uint32_t uart_baudrate(void) { return 0; }
-    virtual bool uart_baurate_has_changed(void) { return false; }
+    virtual bool uart_baudrate_has_changed(void) { return false; }
 
 protected:
 };

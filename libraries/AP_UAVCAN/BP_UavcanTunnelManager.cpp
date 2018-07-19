@@ -104,6 +104,17 @@ void BP_UavcanTunnelManager::update_fast(void)
             continue;
         }
 
+        if (_channel[i].backend->uart_baudrate_has_changed()) {
+            _frame.protocol = 255;
+            _frame.channel_id = _channel[i].channel_id;
+//            uint32_t baud = _channel[i].backend->uart_baudrate();
+//            memcpy(_frame.buffer, &baud, 4);
+            *((uint32_t*)_frame.buffer) = _channel[i].backend->uart_baudrate();
+            _frame.buffer_len = 4;
+            send_to_CAN(i, &_frame);
+            continue;
+        }
+
         uint32_t available = _channel[i].backend->tx_num_available();
 
         if (!available) {

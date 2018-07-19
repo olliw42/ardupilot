@@ -40,8 +40,8 @@ public:
     void read_from_tx(uint8_t *buffer, size_t size) override;
     
     // override default implementations of virtual methods
-    uint32_t uart_baudrate(void) override { return (_initialised) ? _baud : 0; }
-    bool uart_baurate_has_changed(void) override { if (_baud_changed) {_baud_changed = false; return _initialised;} else {return false;} }
+    uint32_t uart_baudrate(void) override { return _baud; } //{ return (_initialised) ? _baud : 0; }
+    bool uart_baudrate_has_changed(void) override { if (_baud_changed) {_baud_changed = false; return _initialised;} else {return false;} }
 
 private:
     bool _initialised;

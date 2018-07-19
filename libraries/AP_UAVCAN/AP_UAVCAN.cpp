@@ -1846,7 +1846,9 @@ void AP_UAVCAN::tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uin
 {
     if (_tunnelbroadcast_out.sem->take(1)) { //why 1 and not 10 here?
 
-//        _tunnelbroadcast_out.msg.protocol = ???
+        //I for the heck can't figure out how to set the protocol C++ like
+        // this stupid workaround seems to work though
+        memset(&(_tunnelbroadcast_out.msg[tunnel_index].protocol), protocol, 1);
 
         _tunnelbroadcast_out.msg[tunnel_index].channel_id = channel_id;
         _tunnelbroadcast_out.msg[tunnel_index].buffer.resize(buffer_len);
