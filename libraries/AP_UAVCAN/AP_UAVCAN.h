@@ -320,9 +320,7 @@ private:
     // incoming message, by device id
 public:
     // currently, we do nothing than to write the data to dataflash
-    // => we do not need a listener, we can do it in _update_data()
-    // register_listener would be called from the listener class
-    // => for EscStatus it is never called, and it doesn't harm to leave AP_BattMonitor_Backend
+    // => we do not need a listener, we can do it in _update_i()
     // this of course needs to change once we have a proper class which wants to listen to EscStatus
     struct EscStatus_Data {
         uint32_t error_count;
