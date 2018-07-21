@@ -515,12 +515,12 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
 //------------------------------------------------------
 // interfaces to BP_STorM32
 //------------------------------------------------------
+//the _serial functions don't need if (!_serial_is_initialised) return 0; protectors,
+// since that's done already inside the STorM32_lib for the public API
 
 size_t BP_Mount_STorM32::_serial_txspace(void)
 {
     if (_pt.uart_locked) return 0;
-
-    if (!_serial_is_initialised) return 0;
 
     return (size_t)_uart->txspace();
 }
@@ -530,8 +530,6 @@ size_t BP_Mount_STorM32::_serial_write(const uint8_t* buffer, size_t size, uint8
 {
     if (_pt.uart_locked) return 0;
 
-    if (!_serial_is_initialised) return 0;
-
     return _uart->write(buffer, size);
 }
 
@@ -540,8 +538,6 @@ uint32_t BP_Mount_STorM32::_serial_available(void)
 {
     if (_pt.uart_locked) return 0;
 
-    if (!_serial_is_initialised) return 0;
-
     return _uart->available();
 }
 
@@ -549,8 +545,6 @@ uint32_t BP_Mount_STorM32::_serial_available(void)
 int16_t BP_Mount_STorM32::_serial_read(void)
 {
     if (_pt.uart_locked) return 0;
-
-    if (!_serial_is_initialised) return 0;
 
     return _uart->read();
 }
