@@ -331,10 +331,12 @@ public:
         float temperature;
         int32_t rpm;
         uint8_t power_rating_pct;
+        //auxiliary meta data
+        uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
     };
     //has no external listener
     EscStatus_Data* escstatus_getptrto_data(uint8_t id);
-    void escstatus_update_data(uint8_t id);
+    void escstatus_update_i(uint8_t i);
 
 private:
     struct {

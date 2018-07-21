@@ -416,7 +416,7 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
 
     uint8_t id = msg.esc_index; //by device id
 
-    AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data(id);
+    AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data(id); //i is in data->i
     if (data != nullptr) {
         data->error_count = msg.error_count;
         data->voltage = msg.voltage;
@@ -425,7 +425,7 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
         data->rpm = msg.rpm;
         data->power_rating_pct = msg.power_rating_pct;
 
-        ap_uavcan->escstatus_update_data(id);
+        ap_uavcan->escstatus_update_i(data->i);
     }
 }
 
@@ -1703,6 +1703,7 @@ AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
     // check if id is already in list, and if it is take it
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
         if (_escstatus.id[i] == id) {
+            _escstatus.data[i].i = i;
             return &_escstatus.data[i];
         }
     }
@@ -1713,41 +1714,36 @@ AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
             continue;
         }
         _escstatus.id[i] = id;
+        _escstatus.data[i].i = i;
         return &_escstatus.data[i];
     }
 
     return nullptr;
 }
 
-void AP_UAVCAN::escstatus_update_data(uint8_t id)
+void AP_UAVCAN::escstatus_update_i(uint8_t i)
 {
     // only 8 LOG_ESC1_MSG are defined, see /libraries/DataFlash/LogStructure.h
     // technically, it could happen that the esc_index is not continuous, and one would need a better handling
-    // however, I think, ArduPilot implicitly enforces continues esc_index, so should be no problem
+    // however, I think, ArduPilot implicitly enforces continuous esc_index, so should be no problem
+    uint8_t id = _escstatus.id[i];
     if (id >= 8) return;
-
-    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
-        if (_escstatus.id[i] != id) {
-            continue;
-        }
 
 //TODO: do not log packets with error???
 // no, it would be better to extend the ESC log message, and to drop wrong packages on the node side
-        DataFlash_Class *df = DataFlash_Class::instance();
-        if (df && df->logging_enabled()) {
-            uint64_t time_us = AP_HAL::micros64();
-            struct log_Esc pkt = {
-                    LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + id)),
-                    time_us     : time_us,
-                    rpm         : (int32_t)(_escstatus.data[i].rpm),
-                    voltage     : (uint16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
-                    current     : (uint16_t)(_escstatus.data[i].current*100.0f + 0.5f),
-                    temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f),
-                    current_tot : (uint16_t)(0)
-            };
-            df->WriteBlock(&pkt, sizeof(pkt));
-        }
-
+    DataFlash_Class* df = DataFlash_Class::instance();
+    if (df && df->logging_enabled()) {
+        uint64_t time_us = AP_HAL::micros64();
+        struct log_Esc pkt = {
+                LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + id)),
+                time_us     : time_us,
+                rpm         : (int32_t)(_escstatus.data[i].rpm),
+                voltage     : (uint16_t)(_escstatus.data[i].voltage*100.0f + 0.5f),
+                current     : (uint16_t)(_escstatus.data[i].current*100.0f + 0.5f),
+                temperature : (int16_t)(_escstatus.data[i].temperature*100.0f + 0.5f),
+                current_tot : (uint16_t)(0)
+        };
+        df->WriteBlock(&pkt, sizeof(pkt));
     }
 }
 
