@@ -8,11 +8,6 @@ extern const AP_HAL::HAL& hal;
 
 Uc4hNotifyDevice::Uc4hNotifyDevice()
 {
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-        _ap_uavcan[i] = nullptr;
-    }
-
-    _healthy = false;
     _task_time_last = 0;
     _flags_updated = false;
     _text_updated = false;
@@ -25,55 +20,20 @@ Uc4hNotifyDevice::Uc4hNotifyDevice()
 
 bool Uc4hNotifyDevice::init()
 {
-    _healthy = false;
-    return _healthy;
+    return true; //the logic has changed, needs to return true to be added as backend
 }
 
 
 // update - updates led according to timed_updated.  Should be called at 50Hz
 void Uc4hNotifyDevice::update()
 {
-    // return immediately if not yet found
-    if (!_healthy) {
-        find_CAN();
-        return;
-    }
-
     update_slow();
     send_CAN_notify_message();
 }
 
 
-void Uc4hNotifyDevice::find_CAN(void)
-{
-    //see BP_Mount_STorM32 class as example
-
-    if (_healthy) { //we have found the CAN, so no need to do again, should never happen, but play it safe
-        return;
-    }
-
-    if (hal.can_mgr == nullptr) {
-        return;
-    }
-
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-        if (hal.can_mgr[i] != nullptr) {
-            AP_UAVCAN* ap_uavcan = hal.can_mgr[i]->get_UAVCAN();
-            if (ap_uavcan != nullptr) {
-                _ap_uavcan[i] = ap_uavcan;
-                _healthy = true;
-
-                //here we can register any listeners
-            }
-        }
-    }
-}
-
-
 void Uc4hNotifyDevice::send_CAN_notify_message(void)
 {
-    //see BP_Mount_STorM32 class as example
-
     //don't send out more than one message per 50 Hz tick
     // give sync priority
 
@@ -81,9 +41,10 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
         _sync_updated = false;
 
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-            if (_ap_uavcan[i] != nullptr) {
+            AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(i);
+            if (ap_uavcan != nullptr) {
 
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_SYNC, 0, (uint8_t*)(&_sync_data), sizeof(_sync_data) );
+                ap_uavcan->uc4hnotify_send( UC4HNOTIFYTYPE_SYNC, 0, (uint8_t*)(&_sync_data), sizeof(_sync_data) );
 
             }
         }
@@ -93,10 +54,11 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
         _flags_updated = false;
 
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-            if (_ap_uavcan[i] != nullptr) {
+            AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(i);
+            if (ap_uavcan != nullptr) {
 
                 //subtype is the version of the FLAGS field
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_FLAGS, 0, (uint8_t*)(&_flags_data), sizeof(_flags_data) );
+                ap_uavcan->uc4hnotify_send( UC4HNOTIFYTYPE_FLAGS, 0, (uint8_t*)(&_flags_data), sizeof(_flags_data) );
 
             }
         }
@@ -107,9 +69,10 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
         if (AP_Notify::flags.armed) return; //should never happen, but play it safe
 
         for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-            if (_ap_uavcan[i] != nullptr) {
+            AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(i);
+            if (ap_uavcan != nullptr) {
 
-                _ap_uavcan[i]->uc4hnotify_send( UC4HNOTIFYTYPE_TEXT, 0, (uint8_t*)(&_text_data), strlen(_text_data) );
+                ap_uavcan->uc4hnotify_send( UC4HNOTIFYTYPE_TEXT, 0, (uint8_t*)(&_text_data), strlen(_text_data) );
 
             }
         }
@@ -121,14 +84,14 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
 void Uc4hNotifyDevice::update_slow(void)
 {
     // slow rate from 50 Hz to 4 Hz, make it a bit odd to distribute load
-    uint64_t current_time_ms = AP_HAL::millis64();
-    if ((current_time_ms - _task_time_last) < 234) {
+    uint64_t now_ms = AP_HAL::millis64();
+    if ((now_ms - _task_time_last) < 234) {
         return;
     }
-    _task_time_last = current_time_ms; //precision is not required
+    _task_time_last = now_ms; //precision is not required
 
-    if ((current_time_ms - _sync_time_last) > 4000) {
-        _sync_time_last = current_time_ms; //precision is not required
+    if ((now_ms - _sync_time_last) > 4000) {
+        _sync_time_last = now_ms; //precision is not required
         update_sync();
     }
 

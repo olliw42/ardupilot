@@ -17,9 +17,6 @@ public:
     // called at 50Hz
     virtual void update() override;
 
-    // healthy - returns true if the LED is operating properly
-    virtual bool healthy() { return _healthy; }
-
     //this is the type in the UAVCAN message
     enum UC4HNOTIFYTYPEENUM {
         UC4HNOTIFYTYPE_FLAGS = 0, //subtype is the version of the flags structure
@@ -29,15 +26,12 @@ public:
     };
 
 private:
-    AP_UAVCAN* _ap_uavcan[MAX_NUMBER_OF_CAN_DRIVERS];
-    bool _healthy;
     uint64_t _task_time_last; //to slow down
     bool _flags_updated;
     bool _text_updated;
     uint64_t _sync_time_last;
     bool _sync_updated;
 
-    void find_CAN(void);
     void send_CAN_notify_message(void);
 
     void update_slow(void);
