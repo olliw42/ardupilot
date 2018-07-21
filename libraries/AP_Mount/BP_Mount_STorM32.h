@@ -175,6 +175,7 @@ private:
         bool uart_locked;
         uint16_t uart_justhaslocked;
         uint8_t uart_serialno; //only for notification
+        bool passthru_installed; //only for notification
         bool send_passthru_installed; //only for notification
     } _pt;
     void passthrough_install(const AP_SerialManager& serial_manager);

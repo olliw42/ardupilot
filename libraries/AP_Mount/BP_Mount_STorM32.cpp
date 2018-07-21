@@ -54,6 +54,7 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount& frontend, AP_Mount::mount_state& st
     _pt.uart_locked = false;
     _pt.uart_justhaslocked = 0;
     _pt.uart_serialno = 0;
+    _pt.passthru_installed = false;
     _pt.send_passthru_installed = false;
 
     _notify = nullptr;
@@ -318,13 +319,6 @@ void BP_Mount_STorM32::get_pwm_target_angles_from_radio(uint16_t* pitch_pwm, uin
 void BP_Mount_STorM32::get_valid_pwm_from_channel(uint8_t rc_in, uint16_t* pwm)
 {
     #define rc_ch(i) RC_Channels::rc_channel(i-1)
-/*
-    if (rc_in && (rc_ch(rc_in))) {
-        *pwm = rc_ch(rc_in)->get_radio_in();
-    } else {
-        *pwm = 1500;
-    }
-*/
     *pwm = (rc_in && (rc_ch(rc_in))) ? rc_ch(rc_in)->get_radio_in() : 1500;
 }
 
@@ -492,6 +486,7 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
             gcs().send_text(MAV_SEVERITY_INFO, s);
         }
         _send_armeddisarmed = true; //also send gimbal state
+        if (_pt.passthru_installed) _pt.send_passthru_installed = true; //also send passthru state
     }
 
     if (!_notify->actions.gcs_connection_detected) { //postpone all further sends until a gcs has been detected
@@ -616,12 +611,12 @@ void BP_Mount_STorM32::passthrough_install(const AP_SerialManager& serial_manage
         return;
     }
 
-    bool installed = gcs().install_storm32_protocol(
+    _pt.passthru_installed = gcs().install_storm32_protocol(
             mav_chan,
             FUNCTOR_BIND_MEMBER(&BP_Mount_STorM32::passthrough_handler, uint8_t, uint8_t, uint8_t, AP_HAL::UARTDriver*)
         );
 
-    if (installed) _pt.send_passthru_installed = true;
+    if (_pt.passthru_installed) _pt.send_passthru_installed = true;
 }
 
 
