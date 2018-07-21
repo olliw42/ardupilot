@@ -290,7 +290,7 @@ public:
     }
 
 //OW
-    // --- GenericBatteryInfo ---
+// --- GenericBatteryInfo ---
     // incoming message, by device id
 public:
     struct GenericBatteryInfo_Data {
@@ -298,12 +298,14 @@ public:
         float current; //float16
         float charge_consumed_mAh; //float16
         uint8_t status_flags;
+        //auxiliary meta data
+        uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
     };
 
     uint8_t genericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
     void genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
     GenericBatteryInfo_Data* genericbatteryinfo_getptrto_data(uint8_t id);
-    void genericbatteryinfo_update_data(uint8_t id);
+    void genericbatteryinfo_update_i(uint8_t i);
 
 private:
     struct {
@@ -314,7 +316,7 @@ private:
         GenericBatteryInfo_Data data[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
     } _genericbatteryinfo;
 
-    // --- EscStatus ---
+// --- EscStatus ---
     // incoming message, by device id
 public:
     // currently, we do nothing than to write the data to dataflash
@@ -330,21 +332,17 @@ public:
         int32_t rpm;
         uint8_t power_rating_pct;
     };
-    //uint8_t escstatus_register_listener(AP_EscMonitor_Backend* new_listener, uint8_t id);
-    //void AP_UAVCAN::escstatus_remove_listener(AP_EscMonitor_Backend* rem_listener);
+    //has no external listener
     EscStatus_Data* escstatus_getptrto_data(uint8_t id);
     void escstatus_update_data(uint8_t id);
 
 private:
     struct {
         uint16_t id[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
-        //uint16_t id_taken[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
-        //uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
-        //AP_EscMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
         EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
     } _escstatus;
 
-    // --- Uc4hNotify ---
+// --- Uc4hNotify ---
     // outgoing message
 public:
     bool uc4hnotify_sem_take();
@@ -362,12 +360,12 @@ private:
     // --- outgoing message handler ---
     void uc4h_do_cyclic(uint64_t current_time_ms);
 
-    // --- tunnel.Broadcast ---
+// --- tunnel.Broadcast ---
     // incoming message, by channel_id
     // the handling of the channel_id is done by the BP_UavcanTunnelManager class!
     // we write directly to this class, so nothing to keep here
 
-    // --- tunnel.Broadcast ---
+// --- tunnel.Broadcast ---
     // outgoing message
     // the handling is simple since most is done in the BP_UavcanTunnelManager class! we just fetch a ptr to data
 public:

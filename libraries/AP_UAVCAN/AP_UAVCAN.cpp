@@ -382,21 +382,21 @@ static uavcan::Publisher<uavcan::equipment::indication::LightsCommand>* rgb_led[
 
 static void genericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::power::GenericBatteryInfo>& msg, uint8_t mgr)
 {
-    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
         return;
     }
 
     uint8_t id = msg.battery_id; //by device id
 
-    AP_UAVCAN::GenericBatteryInfo_Data *data = ap_uavcan->genericbatteryinfo_getptrto_data(id);
+    AP_UAVCAN::GenericBatteryInfo_Data* data = ap_uavcan->genericbatteryinfo_getptrto_data(id); //i is in data->i
     if (data != nullptr) {
         data->voltage = msg.voltage;
         data->current = msg.current;
         data->charge_consumed_mAh = msg.charge_consumed_mAh;
         data->status_flags = msg.status_flags;
 
-        ap_uavcan->genericbatteryinfo_update_data(id);
+        ap_uavcan->genericbatteryinfo_update_i(data->i);
     }
 }
 
@@ -533,11 +533,6 @@ AP_UAVCAN::AP_UAVCAN() :
     // --- EscStatus ---
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
         _escstatus.id[i] = UINT8_MAX;
-//        _escstatus.id_taken[i] = 0;
-    }
-    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-//        _escstatus.listener_to_id[li] = UINT8_MAX;
-//        _escstatus.listeners[li] = nullptr;
     }
 
     // --- Uc4hNotifyc ---
@@ -1661,9 +1656,10 @@ void AP_UAVCAN::genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_l
 
 AP_UAVCAN::GenericBatteryInfo_Data* AP_UAVCAN::genericbatteryinfo_getptrto_data(uint8_t id)
 {
-    // check if id is already in list, and if it is take it
+    // check if id is already in list, and if it is, take it
     for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
         if (_genericbatteryinfo.id[i] == id) {
+            _genericbatteryinfo.data[i].i = i;
             return &_genericbatteryinfo.data[i];
         }
     }
@@ -1674,31 +1670,27 @@ AP_UAVCAN::GenericBatteryInfo_Data* AP_UAVCAN::genericbatteryinfo_getptrto_data(
             continue;
         }
         _genericbatteryinfo.id[i] = id;
+        _genericbatteryinfo.data[i].i = i;
         return &_genericbatteryinfo.data[i];
     }
 
     return nullptr;
 }
 
-void AP_UAVCAN::genericbatteryinfo_update_data(uint8_t id)
+void AP_UAVCAN::genericbatteryinfo_update_i(uint8_t i)
 {
-    for (uint8_t i = 0; i < AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER; i++) {
-        if (_genericbatteryinfo.id[i] != id) {
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_genericbatteryinfo.listener_to_id[li] != i) {
             continue;
         }
 
-        for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-            if (_genericbatteryinfo.listener_to_id[li] != i) {
-                continue;
-            }
-
-            _genericbatteryinfo.listeners[li]->handle_genericbatteryinfo_msg(
-                    _genericbatteryinfo.data[i].voltage,
-                    _genericbatteryinfo.data[i].current,
-                    _genericbatteryinfo.data[i].charge_consumed_mAh);
-        }
+        _genericbatteryinfo.listeners[li]->handle_genericbatteryinfo_msg(
+                _genericbatteryinfo.data[i].voltage,
+                _genericbatteryinfo.data[i].current,
+                _genericbatteryinfo.data[i].charge_consumed_mAh);
     }
 }
+
 
 //--- EscStatus ---
 // incoming message, by device id
@@ -1798,7 +1790,6 @@ void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload,
     }
 }
 
-//--- do cyclic handler ---
 
 void AP_UAVCAN::uc4h_do_cyclic(uint64_t current_time_ms)
 {
