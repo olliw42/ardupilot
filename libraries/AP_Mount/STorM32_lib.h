@@ -75,11 +75,13 @@ public:
     // functions for handling reception of data from the STorM32
     void receive_reset(void);
     void receive_reset_wflush(void);
-    void do_receive_singlechar(void);
     void do_receive(void);
     bool message_received(void);
 
 protected:
+    // functions for handling reception of data from the STorM32
+    void _do_receive_singlechar(void);
+
     // STorM32 states
     enum STORM32STATEENUM {
       STORM32STATE_STARTUP_MOTORS = 0,

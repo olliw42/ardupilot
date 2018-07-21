@@ -128,7 +128,7 @@ private:
     };
     uint16_t _bitmask; //this mask is to control some functions
 
-    // storm32.Status in
+    // storm32 status in, mount_status out
     struct {
         float pitch_deg;
         float roll_deg;
@@ -175,6 +175,7 @@ private:
         bool uart_locked;
         uint16_t uart_justhaslocked;
         uint8_t uart_serialno; //only for notification
+        bool passthru_installed; //only for notification
         bool send_passthru_installed; //only for notification
     } _pt;
     void passthrough_install(const AP_SerialManager& serial_manager);
