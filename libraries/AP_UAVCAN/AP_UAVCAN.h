@@ -359,6 +359,9 @@ private:
         AP_HAL::Semaphore* sem;
     } _uc4hnotify;
 
+    // --- outgoing message handler ---
+    void uc4h_do_cyclic(uint64_t current_time_ms);
+
     // --- tunnel.Broadcast ---
     // incoming message, by channel_id
     // the handling of the channel_id is done by the BP_UavcanTunnelManager class!
@@ -382,7 +385,6 @@ private:
     } _tunnelbroadcast_out;
 
     // --- outgoing message handler ---
-    void uc4h_do_cyclic(uint64_t current_time_ms);
     void tunnelbroadcast_out_do_cyclic(void);
 //OWEND
 };

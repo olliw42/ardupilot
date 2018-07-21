@@ -121,9 +121,9 @@ void BP_UavcanTunnelManager::update_fast(void)
             //nothing received
             _channel[i].last_received_ms = now_ms; //clear it, so that the timeout starts with a first received char after a blank period
         } else {
-            if ((available >= 60) || ((now_ms - _channel[i].last_received_ms) >= TUNNELMANAGER_RXTIMEOUT_MS)) {
+            if ((available >= UAVCAN_TUNNELBROADCAST_BUFFER_MAX) || ((now_ms - _channel[i].last_received_ms) >= TUNNELMANAGER_RXTIMEOUT_MS)) {
 
-                if (available > 60) available = 60; //limit to 60 chars max
+                if (available > UAVCAN_TUNNELBROADCAST_BUFFER_MAX) available = UAVCAN_TUNNELBROADCAST_BUFFER_MAX; //limit to 60 chars max
 
                 _frame.protocol = 254;
                 _frame.channel_id = _channel[i].channel_id;

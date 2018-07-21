@@ -1,3 +1,10 @@
+/*
+(c) olliw
+This class allows handling several virtual serial data streams, and link them to UAVCAN tunnel.Broadcast messages with respective channel_id.
+The data stream can be "anything", and is abstracted by the BP_Tunnel_Backend class. Typically it would be a virtual serial port, but could be I2C.
+The function update_fast() needs to be periodically called at a relatively high rate, e.g. 400 Hz.
+Currently, this function is hooked into the Copter vehicle loop, like the camera_mount.update_fast(), but better places might be found.
+*/
 #pragma once
 
 #include "BP_Tunnel_Backend.h"
@@ -6,6 +13,8 @@
 #define TUNNELMANAGER_NUM_CHANNELS   3 //forced to be identical to SERIALMANAGER_NUM_TUNNELPORTS in AP_SerialManager
 
 #define TUNNELMANAGER_RXTIMEOUT_MS   10
+
+#define UAVCAN_TUNNELBROADCAST_BUFFER_MAX   60
 
 
 class BP_UavcanTunnelManager {
@@ -50,7 +59,7 @@ private:
     struct tunnel_frame { //this also could be the real uavcan tunnel
         uint8_t protocol;
         uint8_t channel_id;
-        uint8_t buffer[60];
+        uint8_t buffer[UAVCAN_TUNNELBROADCAST_BUFFER_MAX];
         uint8_t buffer_len;
     } ;
     struct tunnel_frame _frame;

@@ -692,14 +692,14 @@ bool AP_UAVCAN::try_init(void)
     _led_conf.devices_count = 0;
 
 //OW
-    uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo> *genericbatteryinfo_sub;
+    uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>* genericbatteryinfo_sub;
     genericbatteryinfo_sub = new uavcan::Subscriber<uavcan::equipment::power::GenericBatteryInfo>(*node);
     const int genericbatteryinfo_start_res = genericbatteryinfo_sub->start(genericbatteryinfo_cb[_uavcan_i]);
     if (genericbatteryinfo_start_res < 0) {
         debug_uavcan(1, "UAVCAN GenericBatteryInfo subscriber start problem\n\r");
         return false;
     }
-    uavcan::Subscriber<uavcan::equipment::esc::Status> *escstatus_sub;
+    uavcan::Subscriber<uavcan::equipment::esc::Status>* escstatus_sub;
     escstatus_sub = new uavcan::Subscriber<uavcan::equipment::esc::Status>(*node);
     const int escstatus_start_res = escstatus_sub->start(escstatus_cb[_uavcan_i]);
     if (escstatus_start_res < 0) {
@@ -707,7 +707,7 @@ bool AP_UAVCAN::try_init(void)
         return false;
     }
 
-    uavcan::Subscriber<uavcan::tunnel::Broadcast> *tunnelbroadcast_sub;
+    uavcan::Subscriber<uavcan::tunnel::Broadcast>* tunnelbroadcast_sub;
     tunnelbroadcast_sub = new uavcan::Subscriber<uavcan::tunnel::Broadcast>(*node);
     const int tunnelbroadcast_start_res = tunnelbroadcast_sub->start(tunnelbroadcast_cb[_uavcan_i]);
     if (tunnelbroadcast_start_res < 0) {
