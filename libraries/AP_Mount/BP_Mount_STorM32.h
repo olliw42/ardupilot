@@ -128,7 +128,7 @@ private:
     };
     uint16_t _bitmask; //this mask is to control some functions
 
-    // storm32.Status in
+    // storm32 status in, mount_status out
     struct {
         float pitch_deg;
         float roll_deg;
