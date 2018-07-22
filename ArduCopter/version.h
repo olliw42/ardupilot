@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v009"
+#define THISFIRMWARE "BetaCopter V3.6-dev v010"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -65,6 +65,8 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 */
 
 /*
+v0.10:
+
 v0.09:
 I've decided to split branches into
 * 3.6.0-rc6 v009s, which is based on ArduCopter and includes "only" everything except of any UAVCAN stuff
@@ -83,7 +85,7 @@ compiles fine for v4, so merge
  - changes in Notify to adhere to latest
  - make systematic use of new get_uavcan()
  - 2018.07.22: extensive testflights flamewheel, passed
-
+pushed on 22.07.2018 as v009
 
 v0.08:
  - added changes from STorM32nativeonly branch
