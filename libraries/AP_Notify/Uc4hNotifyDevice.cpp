@@ -1,3 +1,7 @@
+//OW
+//******************************************************
+// (c) olliw, www.olliw.eu, GPL3
+//******************************************************
 #include <AP_HAL/AP_HAL.h>
 #include <AP_GPS/AP_GPS.h>
 #include "Uc4hNotifyDevice.h"

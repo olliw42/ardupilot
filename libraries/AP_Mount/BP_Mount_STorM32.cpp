@@ -1,3 +1,7 @@
+//OW
+//******************************************************
+// (c) olliw, www.olliw.eu, GPL3
+//******************************************************
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Common/AP_Common.h>
 #include <AP_AHRS/AP_AHRS.h>
@@ -17,6 +21,7 @@ extern const AP_HAL::HAL& hal;
 //that's the notify class
 // singleton to communicate events & flags to the STorM32 mount
 BP_Mount_STorM32_Notify* BP_Mount_STorM32_Notify::_singleton;
+
 
 // constructor
 BP_Mount_STorM32_Notify::BP_Mount_STorM32_Notify()

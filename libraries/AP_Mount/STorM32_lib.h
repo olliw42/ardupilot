@@ -1,16 +1,18 @@
+//OW
 //******************************************************
-// (c) olliw, www.olliw.eu
-// GPL3
+// (c) olliw, www.olliw.eu, GPL3
 //******************************************************
 #pragma once
 
 #include <AP_AHRS/AP_AHRS.h>
+
 
 //******************************************************
 // STorM32_lib
 //******************************************************
 
 #define STORM32_LIB_RECEIVE_BUFFER_SIZE      96 //the largest RCcmd response can be 77
+
 
 class STorM32_lib
 {

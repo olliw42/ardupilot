@@ -1,10 +1,12 @@
-/*
-(c) olliw
-This class allows handling several virtual serial data streams, and link them to UAVCAN tunnel.Broadcast messages with respective channel_id.
-The data stream can be "anything", and is abstracted by the BP_Tunnel_Backend class. Typically it would be a virtual serial port, but could be I2C.
-The function update_fast() needs to be periodically called at a relatively high rate, e.g. 400 Hz.
-Currently, this function is hooked into the Copter vehicle loop, like the camera_mount.update_fast(), but better places might be found.
-*/
+//OW
+//******************************************************
+// (c) olliw, www.olliw.eu, GPL3
+//******************************************************
+// This class allows handling several virtual serial data streams, and link them to UAVCAN tunnel.Broadcast messages with respective channel_id.
+// The data stream can be "anything", and is abstracted by the BP_Tunnel_Backend class. Typically it would be a virtual serial port, but could be I2C.
+// The function update_fast() needs to be periodically called at a relatively high rate, e.g. 400 Hz.
+// Currently, this function is hooked into the Copter vehicle loop, like the camera_mount.update_fast(), but better places might be found.
+
 #pragma once
 
 #include "BP_Tunnel_Backend.h"

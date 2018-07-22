@@ -1,3 +1,8 @@
+//OW
+//******************************************************
+// (c) olliw, www.olliw.eu, GPL3
+//******************************************************
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_UAVCAN/AP_UAVCAN.h>
 #include "BP_UavcanTunnelManager.h"

@@ -1,8 +1,8 @@
-/*
-follows very closely the implementation by MagicRub
-https://github.com/magicrub/ardupilot/commit/e223add8c4b18e08a127d40268a1cb986bcb1f3d
-thx!
-*/
+//OW
+// follows very closely the implementation by MagicRub
+// https://github.com/magicrub/ardupilot/commit/e223add8c4b18e08a127d40268a1cb986bcb1f3d
+// THX!
+
 #pragma once
 
 #include <AP_HAL/Semaphores.h>
