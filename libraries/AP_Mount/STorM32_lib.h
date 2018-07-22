@@ -1,16 +1,18 @@
+//OW
 //******************************************************
-// (c) olliw, www.olliw.eu
-// GPL3
+// (c) olliw, www.olliw.eu, GPL3
 //******************************************************
 #pragma once
 
 #include <AP_AHRS/AP_AHRS.h>
+
 
 //******************************************************
 // STorM32_lib
 //******************************************************
 
 #define STORM32_LIB_RECEIVE_BUFFER_SIZE      96 //the largest RCcmd response can be 77
+
 
 class STorM32_lib
 {
@@ -29,8 +31,8 @@ public:
     bool _serial_is_initialised;
 
     virtual size_t _serial_txspace(void) = 0;
-    virtual size_t _serial_write(const uint8_t *buffer, size_t size, uint8_t priority) = 0;
-    size_t _serial_write(const uint8_t *buffer, size_t size){ return _serial_write(buffer, size, PRIORITY_DEFAULT); }
+    virtual size_t _serial_write(const uint8_t* buffer, size_t size, uint8_t priority) = 0;
+    size_t _serial_write(const uint8_t* buffer, size_t size){ return _serial_write(buffer, size, PRIORITY_DEFAULT); }
     virtual uint32_t _serial_available(void) = 0;
     virtual int16_t _serial_read(void) = 0;
 
@@ -61,13 +63,13 @@ public:
     };
 
     // functions for sending to the STorM32, using RCcmds
-    void send_storm32link_v2(const AP_AHRS_TYPE &ahrs);
+    void send_cmd_storm32link_v2(const AP_AHRS_TYPE& ahrs);
     void send_cmd_setangles(float pitch_deg, float roll_deg, float yaw_deg, uint16_t flags);
     void send_cmd_setpitchrollyaw(uint16_t pitch, uint16_t roll, uint16_t yaw);
     void send_cmd_recentercamera(void);
     void send_cmd_docamera(uint16_t trigger_value);
     void send_cmd_setinputs(void);
-    void send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs);
+    void send_cmd_sethomelocation(const AP_AHRS_TYPE& ahrs);
     void send_cmd_settargetlocation(void);
     void send_cmd_getdatafields(uint16_t flags);
     void send_cmd_getversionstr(void);
@@ -75,11 +77,13 @@ public:
     // functions for handling reception of data from the STorM32
     void receive_reset(void);
     void receive_reset_wflush(void);
-    void do_receive_singlechar(void);
     void do_receive(void);
     bool message_received(void);
 
 protected:
+    // functions for handling reception of data from the STorM32
+    void _do_receive_singlechar(void);
+
     // STorM32 states
     enum STORM32STATEENUM {
       STORM32STATE_STARTUP_MOTORS = 0,

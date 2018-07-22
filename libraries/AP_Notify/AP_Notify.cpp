@@ -168,9 +168,7 @@ void AP_Notify::add_backends(void)
   #endif
 
 //OW
-#ifdef USE_UC4H_UAVCAN
     ADD_BACKEND(new Uc4hNotifyDevice());
-#endif
 //OWEND
 
 // Notify devices for ChibiOS boards

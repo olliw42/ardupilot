@@ -1,11 +1,12 @@
+//OW
 //******************************************************
-// (c) olliw, www.olliw.eu
-// GPL3
+// (c) olliw, www.olliw.eu, GPL3
 //******************************************************
 
 #include <GCS_MAVLink/include/mavlink/v2.0/checksum.h>
 #include <AP_Notify/AP_Notify.h>
 #include <AP_Mount/STorM32_lib.h>
+
 
 //******************************************************
 // STorM32_lib class functions
@@ -30,12 +31,13 @@ bool STorM32_lib::is_normal_state(uint16_t state)
     return false;
 }
 
+
 //------------------------------------------------------
 // send stuff
 //------------------------------------------------------
 
 // 33 bytes = 2865us @ 115200bps
-void STorM32_lib::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
+void STorM32_lib::send_cmd_storm32link_v2(const AP_AHRS_TYPE& ahrs)
 {
     if (!_serial_is_initialised) {
         return;
@@ -76,7 +78,7 @@ void STorM32_lib::send_storm32link_v2(const AP_AHRS_TYPE &ahrs)
     ahrs.get_filter_status(nav_status);
 
     // copter.letmeget_motors_armed(); can be replaced by notify->flags.armed,  works identically:
-    AP_Notify *notify = AP_Notify::instance();
+    AP_Notify* notify = AP_Notify::instance();
 
     if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
     if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
@@ -234,7 +236,7 @@ void STorM32_lib::send_cmd_setinputs(void)
 }
 
 // 19 bytes = 1650us @ 115200bps
-void STorM32_lib::send_cmd_sethomelocation(const AP_AHRS_TYPE &ahrs)
+void STorM32_lib::send_cmd_sethomelocation(const AP_AHRS_TYPE& ahrs)
 {
     if (!_serial_is_initialised) {
         return;
@@ -332,34 +334,21 @@ void STorM32_lib::send_cmd_getversionstr(void)
     _serial_write( (uint8_t*)(&t), sizeof(tCmdGetVersionStr) );
 }
 
+
 //------------------------------------------------------
 // receive stuff, only relevant for a real serial, not CAN
 //------------------------------------------------------
 
-void STorM32_lib::receive_reset(void)
-{
-    _serial_in.state = SERIALSTATE_IDLE;
-}
-
-void STorM32_lib::receive_reset_wflush(void)
-{
-    //it is claimed a while can't do it, the UARTDriver lib seems to be weak, so do a for 
-    // the UARTDriver lib doesn't have a rxflush(), and it's flush() is non-functional, hence this stupid looping
-    uint32_t available = _serial_available();
-    for (uint32_t i = 0; i < available; i++) {
-        _serial_read();
-    }
-    if (_serial_available() > 0) {
-        _serial_read();
-    }
-    _serial_in.state = SERIALSTATE_IDLE;
-}
+//------------------------------------------------------
+// internal
 
 //reads in one char and processes it
 // there is no explicit timeout handling or error handling
 // call a flush_rx() and receive_reset() to take care of both of that
-void STorM32_lib::do_receive_singlechar(void)
+void STorM32_lib::_do_receive_singlechar(void)
 {
+    //check for (!_serial_is_initialised) is not needed, since only called from do_receive()
+
     if (_serial_available() <= 0) { //this broadens the use of the function, play it safe
         return;
     }
@@ -406,14 +395,44 @@ void STorM32_lib::do_receive_singlechar(void)
             break;
     }
 }
+//------------------------------------------------------
+// public
+
+void STorM32_lib::receive_reset(void)
+{
+    _serial_in.state = SERIALSTATE_IDLE;
+}
+
+void STorM32_lib::receive_reset_wflush(void)
+{
+    if (!_serial_is_initialised) {
+        return;
+    }
+
+    //it is claimed a while can't do it, the UARTDriver lib seems to be weak, so do a for
+    // the UARTDriver lib doesn't have a rxflush(), and it's flush() is non-functional, hence this stupid looping
+    uint32_t available = _serial_available();
+    for (uint32_t i = 0; i < available; i++) {
+        _serial_read();
+    }
+    if (_serial_available() > 0) {
+        _serial_read();
+    }
+
+    _serial_in.state = SERIALSTATE_IDLE;
+}
 
 //reads in as many chars as there are there
 void STorM32_lib::do_receive(void)
 {
+    if (!_serial_is_initialised) {
+        return;
+    }
+
     //it is claimed a while can't do it, the UARTDriver lib seems to be weak, so do a for 
     uint32_t available = _serial_available();
     for (uint32_t i = 0; i < available; i++) {
-        do_receive_singlechar();
+        _do_receive_singlechar();
     }
 
     // serial state is reset by a flush_rx() and receive_reset(), so, don't worry further

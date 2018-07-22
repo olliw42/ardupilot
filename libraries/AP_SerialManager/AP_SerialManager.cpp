@@ -22,6 +22,12 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include "AP_SerialManager.h"
+//OW
+#include <AP_UAVCAN/BP_UavcanTunnelManager.h>
+#if SERIALMANAGER_NUM_TUNNELPORTS != TUNNELMANAGER_NUM_CHANNELS
+# error TUNNELMANAGER_NUM_CHANNELS and SERIALMANAGER_NUM_TUNNELPORTS do not match!
+#endif
+//OWEND
 
 extern const AP_HAL::HAL& hal;
 
@@ -148,7 +154,20 @@ const AP_Param::GroupInfo AP_SerialManager::var_info[] = {
     // @Values: 1:1200,2:2400,4:4800,9:9600,19:19200,38:38400,57:57600,111:111100,115:115200,500:500000,921:921600,1500:1500000
     // @User: Standard
     AP_GROUPINFO("6_BAUD", 13, AP_SerialManager, state[6].baud, SERIAL6_BAUD),
-    
+
+//OW
+    AP_GROUPINFO("TNL0_PROT",   20, AP_SerialManager, state[7].protocol, SerialProtocol_None),
+    AP_GROUPINFO("TNL0_BAUD",   21, AP_SerialManager, state[7].baud, 115),
+    AP_GROUPINFO("TNL0_CH_ID",  22, AP_SerialManager, channel_id[0], 71),
+
+    AP_GROUPINFO("TNL1_PROT",   23, AP_SerialManager, state[8].protocol, SerialProtocol_None),
+    AP_GROUPINFO("TNL1_BAUD",   24, AP_SerialManager, state[8].baud, 115),
+    AP_GROUPINFO("TNL1_CH_ID",  25, AP_SerialManager, channel_id[1], 72),
+
+    AP_GROUPINFO("TNL2_PROT",   26, AP_SerialManager, state[9].protocol, SerialProtocol_None),
+    AP_GROUPINFO("TNL2_BAUD",   27, AP_SerialManager, state[9].baud, 115),
+    AP_GROUPINFO("TNL2_CH_ID",  28, AP_SerialManager, channel_id[2], 73),
+//OWEND
     AP_GROUPEND
 };
 
@@ -189,6 +208,18 @@ void AP_SerialManager::init()
     if (state[0].uart == nullptr) {
         init_console();
     }
+
+//OW
+    state[7].uart = nullptr;
+    state[8].uart = nullptr;
+    state[9].uart = nullptr;
+    BP_UavcanTunnelManager* tunnelmgr = BP_UavcanTunnelManager::instance();
+    if (tunnelmgr) {
+        state[7].uart = tunnelmgr->register_uart(channel_id[0]);
+        state[8].uart = tunnelmgr->register_uart(channel_id[1]);
+        state[9].uart = tunnelmgr->register_uart(channel_id[2]);
+    }
+//OWEND
     
     // initialise serial ports
     for (uint8_t i=1; i<SERIALMANAGER_NUM_PORTS; i++) {

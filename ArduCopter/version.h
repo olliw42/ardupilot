@@ -19,6 +19,44 @@
 #define FW_PATCH 0
 #define FW_TYPE FIRMWARE_VERSION_TYPE_DEV
 
+/*
+changed files:
+    APM_Config.h: 1x
+    ArduCopter.cpp: 1x
+    Copter.h: 2x
+    AP_BattMonitor_Backend.h: 1x
+    AP_BattMonitor_Params.h: 1x
+    AP_BattMonitor_UAVCAN.cpp: 2x
+    AP_BattMonitor_UAVCAN.h: 2x
+    AP_BattMonitor.cpp: 1x
+    AP_Camera.cpp: 2x
+    AP_HAL_PX4/UartDRIVER.cpp: 3x
+    AP_HAL_PX4/UartDRIVER.h: 2x
+    AP_Mount.cpp: 3x
+    AP_Mount.h: 4x
+    AP_Notify.cpp: 2x
+    AP_SerialManager.cpp: 5x
+    AP_SerialManager.h: 4x
+    AP_UAVCAN.cpp: 6x
+    AP_UAVCAN.h: 3x
+    GCS_Common.cpp: 4x
+    GCS.cpp: 1x
+    GCS.h: 3x
+
+added files:
+    BP_Mount_STorM32.cpp
+    BP_Mount_STorM32.h
+    STorM32_lib.cpp
+    STorM32_lib.h
+    Uc4hNotifyDevice.cpp
+    Uc4hNotifyDevice.h
+    BP_Tunnel_Backend.h
+    BP_UavcanTunnelManager.cpp
+    BP_UavcanTunnelManager.h
+    TunnelUARTDriver.cpp
+    TunnelUARTDriver.h
+    some more in AP_UAVCAN
+*/
 
 /*
 PAINPOINT:
@@ -35,6 +73,16 @@ I've decided to split branches into
 # Conflicts:
 #   libraries/GCS_MAVLink/GCS.h
 compiles fine for v4, so merge
+ - merge in all bec36 v009s stuff, doesn't compile since some UAVCAN functions are now missing
+ - remove all STorM32 UAVCAn message stuff, leaves only GenericBatteryInfo & Notify & ESC status, remove USE_UC4H_UAVCAN
+   corrections to get it to compile, override in Uc4hNotifyDevice.h, inits in Uc4hNotifyDevice.cpp
+ - bring in uc-uartbridge07sq, compiles out of the box
+   works on the bench, has problems with 'p' though
+ - much improved tunnel frame loss prevention, issue showed up in passthru for 'p' command, works fine now in practice
+ - serial UAVCAN tunnel baudrate setting added
+ - changes in Notify to adhere to latest
+ - make systematic use of new get_uavcan()
+ - 2018.07.22: extensive testflights flamewheel, passed
 
 
 v0.08:

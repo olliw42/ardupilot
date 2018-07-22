@@ -903,7 +903,7 @@ GCS_MAVLINK::update(uint32_t max_time_us)
     status.packet_rx_drop_count = 0;
 
 //OW
-// sadly the UARTDriver api doesn't offer a is_locked() function, so we have that ioctl
+// sadly the UARTDriver API doesn't offer a is_locked() function, so we have that ioctl
 // this works because the STorM32 GUI emits periodically
     if (storm32.handler && gcs_alternative_active[chan] && (now_ms - storm32.last_alternate_ms > 4000)) {
         storm32.handler(PROTOCOLHANDLER_IOCTL_UNLOCK, '\0', mavlink_comm_port[chan]);
