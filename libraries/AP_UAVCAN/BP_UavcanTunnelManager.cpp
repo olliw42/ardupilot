@@ -27,7 +27,6 @@ BP_UavcanTunnelManager::BP_UavcanTunnelManager()
     
     for (uint8_t i = 0; i < TUNNELMANAGER_NUM_CHANNELS; i++) {
         _channel[i].backend = nullptr; //this is used to indicate a free/unused slot!! we don't use type, as it makes it easier
-        _channel[i].type = TunnelType_None;
     }
 }
 
@@ -49,7 +48,6 @@ AP_HAL::UARTDriver* BP_UavcanTunnelManager::register_uart(uint8_t channel_id)
 
             if (uart == nullptr) return nullptr; //something went wrong
             
-            _channel[i].type = TunnelType_UART;
             _channel[i].channel_id = channel_id;
             _channel[i].last_received_ms = AP_HAL::millis();
 
@@ -112,8 +110,6 @@ void BP_UavcanTunnelManager::update_fast(void)
         if (_channel[i].backend->uart_baudrate_has_changed()) {
             _frame.protocol = 255;
             _frame.channel_id = _channel[i].channel_id;
-//            uint32_t baud = _channel[i].backend->uart_baudrate();
-//            memcpy(_frame.buffer, &baud, 4);
             *((uint32_t*)_frame.buffer) = _channel[i].backend->uart_baudrate();
             _frame.buffer_len = 4;
             send_to_CAN(i, &_frame);
