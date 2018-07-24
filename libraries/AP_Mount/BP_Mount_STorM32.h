@@ -1,6 +1,8 @@
-/*
-  STorM32 mount backend class
- */
+//OW
+// *****************************************************
+// (c) olliw, www.olliw.eu, GPL3
+// *****************************************************
+// STorM32 mount backend class
 
 //20180717: with the UAVCAN Tunnel code we can remove all CAN dependencies in here, which makes it much simpler
 
@@ -170,6 +172,7 @@ private:
     void set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_pwm, uint16_t yaw_pwm, enum MAV_MOUNT_MODE mount_mode);
     void send_target_angles(void);
 
+    // passthru
     struct {
         AP_HAL::UARTDriver* uart;
         bool uart_locked;
@@ -181,4 +184,4 @@ private:
     void passthrough_install(const AP_SerialManager& serial_manager);
     uint8_t passthrough_handler(uint8_t ioctl, uint8_t b, AP_HAL::UARTDriver* gcs_uart);
     void passthrough_readback(void);
-};
+}; //end of BP_Mount_STorM32 class

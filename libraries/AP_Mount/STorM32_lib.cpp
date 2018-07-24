@@ -1,11 +1,12 @@
-//******************************************************
-// (c) olliw, www.olliw.eu
-// GPL3
-//******************************************************
+//OW
+// *****************************************************
+// (c) olliw, www.olliw.eu, GPL3
+// *****************************************************
 
 #include <GCS_MAVLink/include/mavlink/v2.0/checksum.h>
 #include <AP_Notify/AP_Notify.h>
 #include <AP_Mount/STorM32_lib.h>
+
 
 //******************************************************
 // STorM32_lib class functions
@@ -29,6 +30,7 @@ bool STorM32_lib::is_normal_state(uint16_t state)
     }
     return false;
 }
+
 
 //------------------------------------------------------
 // send stuff
@@ -331,6 +333,7 @@ void STorM32_lib::send_cmd_getversionstr(void)
 
     _serial_write( (uint8_t*)(&t), sizeof(tCmdGetVersionStr) );
 }
+
 
 //------------------------------------------------------
 // receive stuff, only relevant for a real serial, not CAN
