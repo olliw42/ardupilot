@@ -123,6 +123,7 @@ private:
         SEND_STORM32LINK_V2 = 0x02,
         SEND_CMD_SETINPUTS = 0x04,
         SEND_CMD_DOCAMERA = 0x08,
+        SEND_SOLOGIMBALHEARTBEAT = 0x20,
         PASSTHRU_ALLOWED = 0x40,
         PASSTHRU_NOTALLOWEDINFLIGHT = 0x80,
     };
@@ -170,6 +171,10 @@ private:
     void set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_pwm, uint16_t yaw_pwm, enum MAV_MOUNT_MODE mount_mode);
     void send_target_angles(void);
 
+    //mimic solo gimbal
+    uint32_t _sologimbal_send_last;
+
+    // passthru
     struct {
         AP_HAL::UARTDriver* uart;
         bool uart_locked;

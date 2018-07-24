@@ -50,6 +50,8 @@ BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount& frontend, AP_Mount::mount_state& st
 
     _target_mode_last = MAV_MOUNT_MODE_RETRACT;
 
+    _sologimbal_send_last = 0;
+
     _pt.uart = nullptr;
     _pt.uart_locked = false;
     _pt.uart_justhaslocked = 0;
@@ -77,6 +79,8 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
     if (param_bitmask & SEND_STORM32LINK_V2) _bitmask &=~ SEND_STORM32LINK_V2; //disable
     if (param_bitmask & SEND_CMD_SETINPUTS) _bitmask &=~ SEND_CMD_SETINPUTS; //disable
     if (param_bitmask & SEND_CMD_DOCAMERA) _bitmask &=~ SEND_CMD_DOCAMERA; //disable
+
+    if (param_bitmask & SEND_SOLOGIMBALHEARTBEAT) _bitmask |= SEND_SOLOGIMBALHEARTBEAT; //enable
 
     if (param_bitmask & PASSTHRU_ALLOWED) _bitmask &=~ PASSTHRU_ALLOWED; //disable
     if (param_bitmask & PASSTHRU_NOTALLOWEDINFLIGHT) _bitmask |= PASSTHRU_NOTALLOWEDINFLIGHT; //enable
@@ -208,8 +212,7 @@ void BP_Mount_STorM32::set_mode(enum MAV_MOUNT_MODE mode)
 // status_msg - called to allow mounts to send their status to GCS using the MOUNT_STATUS message
 void BP_Mount_STorM32::status_msg(mavlink_channel_t chan)
 {
-    //it doesn't matter if not _initalised
-    // will then send out zeros
+    //it doesn't matter if not _initalised, will then send out zeros
     // check nevertheless
     if (!_initialised) {
         return;
@@ -221,6 +224,23 @@ void BP_Mount_STorM32::status_msg(mavlink_channel_t chan)
 
     // MAVLink MOUNT_STATUS: int32_t pitch(deg*100), int32_t roll(deg*100), int32_t yaw(deg*100)
     mavlink_msg_mount_status_send(chan, 0, 0, pitch_deg*100.0f, roll_deg*100.0f, yaw_deg*100.0f);
+
+    //we could send it from early on, and not wait for _initialised, as this would work a bit "better"
+    // but this here is more logical, and e.g. allows the user to check if the connection is present
+    // we probably could stop sending after a while, though
+    uint32_t now_ms = AP_HAL::millis();
+    if ((_bitmask & SEND_SOLOGIMBALHEARTBEAT) && ((now_ms - _sologimbal_send_last) >= 990)) {
+        _sologimbal_send_last = now_ms;
+        //mimic SoloGimbal heartbeat
+        // HEARTBEAT: uint8_t type, uint8_t autopilot, uint8_t base_mode, uint32_t custom_mode, uint8_t system_status)
+        uint8_t sysid = mavlink_system.sysid;
+        uint8_t compid = mavlink_system.compid;
+        mavlink_system.sysid = 1;
+        mavlink_system.compid = 154;
+        mavlink_msg_heartbeat_send(chan, MAV_TYPE_GIMBAL, MAV_AUTOPILOT_ARDUPILOTMEGA, 0, 0, MAV_STATE_ACTIVE);
+        mavlink_system.sysid = sysid;
+        mavlink_system.compid = compid;
+    }
 }
 
 
