@@ -18,7 +18,10 @@ extern const AP_HAL::HAL& hal;
 #define STORM32_UART_LOCK_KEY 0x32426771
 
 
-//that's the notify class
+//******************************************************
+// BP_Mount_STorM32_Notify, that's the notify class
+//******************************************************
+
 // singleton to communicate events & flags to the STorM32 mount
 BP_Mount_STorM32_Notify* BP_Mount_STorM32_Notify::_singleton;
 
@@ -32,7 +35,10 @@ BP_Mount_STorM32_Notify::BP_Mount_STorM32_Notify()
 }
 
 
-//that's the main class
+//******************************************************
+// BP_Mount_STorM32, that's the main class
+//******************************************************
+
 // constructor
 BP_Mount_STorM32::BP_Mount_STorM32(AP_Mount& frontend, AP_Mount::mount_state& state, uint8_t instance) :
     AP_Mount_Backend(frontend, state, instance)
@@ -86,8 +92,8 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
 
     if (param_bitmask & SEND_SOLOGIMBALHEARTBEAT) _bitmask |= SEND_SOLOGIMBALHEARTBEAT; //enable
 
+    if (param_bitmask & PASSTHRU_ALLOWEDINFLIGHT) _bitmask |= PASSTHRU_ALLOWEDINFLIGHT; //enable
     if (param_bitmask & PASSTHRU_ALLOWED) _bitmask &=~ PASSTHRU_ALLOWED; //disable
-    if (param_bitmask & PASSTHRU_NOTALLOWEDINFLIGHT) _bitmask |= PASSTHRU_NOTALLOWEDINFLIGHT; //enable
 
     _uart = serial_manager.find_serial(AP_SerialManager::SerialProtocol_STorM32_Native, 0);
     if (_uart) {
@@ -229,28 +235,40 @@ void BP_Mount_STorM32::status_msg(mavlink_channel_t chan)
     // MAVLink MOUNT_STATUS: int32_t pitch(deg*100), int32_t roll(deg*100), int32_t yaw(deg*100)
     mavlink_msg_mount_status_send(chan, 0, 0, pitch_deg*100.0f, roll_deg*100.0f, yaw_deg*100.0f);
 
+    //this function is typically called at 2 Hz
+    // but it is not garanteed to be called, so it's a bit dirty,
+    // but there is currently no other way, unless one would a sort of mavlink_update(chan) and link it in upstream
     //we could send it from early on, and not wait for _initialised, as this would work a bit "better"
     // but this here is more logical, and e.g. allows the user to check if the connection is present
     // we probably could stop sending after a while, though
     uint32_t now_ms = AP_HAL::millis();
-    if ((_bitmask & SEND_SOLOGIMBALHEARTBEAT) && ((now_ms - _sologimbal_send_last) >= 990)) {
+    if ((_bitmask & SEND_SOLOGIMBALHEARTBEAT) && ((now_ms - _sologimbal_send_last) >= 740)) {
         _sologimbal_send_last = now_ms;
-        //mimic SoloGimbal heartbeat
-        // HEARTBEAT: uint8_t type, uint8_t autopilot, uint8_t base_mode, uint32_t custom_mode, uint8_t system_status)
-        uint8_t sysid = mavlink_system.sysid;
-        uint8_t compid = mavlink_system.compid;
-        mavlink_system.sysid = 1;
-        mavlink_system.compid = 154;
-        mavlink_msg_heartbeat_send(chan, MAV_TYPE_GIMBAL, MAV_AUTOPILOT_ARDUPILOTMEGA, 0, 0, MAV_STATE_ACTIVE);
-        mavlink_system.sysid = sysid;
-        mavlink_system.compid = compid;
+        send_sologimbal_heartbeat_msg(chan);
     }
 }
 
 
 //------------------------------------------------------
-// BP_Mount_STorM32 private function
+// BP_Mount_STorM32 private functions
 //------------------------------------------------------
+
+void BP_Mount_STorM32::send_sologimbal_heartbeat_msg(mavlink_channel_t chan)
+{
+    //mimic SoloGimbal heartbeat
+    // HEARTBEAT: uint8_t type, uint8_t autopilot, uint8_t base_mode, uint32_t custom_mode, uint8_t system_status)
+
+    //this is to make use of the mavlink library and not having to reinvent the wheel
+    // mavlink_system.sysid usually would be 1, but since it's adjustable we don't want to rely on that
+    mavlink_system_t mav_sys = mavlink_system;
+    mavlink_system.sysid = 1;
+    mavlink_system.compid = 154;
+
+    mavlink_msg_heartbeat_send(chan, MAV_TYPE_GIMBAL, MAV_AUTOPILOT_ARDUPILOTMEGA, 0, 0, MAV_STATE_ACTIVE);
+
+    mavlink_system = mav_sys;
+}
+
 
 void BP_Mount_STorM32::set_target_angles_bymountmode(void)
 {
@@ -532,9 +550,9 @@ void BP_Mount_STorM32::send_text_to_gcs(void)
 
 
 //------------------------------------------------------
-// interfaces to BP_STorM32
+// interfaces to STorM32_lib
 //------------------------------------------------------
-//the _serial functions don't need if (!_serial_is_initialised) return 0; protectors,
+//the _serial functions don't need 'if (!_serial_is_initialised) return 0;' protectors,
 // since that's done already inside the STorM32_lib for the public API
 
 size_t BP_Mount_STorM32::_serial_txspace(void)
@@ -657,7 +675,7 @@ static uint16_t buf_pos = 0;
     }
 
     // NOO, enable this if passthru should not be allowed in flight
-    if ((_bitmask & PASSTHRU_NOTALLOWEDINFLIGHT) && hal.util->get_soft_armed()) {
+    if (((_bitmask & PASSTHRU_ALLOWEDINFLIGHT) == 0) && hal.util->get_soft_armed()) {
         buf_pos = 0;
         // don't allow pass-through when armed
         if (_pt.uart_locked) {

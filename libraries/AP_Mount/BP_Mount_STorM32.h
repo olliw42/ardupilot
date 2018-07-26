@@ -126,8 +126,8 @@ private:
         SEND_CMD_SETINPUTS = 0x04,
         SEND_CMD_DOCAMERA = 0x08,
         SEND_SOLOGIMBALHEARTBEAT = 0x20,
-        PASSTHRU_ALLOWED = 0x40,
-        PASSTHRU_NOTALLOWEDINFLIGHT = 0x80,
+        PASSTHRU_ALLOWEDINFLIGHT = 0x40,
+        PASSTHRU_ALLOWED = 0x80,
     };
     uint16_t _bitmask; //this mask is to control some functions
 
@@ -173,8 +173,9 @@ private:
     void set_target_angles_pwm(uint16_t pitch_pwm, uint16_t roll_pwm, uint16_t yaw_pwm, enum MAV_MOUNT_MODE mount_mode);
     void send_target_angles(void);
 
-    //mimic solo gimbal
+    // mimic solo gimbal
     uint32_t _sologimbal_send_last;
+    void send_sologimbal_heartbeat_msg(mavlink_channel_t chan);
 
     // passthru
     struct {
