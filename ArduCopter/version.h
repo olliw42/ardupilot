@@ -25,6 +25,7 @@ features:
  - bitmask parameter handling, MNT_STRM_BM
  - passthrough, MNT_STRM_PTSER
  - any CAN stuff removed, much simplified and streamlined
+ - Solo gimbal mimicry
 
 changed files:
     AP_Camera.cpp: 2x
