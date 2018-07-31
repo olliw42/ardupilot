@@ -19,6 +19,9 @@
 #define UAVCAN_TUNNELBROADCAST_BUFFER_MAX   60
 
 
+//BP_UavcanTunnelManager tunnel_manager; is called in Copter.h
+
+
 class BP_UavcanTunnelManager {
     
 public:
@@ -43,15 +46,9 @@ public:
 private:
     static BP_UavcanTunnelManager* _instance;
 
-    enum TunnelType {
-        TunnelType_None = 0,
-        TunnelType_UART = 1,
-    };
-
     uint8_t _num_channels; // number of tunnels/channels instantiated
     
     struct tunnel_channel {
-        uint8_t type;
         uint8_t channel_id;
         BP_Tunnel_Backend* backend;
         uint32_t last_received_ms;
