@@ -1,7 +1,7 @@
 //OW
-//******************************************************
+// ******************************************************
 // (c) olliw, www.olliw.eu, GPL3
-//******************************************************
+// ******************************************************
 // This class provides an abstract virtual serial data stream for the BP_UavcanTunnelManager class.
 // It can be "anything", such as a virtual serial port or I2C.
 // Currently, it is the base for the TunnelUARTDriver class, to bridge between a virtual UART and a UAVCAN tunnel.
