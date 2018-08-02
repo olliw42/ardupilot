@@ -14,8 +14,6 @@
 
 #define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
-#define SEND_SOLO_HEARTBEAT_MAX_TIME_MS  60000
-
 
 //singleton to communicate events & flags to the STorM32 mount
 // resembles AP_Notify
