@@ -1,8 +1,8 @@
+//*****************************************************
 //OW
-// *****************************************************
 // (c) olliw, www.olliw.eu, GPL3
-// *****************************************************
 // STorM32 mount backend class
+//*****************************************************
 
 //20180717: with the UAVCAN Tunnel code we can remove all CAN dependencies in here, which makes it much simpler
 
@@ -13,6 +13,8 @@
 #include "STorM32_lib.h"
 
 #define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+
+#define SEND_SOLO_HEARTBEAT_MAX_TIME_MS  60000
 
 
 //singleton to communicate events & flags to the STorM32 mount
