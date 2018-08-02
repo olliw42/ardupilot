@@ -7,8 +7,8 @@
 #include "ap_version.h"
 
 //OW
-//#define THISFIRMWARE "ArduCopter V3.6.0-rc6"
-#define THISFIRMWARE "BetaCopter V3.6.0-rc6 v011s"
+//#define THISFIRMWARE "ArduCopter V3.6.0-rc7"
+#define THISFIRMWARE "BetaCopter V3.6.0-rc7 v011s"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -28,6 +28,8 @@ features:
  - Solo gimbal mimicry
 
 changed files:
+    APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
+
     AP_Camera.cpp: 2x
     AP_HAL_PX4 UARTDriver.cpp: 3x
     AP_HAL_PX4 UARTDriver.h: 2x
@@ -38,4 +40,10 @@ changed files:
     GCS_Common.cpp: 4x
     GCS.cpp: 1x
     GCS.h: 3x
+
+added files:
+    BP_Mount_STorM32.cpp
+    BP_Mount_STorM32.h
+    STorM32_lib.cpp
+    STorM32_lib.h
 */

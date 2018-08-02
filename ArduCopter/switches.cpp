@@ -146,10 +146,7 @@ void Copter::read_aux_switches()
     read_aux_switch(CH_9, aux_con.CH9_flag, g.ch9_option);
     read_aux_switch(CH_10, aux_con.CH10_flag, g.ch10_option);
     read_aux_switch(CH_11, aux_con.CH11_flag, g.ch11_option);
-
-#if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
     read_aux_switch(CH_12, aux_con.CH12_flag, g.ch12_option);
-#endif
 }
 
 #undef read_aux_switch
@@ -730,6 +727,20 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
                 }
             }
             break;
+            
+#ifdef USERHOOK_AUXSWITCH
+        case AUXSW_USER_FUNC1:
+            userhook_auxSwitch1(ch_flag);
+            break;
+            
+        case AUXSW_USER_FUNC2:
+            userhook_auxSwitch2(ch_flag);
+            break;
+            
+        case AUXSW_USER_FUNC3:
+            userhook_auxSwitch3(ch_flag);
+            break;
+#endif
     }
 }
 
