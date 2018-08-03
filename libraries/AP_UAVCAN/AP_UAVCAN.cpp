@@ -1774,6 +1774,7 @@ void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload,
 
         _uc4hnotify.msg.type = type;
         _uc4hnotify.msg.subtype = subtype;
+        if (payload_len > 64) payload_len = 64; //play it safe
         _uc4hnotify.msg.payload.resize(payload_len);
         for (uint8_t i = 0; i < payload_len; i++) {
             _uc4hnotify.msg.payload[i] = payload[i];
