@@ -1,9 +1,10 @@
+//******************************************************
 //OW
-// ******************************************************
 // (c) olliw, www.olliw.eu, GPL3
-// ******************************************************
+//******************************************************
 #include <AP_HAL/AP_HAL.h>
 #include <AP_GPS/AP_GPS.h>
+#include <AP_BattMonitor/AP_BattMonitor.h>
 #include "Uc4hNotifyDevice.h"
 #include "AP_Notify.h"
 
@@ -114,8 +115,56 @@ void Uc4hNotifyDevice::update_sync(void)
 void Uc4hNotifyDevice::update_flags(void)
 {
     _flags_data.number_of_arms = 4; //ONLY QUAD SUPPORTED currently
-    _flags_data.flags = AP_Notify::flags;
-    _flags_data.events = AP_Notify::events;
+//this doesn't work anymore
+//    _flags_data.flags = AP_Notify::flags;
+//    _flags_data.events = AP_Notify::events;
+//we need to copy over data by hand
+    _flags_data.flags.initialising          = AP_Notify::flags.initialising;
+    _flags_data.flags.gps_status            = AP_Notify::flags.gps_status;
+    _flags_data.flags.gps_num_sats          = AP_Notify::flags.gps_num_sats;
+    _flags_data.flags.flight_mode           = AP_Notify::flags.flight_mode;
+    _flags_data.flags.armed                 = AP_Notify::flags.armed;
+    _flags_data.flags.pre_arm_check         = AP_Notify::flags.pre_arm_check;
+    _flags_data.flags.pre_arm_gps_check     = AP_Notify::flags.pre_arm_gps_check;
+    _flags_data.flags.save_trim             = AP_Notify::flags.save_trim;
+    _flags_data.flags.esc_calibration       = AP_Notify::flags.esc_calibration;
+    _flags_data.flags.failsafe_radio        = AP_Notify::flags.failsafe_radio;
+    _flags_data.flags.failsafe_battery      = AP_Notify::flags.failsafe_battery;
+    _flags_data.flags.parachute_release     = AP_Notify::flags.parachute_release;
+    _flags_data.flags.ekf_bad               = AP_Notify::flags.ekf_bad;
+    _flags_data.flags.autopilot_mode        = AP_Notify::flags.autopilot_mode;
+    _flags_data.flags.firmware_update       = AP_Notify::flags.firmware_update;
+    _flags_data.flags.compass_cal_running   = AP_Notify::flags.compass_cal_running;
+    _flags_data.flags.leak_detected         = AP_Notify::flags.leak_detected;
+    _flags_data.flags.battery_voltage       = AP::battery().voltage(); // not available anymore AP_Notify::flags.battery_voltage;
+    _flags_data.flags.gps_fusion            = AP_Notify::flags.gps_fusion;
+    _flags_data.flags.gps_glitching         = AP_Notify::flags.gps_glitching;
+    _flags_data.flags.have_pos_abs          = AP_Notify::flags.have_pos_abs;
+
+    _flags_data.flags.external_leds         = false; // not available anymore AP_Notify::flags.external_leds;
+    _flags_data.flags.vehicle_lost          = AP_Notify::flags.vehicle_lost;
+    _flags_data.flags.waiting_for_throw     = AP_Notify::flags.waiting_for_throw;
+    _flags_data.flags.powering_off          = AP_Notify::flags.powering_off;
+    _flags_data.flags.video_recording       = AP_Notify::flags.video_recording;
+
+    _flags_data.events.arming_failed            = AP_Notify::events.arming_failed;
+    _flags_data.events.user_mode_change         = AP_Notify::events.user_mode_change;
+    _flags_data.events.user_mode_change_failed  = AP_Notify::events.user_mode_change_failed;
+    _flags_data.events.failsafe_mode_change     = AP_Notify::events.failsafe_mode_change;
+    _flags_data.events.autotune_complete        = AP_Notify::events.autotune_complete;
+    _flags_data.events.autotune_failed          = AP_Notify::events.autotune_failed;
+    _flags_data.events.autotune_next_axis       = AP_Notify::events.autotune_next_axis;
+    _flags_data.events.mission_complete         = AP_Notify::events.mission_complete;
+    _flags_data.events.waypoint_complete        = AP_Notify::events.waypoint_complete;
+    _flags_data.events.initiated_compass_cal    = AP_Notify::events.initiated_compass_cal;
+    _flags_data.events.compass_cal_saved        = AP_Notify::events.compass_cal_saved;
+    _flags_data.events.compass_cal_failed       = AP_Notify::events.compass_cal_failed;
+    _flags_data.events.compass_cal_canceled     = AP_Notify::events.compass_cal_canceled;
+    _flags_data.events.tune_started             = AP_Notify::events.tune_started;
+    _flags_data.events.tune_next                = AP_Notify::events.tune_next;
+    _flags_data.events.tune_save                = AP_Notify::events.tune_save;
+    _flags_data.events.tune_error               = AP_Notify::events.tune_error;
+
     _flags_updated = true;
 }
 
