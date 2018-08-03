@@ -21,7 +21,7 @@
 #include <uavcan/equipment/indication/RGB565.hpp>
 //OW
 #include "Notify.hpp"
-#include "newtunnel/Broadcast.hpp" //#include <uavcan/tunnel/Broadcast.hpp>
+#include <uavcan/tunnel/Broadcast.hpp> //#include "newtunnel/Broadcast.hpp" are identical, thus deleted
 #include "BP_UavcanTunnelManager.h"
 //OWEND
 
