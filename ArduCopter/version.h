@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v010"
+#define THISFIRMWARE "BetaCopter V3.6-dev v011"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -65,8 +65,15 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 */
 
 /*
-v0.10:
+v0.11:
+ - merge master of 3.08.2018, using master-bcdev-merge method,
+   only one merge conflict
+   but needs serious changes to Notify stuff => needs carefull testing
+   newtunnel stuff could be removed
 
+
+v0.10:
+skipped to get en par with 's' version
 v0.09:
 I've decided to split branches into
 * 3.6.0-rc6 v009s, which is based on ArduCopter and includes "only" everything except of any UAVCAN stuff
