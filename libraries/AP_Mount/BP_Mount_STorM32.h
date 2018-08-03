@@ -1,7 +1,7 @@
+//*****************************************************
 //OW
-// *****************************************************
 // (c) olliw, www.olliw.eu, GPL3
-// *****************************************************
+//*****************************************************
 // STorM32 mount backend class
 
 //20180717: with the UAVCAN Tunnel code we can remove all CAN dependencies in here, which makes it much simpler
