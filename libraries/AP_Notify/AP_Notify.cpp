@@ -32,6 +32,9 @@
 #include "UAVCAN_RGB_LED.h"
 #include <stdio.h>
 #include "AP_BoardLED2.h"
+//OW
+#include "Uc4hNotifyDevice.h"
+//OWEND
 
 extern const AP_HAL::HAL& hal;
 
@@ -257,6 +260,10 @@ void AP_Notify::add_backends(void)
 
     // Always try and add a display backend
     ADD_BACKEND(new Display());
+
+//OW
+    ADD_BACKEND(new Uc4hNotifyDevice());
+//OWEND
 
     // Add noise making devices
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || \

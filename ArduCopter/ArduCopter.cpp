@@ -262,6 +262,9 @@ void Copter::fast_loop()
     // camera mount's fast update
     camera_mount.update_fast();
 #endif
+//OW
+    tunnel_manager.update_fast();
+//OWEND
 
     // log sensor health
     if (should_log(MASK_LOG_ANY)) {
