@@ -257,13 +257,8 @@ void AP_Notify::add_backends(void)
         }
     }
 
-
     // Always try and add a display backend
     ADD_BACKEND(new Display());
-
-//OW
-    ADD_BACKEND(new Uc4hNotifyDevice());
-//OWEND
 
     // Add noise making devices
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || \
@@ -303,6 +298,9 @@ void AP_Notify::add_backends(void)
     ADD_BACKEND(new Buzzer());
 #endif // Noise makers
 
+//OW
+    ADD_BACKEND(new Uc4hNotifyDevice());
+//OWEND
 }
 
 // initialisation
