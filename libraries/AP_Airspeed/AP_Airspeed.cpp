@@ -30,6 +30,9 @@
 #include "AP_Airspeed_SDP3X.h"
 #include "AP_Airspeed_analog.h"
 #include "AP_Airspeed_Backend.h"
+//OW
+#include "AP_Airspeed_UAVCAN.h"
+//OWEND
 
 extern const AP_HAL::HAL &hal;
 
@@ -249,6 +252,13 @@ void AP_Airspeed::init()
         case TYPE_I2C_SDP3X:
             sensor[i] = new AP_Airspeed_SDP3X(*this, i);
             break;
+//OW
+#if HAL_WITH_UAVCAN
+        case TYPE_UAVCAN:
+            sensor[i] = new AP_Airspeed_UAVCAN(*this, i);
+            break;
+#endif
+//OWEND
         }
         if (sensor[i] && !sensor[i]->init()) {
             gcs().send_text(MAV_SEVERITY_INFO, "Airspeed[%u] init failed", i);

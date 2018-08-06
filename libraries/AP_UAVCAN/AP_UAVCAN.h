@@ -16,6 +16,9 @@
 #include <AP_Baro/AP_Baro_Backend.h>
 #include <AP_Compass/AP_Compass.h>
 #include <AP_BattMonitor/AP_BattMonitor_Backend.h>
+//OW
+#include <AP_Airspeed/AP_Airspeed_Backend.h>
+//OWEND
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
@@ -287,10 +290,7 @@ public:
     // --- RawAirData ---
     // incoming message, by node id
     public:
-        // currently, we do nothing than to write the data to dataflash
-        // => we do not need a listener, we can do it in _update_data()
-        // register_listener would be called from the listener class
-        // this of course needs to change once we have a class which wants to listen
+        // currently, for testing, we also to write the data to dataflash in _update_data()
         struct RawAirData_Data {
             uint8_t flags;
             float static_pressure;
@@ -301,17 +301,17 @@ public:
             float pitot_temperature;
             //covariance is not used, so drop to save space
         };
-        //uint8_t rawairdata_register_listener(AP_EscMonitor_Backend* new_listener, uint8_t id);
+        uint8_t rawairdata_register_listener(AP_Airspeed_Backend* new_listener, uint8_t id);
         RawAirData_Data* rawairdata_getptrto_data(uint8_t id);
         void rawairdata_update_data(uint8_t id);
 
     private:
         struct {
             uint16_t id[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
-            //uint16_t id_taken[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
-            //uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
-            //AP_EscMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
             RawAirData_Data data[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
+            uint16_t id_taken[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
+            uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+            AP_Airspeed_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
         } _rawairdata;
 
 //OWEND

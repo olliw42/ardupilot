@@ -368,25 +368,28 @@ static void (*battery_info_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uav
 
 static void rawairdata_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg, uint8_t mgr)
 {
-    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
         return;
     }
 
     uint8_t id = msg.getSrcNodeID().get(); //by node id
 
-    AP_UAVCAN::RawAirData_Data *data = ap_uavcan->rawairdata_getptrto_data(id);
-    if (data != nullptr) {
-        data->flags = msg.flags;
-        data->static_pressure = msg.static_pressure;
-        data->differential_pressure = msg.differential_pressure;
-        data->static_pressure_sensor_temperature = msg.static_pressure_sensor_temperature;
-        data->differential_pressure_sensor_temperature = msg.differential_pressure_sensor_temperature;
-        data->static_air_temperature = msg.static_air_temperature;
-        data->pitot_temperature = msg.pitot_temperature;
-
-        ap_uavcan->rawairdata_update_data(id);
+    AP_UAVCAN::RawAirData_Data* data = ap_uavcan->rawairdata_getptrto_data(id);
+    if (data == nullptr) {
+        return;
     }
+
+    data->flags = msg.flags;
+    data->static_pressure = msg.static_pressure;
+    data->differential_pressure = msg.differential_pressure;
+    data->static_pressure_sensor_temperature = msg.static_pressure_sensor_temperature;
+    data->differential_pressure_sensor_temperature = msg.differential_pressure_sensor_temperature;
+    data->static_air_temperature = msg.static_air_temperature;
+    data->pitot_temperature = msg.pitot_temperature;
+
+    // after all is filled, update all listeners with new data
+    ap_uavcan->rawairdata_update_data(id);
 }
 
 static void rawairdata_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::air_data::RawAirData>& msg)
@@ -455,11 +458,11 @@ AP_UAVCAN::AP_UAVCAN() :
     // --- RawAirData ---
     for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
         _rawairdata.id[i] = UINT8_MAX;
-//        _rawairdata.id_taken[i] = 0;
+        _rawairdata.id_taken[i] = 0;
     }
     for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-//        _rawairdata.listener_to_id[li] = UINT8_MAX;
-//        _rawairdata.listeners[li] = nullptr;
+        _rawairdata.listener_to_id[li] = UINT8_MAX;
+        _rawairdata.listeners[li] = nullptr;
     }
 //OWEND
 
@@ -1493,12 +1496,39 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
 //--- RawAirData ---
 // incoming message, by node id
 
-//we do not currently use a class which wants to listen to that
-// so, these are currently not needed:
-//   uint8_t AP_UAVCAN::register_xxx_listener_to_node(AP_Xxx_Backend* new_listener, uint8_t node)
-//   void AP_UAVCAN::remove_xxx_listener(AP_Xxx_Backend* rem_listener)
-//   uint8_t AP_UAVCAN::find_smallest_free_xxx_node()
-// also, in rawairdata_update_data() the class's handler is not called
+uint8_t AP_UAVCAN::rawairdata_register_listener(AP_Airspeed_Backend* new_listener, uint8_t id)
+{
+    uint8_t sel_place = UINT8_MAX, ret = 0;
+
+    //find first free place in listeners list
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_rawairdata.listeners[li] == nullptr) {
+            sel_place = li;
+            break;
+        }
+    }
+
+    //no free place, abort
+    if (sel_place == UINT8_MAX) {
+        return 0;
+    }
+
+    //insert listener
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        if (_rawairdata.id[i] != id) {
+            continue;
+        }
+        _rawairdata.listeners[sel_place] = new_listener;
+        _rawairdata.listener_to_id[sel_place] = i;
+        _rawairdata.id_taken[i]++;
+        ret = i + 1;
+        debug_uavcan(2, "reg_RAWAIRDATA place:%d, chan: %d\n\r", sel_place, i);
+        break;
+    }
+
+    return ret;
+}
+
 
 AP_UAVCAN::RawAirData_Data* AP_UAVCAN::rawairdata_getptrto_data(uint8_t id)
 {
@@ -1531,7 +1561,20 @@ void AP_UAVCAN::rawairdata_update_data(uint8_t id)
             continue;
         }
 
+        for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+            if (_rawairdata.listener_to_id[li] != i) {
+                continue;
+            }
+
+            _rawairdata.listeners[li]->handle_rawairdata_msg(
+                    _rawairdata.data[i].differential_pressure,
+                    _rawairdata.data[i].differential_pressure_sensor_temperature);
+        }
+
+        //TODO: how to handle dual CAN bus
+
         //it seems that this is not required, MP plots them as NaN either way, but there is probably a reason for the extra quiet_nanf()
+        // we need it also for the conversions
         #define TSTNAN(x) (uavcan::isNaN(x)) ? df->quiet_nanf() : (x)
 
         DataFlash_Class *df = DataFlash_Class::instance();
@@ -1543,10 +1586,10 @@ void AP_UAVCAN::rawairdata_update_data(uint8_t id)
                flags                                   : _rawairdata.data[i].flags,
                static_pressure                         : TSTNAN(_rawairdata.data[i].static_pressure),
                differential_pressure                   : TSTNAN(_rawairdata.data[i].differential_pressure),
-               static_pressure_sensor_temperature      : TSTNAN(_rawairdata.data[i].static_pressure_sensor_temperature),
-               differential_pressure_sensor_temperature: TSTNAN(_rawairdata.data[i].differential_pressure_sensor_temperature),
-               static_air_temperature                  : TSTNAN(_rawairdata.data[i].static_air_temperature),
-               pitot_temperature                       : TSTNAN(_rawairdata.data[i].pitot_temperature)
+               static_pressure_sensor_temperature      : TSTNAN(_rawairdata.data[i].static_pressure_sensor_temperature - 273.15f),
+               differential_pressure_sensor_temperature: TSTNAN(_rawairdata.data[i].differential_pressure_sensor_temperature - 273.15f),
+               static_air_temperature                  : TSTNAN(_rawairdata.data[i].static_air_temperature - 273.15f),
+               pitot_temperature                       : TSTNAN(_rawairdata.data[i].pitot_temperature - 273.15f)
             };
             df->WriteBlock(&pkt, sizeof(pkt));
         }
@@ -1556,30 +1599,3 @@ void AP_UAVCAN::rawairdata_update_data(uint8_t id)
 //OWEND
 
 #endif // HAL_WITH_UAVCAN
-
-//OW
-/* api for each node (referenced by node id, slightly different when referenced by device id/index):
-
-uint8_t AP_UAVCAN::register_xxx_listener(AP_Xxx_Backend* new_listener, uint8_t preferred_channel)
-  currently not used anywhere
-
-uint8_t AP_UAVCAN::register_xxx_listener_to_node(AP_Xxx_Backend* new_listener, uint8_t node)
-  called in: AP_Xxx_UAVCAN::register_uavcan_xxx(uint8_t mgr, uint8_t node)
-  the node class registers itself as listener
-
-void AP_UAVCAN::remove_xxx_listener(AP_Xxx_Backend* rem_listener)
-  called in: AP_Xxx_UAVCAN::~AP_Xxx_UAVCAN()
-
-uint8_t AP_UAVCAN::find_smallest_free_xxx_node()
-  called in: AP_Xxx_Backend *AP_Xxx_UAVCAN::probe(AP_Xxx &xxx)
-
-AP_UAVCAN::Xxx_Info *AP_UAVCAN::find_xxx_node(uint8_t node)
-  called in: static void xxxxxx_cb(const uavcan::ReceivedDataStructure<uavcan:: ... >& msg, uint8_t mgr)
-  the naming of this function is totally misleading, it returns a ptr to the data structure
-
-void AP_UAVCAN::update_xxx_state(uint8_t node)
-  called in: static void xxxxxx_cb(const uavcan::ReceivedDataStructure<uavcan:: ... >& msg, uint8_t mgr)
-  reads the data from the UAVCAN message into the data structure
-*/
-// my convention: i for AP_UAVCAN_XXX_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
-//OWEND

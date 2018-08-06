@@ -36,6 +36,11 @@ public:
     // return the current temperature in degrees C, if available
     virtual bool get_temperature(float &temperature) = 0;
 
+//OW
+    // callback for UAVCAN message
+    virtual void handle_rawairdata_msg(float differential_pressure, float differential_pressure_sensor_temperature) {}
+//OWEND
+
 protected:
     int8_t get_pin(void) const;
     float get_psi_range(void) const;
