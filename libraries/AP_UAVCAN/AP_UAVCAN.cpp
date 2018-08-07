@@ -1496,9 +1496,24 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
 //--- RawAirData ---
 // incoming message, by node id
 
+uint8_t AP_UAVCAN::rawairdata_find_smallest_nottaken_id(void)
+{
+    uint8_t found_id = UINT8_MAX;
+
+    //loop through all and find the smallest id
+    for (uint8_t i = 0; i < AP_UAVCAN_RAWAIRDATA_MAX_NUMBER; i++) {
+        if (_rawairdata.id_taken[i] == 0) {
+            found_id = MIN(found_id, _rawairdata.id[i]);
+        }
+    }
+
+    return found_id;
+}
+
+
 uint8_t AP_UAVCAN::rawairdata_register_listener(AP_Airspeed_Backend* new_listener, uint8_t id)
 {
-    uint8_t sel_place = UINT8_MAX, ret = 0;
+    uint8_t sel_place = UINT8_MAX, ret = 0; //it would be more logical/consistent to also use here UINT8_MAX as false
 
     //find first free place in listeners list
     for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {

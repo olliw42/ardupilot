@@ -301,6 +301,7 @@ public:
             float pitot_temperature;
             //covariance is not used, so drop to save space
         };
+        uint8_t rawairdata_find_smallest_nottaken_id(void);
         uint8_t rawairdata_register_listener(AP_Airspeed_Backend* new_listener, uint8_t id);
         RawAirData_Data* rawairdata_getptrto_data(uint8_t id);
         void rawairdata_update_data(uint8_t id);
@@ -309,7 +310,7 @@ public:
         struct {
             uint16_t id[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
             RawAirData_Data data[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
-            uint16_t id_taken[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER];
+            uint16_t id_taken[AP_UAVCAN_RAWAIRDATA_MAX_NUMBER]; // there can be several listeners to the same id
             uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
             AP_Airspeed_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
         } _rawairdata;
