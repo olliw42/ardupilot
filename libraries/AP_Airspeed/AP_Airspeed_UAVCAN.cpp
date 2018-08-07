@@ -37,7 +37,7 @@ bool AP_Airspeed_UAVCAN::init()
             continue;
         }
         
-        const uint8_t id = 48 + i; //TODO: this should be adjustable or auto adjusted !!!
+        const uint8_t id = 49; //TODO: this should be adjustable or auto adjusted !!!
         
         if (ap_uavcan->rawairdata_register_listener(this, id)) {
             debug_as_uavcan(2, "UAVCAN Airspeed registered id: %d\n\r", id);
