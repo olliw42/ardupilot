@@ -1545,6 +1545,23 @@ uint8_t AP_UAVCAN::rawairdata_register_listener(AP_Airspeed_Backend* new_listene
 }
 
 
+void AP_UAVCAN::rawairdata_remove_listener(AP_Airspeed_Backend* rem_listener)
+{
+    //check for all listeners and compare pointers
+    for (uint8_t i = 0; i < AP_UAVCAN_MAX_LISTENERS; i++) {
+        if (_rawairdata.listeners[i] == rem_listener) {
+            _rawairdata.listeners[i] = nullptr;
+
+            //also decrement usage counter and reset listening node
+            if (_rawairdata.id_taken[_rawairdata.listener_to_id[i]] > 0) {
+                _rawairdata.id_taken[_rawairdata.listener_to_id[i]]--;
+            }
+            _rawairdata.listener_to_id[i] = UINT8_MAX;
+        }
+    }
+}
+
+
 AP_UAVCAN::RawAirData_Data* AP_UAVCAN::rawairdata_getptrto_data(uint8_t id)
 {
     // check if id is already in list, and if it is take it

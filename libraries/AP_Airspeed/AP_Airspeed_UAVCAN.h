@@ -14,7 +14,7 @@ public:
     AP_Airspeed_UAVCAN(AP_Airspeed& frontend, uint8_t _instance);
 
     /// Destructor
-    //~AP_Airspeed_UAVCAN() override;  //THIS class is hopefully never destructed!!! why would it
+    ~AP_Airspeed_UAVCAN() override;
 
     // probe and initialise the sensor
     bool init(void) override;

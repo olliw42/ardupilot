@@ -303,6 +303,7 @@ public:
         };
         uint8_t rawairdata_find_smallest_nottaken_id(void);
         uint8_t rawairdata_register_listener(AP_Airspeed_Backend* new_listener, uint8_t id);
+        void rawairdata_remove_listener(AP_Airspeed_Backend* rem_listener);
         RawAirData_Data* rawairdata_getptrto_data(uint8_t id);
         void rawairdata_update_data(uint8_t id);
 
