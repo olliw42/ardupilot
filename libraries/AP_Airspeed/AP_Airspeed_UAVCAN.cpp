@@ -19,7 +19,9 @@ AP_Airspeed_UAVCAN::AP_Airspeed_UAVCAN(AP_Airspeed& _frontend, uint8_t _instance
     AP_Airspeed_Backend(_frontend, _instance)
 {
     _initialized = false;
-    _last_sample_time_ms = 0;
+
+    _new_pressure_received = false;
+    _new_temperature_received = false;
 
     _my_sem = hal.util->new_semaphore();
 }
@@ -96,6 +98,7 @@ bool AP_Airspeed_UAVCAN::init()
 
 // this is how it should also be done for AirSpeed
 // needs however significant changes to Airspeed class, and could seriously affect other classes such as EKF etc. pp => one needs to be careful!!
+// alternative one could do some rate-changed filtering, if filtering is not harmfull, or done anyways
 // this rate problem could also be true for other slowly sending UAVCAN sensors, Baro?
 
 // => thus, for the moment the only way is to send airspeed faster, and discard
@@ -117,6 +120,11 @@ bool AP_Airspeed_UAVCAN::get_differential_pressure(float& pressure)
 //        return false;
 //    }
 
+    if (!_new_pressure_received) {
+        return false;
+    }
+    _new_pressure_received = false; //shouldn't this be cleared within the sem protection? yes, but doesn't matter as it blocks forever
+
     if (_my_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         pressure = _pressure;
         _my_sem->give();
@@ -136,6 +144,11 @@ bool AP_Airspeed_UAVCAN::get_temperature(float& temperature)
 //    if ((AP_HAL::millis() - _last_sample_time_ms) > 100) {
 //        return false;
 //    }
+
+    if (!_new_temperature_received) {
+        return false;
+    }
+    _new_temperature_received = false; //shouldn't this be cleared within the sem protection? yes, but doesn't matter as it blocks forever
 
     if (_my_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         temperature = _temperature;
@@ -158,7 +171,8 @@ void AP_Airspeed_UAVCAN::handle_rawairdata_msg(float differential_pressure, floa
         _pressure = differential_pressure; //UAVCAN is in Pascal, no conversion needed
         _temperature = differential_pressure_sensor_temperature - 273.15f; //UAVCAN is in Kelvin, convert to Celsius
 
-        _last_sample_time_ms = AP_HAL::millis();
+        _new_pressure_received = true;
+        _new_temperature_received = true;
 
         _my_sem->give();
     }

@@ -30,10 +30,11 @@ public:
 private:
     bool _initialized;
 
-    uint32_t _last_sample_time_ms;
-
     float _pressure; // in Pascal
     float _temperature; // in Celsius
+
+    bool _new_pressure_received;
+    bool _new_temperature_received;
 
     //note, the BattMonitor class has no such semaphore, the GPS, Baro, and Compass have, why?
     // because the latter are supposed to support multiple nodes? but there is no such systematics in AP_UAVCAN
