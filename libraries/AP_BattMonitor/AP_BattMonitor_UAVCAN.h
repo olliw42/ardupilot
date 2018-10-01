@@ -13,7 +13,7 @@ public:
     enum BattMonitor_UAVCAN_Type {
         UAVCAN_BATTERY_INFO = 0,
 //OW
-        UAVCAN_GENERICBATTERY_INFO = 83,
+        UAVCAN_UC4HGENERICBATTERY_INFO = 83,
 //OWEND
     };
 
@@ -31,7 +31,7 @@ public:
 
     void handle_bi_msg(float voltage, float current, float temperature) override;
 //OW
-    void handle_genericbatteryinfo_msg(float voltage, float current, float charge) override;
+    void handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy) override;
 //OWEND
 
 protected:

@@ -42,9 +42,9 @@ void AP_BattMonitor_UAVCAN::init()
                 }
                 break;
 //OW
-            case UAVCAN_GENERICBATTERY_INFO:
-                if (ap_uavcan->genericbatteryinfo_register_listener(this, _params._serial_number)) {
-                    debug_bm_uavcan(2, "UAVCAN BattMonitor GenericBatteryInfo registered id: %d\n\r", _params._serial_number);
+            case UAVCAN_UC4HGENERICBATTERY_INFO:
+                if (ap_uavcan->uc4hgenericbatteryinfo_register_listener(this, _params._serial_number)) {
+                    debug_bm_uavcan(2, "UAVCAN BattMonitor Uc4hGenericBatteryInfo registered id: %d\n\r", _params._serial_number);
                 }
                 break;
 //OWEND
@@ -87,20 +87,21 @@ void AP_BattMonitor_UAVCAN::handle_bi_msg(float voltage, float current, float te
 }
 
 //OW
-void AP_BattMonitor_UAVCAN::handle_genericbatteryinfo_msg(float voltage, float current, float charge)
+void AP_BattMonitor_UAVCAN::handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy)
 {
     _state.voltage = voltage;
     _state.current_amps = current;
-//XX    _state.current_total_mah = charge;
+//    _state.current_total_mah = charge;
+//    _state.energy_total_Wh = energy;
 
-    // much of the following is not really needed for genericbatteryinfo
-    // but we want to be able to fallback to circuitstatus whenever needed, and to avoid timeout
+    // much of the following is not really needed for uc4h.genericbatteryinfo
+    // but we want to be able to fallback whenever needed, and to avoid timeout
 
     uint32_t tnow = AP_HAL::micros();
 
-    if (!uavcan::isNaN(charge)) {
+    if (!uavcan::isNaN(charge) && !uavcan::isNaN(energy)) { //this should never happen, but play it safe
         _state.consumed_mah = charge;
-        _state.consumed_wh = 0.001f * charge * _state.voltage;
+        _state.consumed_wh = energy;
     } else {
         float dt = tnow - _state.last_time_micros;
 

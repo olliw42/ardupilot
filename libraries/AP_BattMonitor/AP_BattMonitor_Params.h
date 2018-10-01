@@ -23,7 +23,7 @@ public:
         BattMonitor_TYPE_UAVCAN_BatteryInfo         = 8,
         BattMonitor_TYPE_BLHeliESC                  = 9,
 //OW
-        BattMonitor_TYPE_UAVCAN_GenericBatteryInfo  = 83,
+        BattMonitor_TYPE_UAVCAN_Uc4hGenericBatteryInfo  = 83,
 //OWEND
     };
 

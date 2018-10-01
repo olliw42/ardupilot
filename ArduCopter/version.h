@@ -67,7 +67,11 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 /*
 v0.12:
  - Notify stuff changed, adapted to "new" notify message interpretation
-
+   benchtested v4
+ - bp_dsdl, bop_dsdl_geberated added with newly generated dsdl .hpp files
+ - powerbrick stuff changed, adapted to new uc4h.GenericBatteryInfo message
+   benchtested v4
+   energy calculation appears to be reasonable
 
 v0.11:
  - merge master of 3.08.2018, using master-bcdev-merge method,
