@@ -39,12 +39,13 @@
 # frame = 0x7F means that no frame is specified, and that only the mode field should be considered
 #
 
-uint8 mode
+uint8 gimbal_id                 #0 means broadcast, any gimbal should listen
 
-uint7 frame
+uint8 mode                      #0 means that the mode should not be changed
 
-bool anglequaternion_tag        #that's instead of using a union, which is a bit clumsy
-float32[4] orientation          #anglequaternion_tag = 0: roll, pitch, yaw in rad, 1: orientation quaternion in xyzw
+uint8 control_mode              #specifies the meaning of the data
+
+float32[4] orientation          #the meaning of the content is defined by frame, angles: roll, pitch, yaw in rad, otherwise: orientation quaternion in xyzw
 
 float32[<=3] angular_velocity   #roll, pitch, yaw rates in rad/s
 
