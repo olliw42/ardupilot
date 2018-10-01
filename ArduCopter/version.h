@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "APM:Copter V3.6-dev"
-#define THISFIRMWARE "BetaCopter V3.6-dev v011"
+#define THISFIRMWARE "BetaCopter V3.6-dev v012"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -65,12 +65,15 @@ a px4-clean MUST be done when changing from v2 to v3,v4 or vice versa !!!
 */
 
 /*
+v0.12:
+ - Notify stuff changed, adapted to "new" notify message interpretation
+
+
 v0.11:
  - merge master of 3.08.2018, using master-bcdev-merge method,
    only one merge conflict
    but needs serious changes to Notify stuff => needs carefull testing
    newtunnel stuff could be removed
-
 
 v0.10:
 skipped to get en par with 's' version
