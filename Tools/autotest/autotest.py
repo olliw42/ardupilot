@@ -21,6 +21,7 @@ import arducopter
 import arduplane
 import ardusub
 import quadplane
+import balancebot
 
 from pysim import util
 from pymavlink import mavutil
@@ -229,7 +230,8 @@ __bin_names = {
     "AntennaTracker": "antennatracker",
     "CopterAVC": "arducopter-heli",
     "QuadPlane": "arduplane",
-    "ArduSub": "ardusub"
+    "ArduSub": "ardusub",
+    "balancebot": "ardurover"
 }
 
 
@@ -308,6 +310,7 @@ def run_step(step):
         "valgrind": opts.valgrind,
         "gdb": opts.gdb,
         "gdbserver": opts.gdbserver,
+        "breakpoints": opts.breakpoint,
     }
     if opts.speedup is not None:
         fly_opts["speedup"] = opts.speedup
@@ -334,6 +337,12 @@ def run_step(step):
         tester = apmrover2.AutoTestRover(binary,
                                          frame=opts.frame,
                                          **fly_opts)
+        return tester.autotest()
+
+    if step == 'drive.balancebot':
+        tester = balancebot.AutoTestBalanceBot(binary,
+                                               frame=opts.frame,
+                                               **fly_opts)
         return tester.autotest()
 
     if step == 'dive.ArduSub':
@@ -604,6 +613,11 @@ if __name__ == "__main__":
                          default=False,
                          action='store_true',
                          help='run ArduPilot binaries under gdbserver')
+    group_sim.add_option("-B", "--breakpoint",
+                         type='string',
+                         action="append",
+                         default=[],
+                         help="add a breakpoint at given location in debugger")
     parser.add_option_group(group_sim)
 
     opts, args = parser.parse_args()
@@ -624,6 +638,7 @@ if __name__ == "__main__":
         'build.APMrover2',
         'defaults.APMrover2',
         'drive.APMrover2',
+        'drive.balancebot',
 
         'build.ArduCopter',
         'defaults.ArduCopter',

@@ -71,7 +71,7 @@ void UARTDriver::uart_thread(void* arg)
 
     uart_thread_ctx = chThdGetSelfX();
     while (true) {
-        eventmask_t mask = chEvtWaitAnyTimeout(~0, MS2ST(1));
+        eventmask_t mask = chEvtWaitAnyTimeout(~0, chTimeMS2I(1));
         uint32_t now = AP_HAL::micros();
         if (now - last_thread_run_us >= 1000) {
             // run them all if it's been more than 1ms since we ran
@@ -129,8 +129,8 @@ void UARTDriver::begin(uint32_t b, uint16_t rxS, uint16_t txS)
     if (sdef.serial == nullptr) {
         return;
     }
-    uint16_t min_tx_buffer = 4096;
-    uint16_t min_rx_buffer = 1024;
+    uint16_t min_tx_buffer = 1024;
+    uint16_t min_rx_buffer = 512;
     // on PX4 we have enough memory to have a larger transmit and
     // receive buffer for all ports. This means we don't get delays
     // while waiting to write GPS config packets
@@ -600,7 +600,7 @@ bool UARTDriver::wait_timeout(uint16_t n, uint32_t timeout_ms)
     }
     _wait.n = n;
     _wait.thread_ctx = chThdGetSelfX();
-    eventmask_t mask = chEvtWaitAnyTimeout(EVT_DATA, MS2ST(timeout_ms));
+    eventmask_t mask = chEvtWaitAnyTimeout(EVT_DATA, chTimeMS2I(timeout_ms));
     return (mask & EVT_DATA) != 0;
 }
 
@@ -686,7 +686,7 @@ void UARTDriver::write_pending_bytes_DMA(uint32_t n)
                      STM32_DMA_CR_MINC | STM32_DMA_CR_TCIE);
     dmaStreamEnable(txdma);
     uint32_t timeout_us = ((1000000UL * (tx_len+2) * 10) / _baudrate) + 500;
-    chVTSet(&tx_timeout, US2ST(timeout_us), handle_tx_timeout, this);
+    chVTSet(&tx_timeout, chTimeUS2I(timeout_us), handle_tx_timeout, this);
 }
 
 /*

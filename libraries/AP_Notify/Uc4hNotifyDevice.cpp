@@ -1,9 +1,10 @@
+//******************************************************
 //OW
-// ******************************************************
 // (c) olliw, www.olliw.eu, GPL3
-// ******************************************************
+//******************************************************
 #include <AP_HAL/AP_HAL.h>
 #include <AP_GPS/AP_GPS.h>
+#include <AP_BattMonitor/AP_BattMonitor.h>
 #include "Uc4hNotifyDevice.h"
 #include "AP_Notify.h"
 
@@ -62,7 +63,7 @@ void Uc4hNotifyDevice::send_CAN_notify_message(void)
             if (ap_uavcan != nullptr) {
 
                 //subtype is the version of the FLAGS field
-                ap_uavcan->uc4hnotify_send( UC4HNOTIFYTYPE_FLAGS, 0, (uint8_t*)(&_flags_data), sizeof(_flags_data) );
+                ap_uavcan->uc4hnotify_send( UC4HNOTIFYTYPE_FLAGS, UC4H_APNOTIFYTYPE_V001, (uint8_t*)(&_flags_data), sizeof(_flags_data) );
 
             }
         }
@@ -113,9 +114,22 @@ void Uc4hNotifyDevice::update_sync(void)
 
 void Uc4hNotifyDevice::update_flags(void)
 {
-    _flags_data.number_of_arms = 4; //ONLY QUAD SUPPORTED currently
-    _flags_data.flags = AP_Notify::flags;
-    _flags_data.events = AP_Notify::events;
+    _flags_data.flags.initialising          = AP_Notify::flags.initialising;
+    _flags_data.flags.firmware_update       = AP_Notify::flags.firmware_update;
+    _flags_data.flags.gps_status            = AP_Notify::flags.gps_status;
+    _flags_data.flags.gps_num_sats          = AP_Notify::flags.gps_num_sats;
+    _flags_data.flags.gps_fusion            = AP_Notify::flags.gps_fusion;
+    _flags_data.flags.have_pos_abs          = AP_Notify::flags.have_pos_abs;
+    _flags_data.flags.ekf_bad               = AP_Notify::flags.ekf_bad;
+    _flags_data.flags.pre_arm_check         = AP_Notify::flags.pre_arm_check;
+    _flags_data.flags.pre_arm_gps_check     = AP_Notify::flags.pre_arm_gps_check;
+    _flags_data.flags.armed                 = AP_Notify::flags.armed;
+    _flags_data.flags.autopilot_mode        = AP_Notify::flags.autopilot_mode;
+    _flags_data.flags.flight_mode           = AP_Notify::flags.flight_mode;
+    _flags_data.flags.failsafe_radio        = AP_Notify::flags.failsafe_radio;
+    _flags_data.flags.failsafe_battery      = AP_Notify::flags.failsafe_battery;
+    _flags_data.flags.battery_voltage       = AP::battery().voltage(); // not available anymore AP_Notify::flags.battery_voltage;
+
     _flags_updated = true;
 }
 

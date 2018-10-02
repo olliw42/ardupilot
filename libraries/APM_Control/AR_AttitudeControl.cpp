@@ -122,7 +122,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Description: Speed control brake enable/disable. Allows sending a reversed output to the motors to slow the vehicle.
     // @Values: 0:Disable,1:Enable
     // @User: Standard
-    AP_GROUPINFO("_BRAKE", 4, AR_AttitudeControl, _brake_enable, 0),
+    AP_GROUPINFO("_BRAKE", 4, AR_AttitudeControl, _brake_enable, 1),
 
     // @Param: _STOP_SPEED
     // @DisplayName: Speed control stop speed
@@ -434,8 +434,7 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
         if ((desired_speed >= 0.0f) && (throttle_out <= 0.0f)) {
             throttle_out = 0.0f;
             _throttle_limit_low = true;
-        }
-        if ((desired_speed <= 0.0f) && (throttle_out >= 0.0f)) {
+        } else if ((desired_speed <= 0.0f) && (throttle_out >= 0.0f)) {
             throttle_out = 0.0f;
             _throttle_limit_high = true;
         }

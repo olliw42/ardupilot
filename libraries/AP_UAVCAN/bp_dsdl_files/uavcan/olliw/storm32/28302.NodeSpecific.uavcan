@@ -1,5 +1,0 @@
-#
-# Node Specific
-#
-
-uint8[<=128] payload

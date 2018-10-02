@@ -164,7 +164,7 @@ void AP_IOMCU::thread_main(void)
     trigger_event(IOEVENT_INIT);
     
     while (true) {
-        eventmask_t mask = chEvtWaitAnyTimeout(~0, MS2ST(10));
+        eventmask_t mask = chEvtWaitAnyTimeout(~0, chTimeMS2I(10));
 
         // check for pending IO events
         if (mask & EVENT_MASK(IOEVENT_SEND_PWM_OUT)) {
@@ -311,7 +311,7 @@ void AP_IOMCU::read_rc_input()
     // read a min of 9 channels and max of IOMCU_MAX_CHANNELS
     uint8_t n = MIN(MAX(9, rc_input.count), IOMCU_MAX_CHANNELS);
     read_registers(PAGE_RAW_RCIN, 0, 6+n, (uint16_t *)&rc_input);
-    if (rc_input.flags_rc_ok) {
+    if (rc_input.flags_rc_ok && !rc_input.flags_failsafe) {
         rc_input.last_input_us = AP_HAL::micros();
     }
 }
@@ -550,8 +550,15 @@ void AP_IOMCU::push(void)
 // set output frequency
 void AP_IOMCU::set_freq(uint16_t chmask, uint16_t freq)
 {
+    const uint8_t masks[] = { 0x03,0x0C,0xF0 };
+    // ensure mask is legal for the timer layout
+    for (uint8_t i=0; i<ARRAY_SIZE_SIMPLE(masks); i++) {
+        if (chmask & masks[i]) {
+            chmask |= masks[i];
+        }
+    }
     rate.freq = freq;
-    rate.chmask = chmask;
+    rate.chmask |= chmask;
     trigger_event(IOEVENT_SET_RATES);
 }
 

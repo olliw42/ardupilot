@@ -504,15 +504,18 @@ is bob we will attempt to checkout bob-AVR'''
                 "OMNIBUSF7V2",
                 "sparky2",
                 "omnibusf4pro",
+                "OmnibusNanoV6",
                 "mini-pix",
                 "airbotf4",
                 "revo-mini",
                 "CubeBlack",
+                "Pixhawk1",
                 "Pixhawk4",
                 "PH4-mini",
                 "CUAVv5",
                 "mRoX21",
-                "Pixracer"]
+                "Pixracer",
+                "F4BY"]
 
     def build_arducopter(self, tag):
         '''build Copter binaries'''

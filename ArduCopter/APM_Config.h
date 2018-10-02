@@ -45,28 +45,6 @@
 //#define DEVO_TELEM_ENABLED DISABLED               // disable DEVO telemetry, if you don't use Walkera RX-707 (or newer) receivers
 
 
-//OW
-#if HAL_MINIMIZE_FEATURES
-    #define RANGEFINDER_ENABLED     DISABLED
-    #define PROXIMITY_ENABLED       DISABLED
-    #define OPTFLOW                 DISABLED
-    #define VISUAL_ODOMETRY_ENABLED DISABLED
-    #define PRECISION_LANDING       DISABLED
-    #define PARACHUTE               DISABLED
-    #define ADSB_ENABLED            DISABLED
-    //AC_FENCE
-    #define AC_RALLY                DISABLED
-    #define AC_TERRAIN              DISABLED
-    #define AC_AVOID_ENABLED        DISABLED
-
-//#define AUTOTUNE_ENABLED      DISABLED
-//#define AC_FENCE              DISABLED
-//#define FRSKY_TELEM_ENABLED   DISABLED
-//#define SPRAYER               DISABLED
-//#define WINCH_ENABLED         DISABLED
-#endif
-//OWEND
-
 // features below are disabled by default on all boards
 //#define CAL_ALWAYS_REBOOT                         // flight controller will reboot after compass or accelerometer calibration completes
 //#define DISALLOW_GCS_MODE_CHANGE_DURING_RC_FAILSAFE   // disable mode changes from GCS during Radio failsafes.  Avoids a race condition for vehicle like Solo in which the RC and telemetry travel along the same link
@@ -87,3 +65,35 @@
 //#define USERHOOK_MEDIUMLOOP userhook_MediumLoop();        // for code to be run at 10hz
 //#define USERHOOK_SLOWLOOP userhook_SlowLoop();            // for code to be run at 3.3hz
 //#define USERHOOK_SUPERSLOWLOOP userhook_SuperSlowLoop();  // for code to be run at 1hz
+//#define USERHOOK_AUXSWITCH ENABLED                        // for code to handle user aux switches
+
+//OW
+#if HAL_MINIMIZE_FEATURES
+#define RANGEFINDER_ENABLED     DISABLED
+#define PROXIMITY_ENABLED       DISABLED
+
+#define OPTFLOW                 DISABLED
+#define VISUAL_ODOMETRY_ENABLED DISABLED
+
+#define SPRAYER_ENABLED         DISABLED
+#define PRECISION_LANDING       DISABLED
+#define GRIPPER_ENABLED         DISABLED
+#define WINCH_ENABLED           DISABLED
+#define RPM_ENABLED             DISABLED
+#define PARACHUTE               DISABLED
+#define ADSB_ENABLED            DISABLED
+
+#define MODE_SMARTRTL_ENABLED   DISABLED
+#define MODE_THROW_ENABLED      DISABLED
+#define BEACON_ENABLED          DISABLED
+
+#define AC_FENCE                DISABLED
+#define AC_RALLY                DISABLED
+#define AC_TERRAIN              DISABLED
+#define AC_AVOID_ENABLED        DISABLED
+
+#define TOY_MODE_ENABLED        DISABLED
+#define DEVO_TELEM_ENABLED      DISABLED
+#define OSD_ENABLED             DISABLED
+#endif
+//OWEND

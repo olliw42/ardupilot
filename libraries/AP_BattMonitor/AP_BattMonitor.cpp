@@ -106,9 +106,9 @@ AP_BattMonitor::init()
 #endif
                 break;
 //OW
-            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_GenericBatteryInfo:
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_Uc4hGenericBatteryInfo:
 #if HAL_WITH_UAVCAN
-                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], AP_BattMonitor_UAVCAN::UAVCAN_GENERICBATTERY_INFO, _params[instance]);
+                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], AP_BattMonitor_UAVCAN::UAVCAN_UC4HGENERICBATTERY_INFO, _params[instance]);
                 _num_instances++;
 #endif
                 break;
@@ -206,10 +206,6 @@ AP_BattMonitor::read()
             drivers[i]->read();
             drivers[i]->update_resistance_estimate();
         }
-    }
-
-    if (get_type() != AP_BattMonitor_Params::BattMonitor_TYPE_NONE) {
-        AP_Notify::flags.battery_voltage = voltage();
     }
 
     DataFlash_Class *df = DataFlash_Class::instance();

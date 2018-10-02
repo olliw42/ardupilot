@@ -20,8 +20,8 @@
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
 //OW
-#include "Notify.hpp"
-#include "newtunnel/Broadcast.hpp" //#include <uavcan/tunnel/Broadcast.hpp>
+#include "bp_dsdl_generated/olliw/uc4h/Notify.hpp"
+#include <uavcan/tunnel/Broadcast.hpp> //#include "newtunnel/Broadcast.hpp" are identical, thus deleted
 #include "BP_UavcanTunnelManager.h"
 //OWEND
 
@@ -43,7 +43,7 @@
 #define AP_UAVCAN_MAX_BARO_NODES 4
 #define AP_UAVCAN_MAX_BI_NUMBER 4
 //OW
-#define AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER 4
+#define AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER 4
 #define AP_UAVCAN_ESCSTATUS_MAX_NUMBER 8
 //OWEND
 
@@ -290,31 +290,34 @@ public:
     }
 
 //OW
-// --- GenericBatteryInfo ---
+// --- uc4h.GenericBatteryInfo ---
     // incoming message, by device id
 public:
-    struct GenericBatteryInfo_Data {
+    struct Uc4hGenericBatteryInfo_Data {
         float voltage; //float16
         float current; //float16
         float charge_consumed_mAh; //float16
+        float energy_consumed_Wh; //float16
+        float cell_voltages[12]; //float16[<=12] cell_voltages
         uint8_t status_flags;
         //auxiliary meta data
         uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
+        uint8_t cell_voltages_num; //this counts the number of received cell voltages
     };
 
-    uint8_t genericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
-    void genericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
-    GenericBatteryInfo_Data* genericbatteryinfo_getptrto_data(uint8_t id);
-    void genericbatteryinfo_update_i(uint8_t i);
+    uint8_t uc4hgenericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
+    void uc4hgenericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
+    Uc4hGenericBatteryInfo_Data* uc4hgenericbatteryinfo_getptrto_data(uint8_t id);
+    void uc4hgenericbatteryinfo_update_i(uint8_t i);
 
 private:
     struct {
-        uint16_t id[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
-        uint16_t id_taken[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t id[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t id_taken[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
         uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
         AP_BattMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
-        GenericBatteryInfo_Data data[AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER];
-    } _genericbatteryinfo;
+        Uc4hGenericBatteryInfo_Data data[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
+    } _uc4hgenericbatteryinfo;
 
 // --- EscStatus ---
     // incoming message, by device id
@@ -342,7 +345,7 @@ private:
         EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
     } _escstatus;
 
-// --- Uc4hNotify ---
+// --- uc4h.Notify ---
     // outgoing message
 public:
     bool uc4hnotify_sem_take();

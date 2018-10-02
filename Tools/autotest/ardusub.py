@@ -25,6 +25,7 @@ class AutoTestSub(AutoTest):
                  frame=None,
                  params=None,
                  gdbserver=False,
+                 breakpoints=[],
                  **kwargs):
         super(AutoTestSub, self).__init__(**kwargs)
         self.binary = binary
@@ -33,6 +34,7 @@ class AutoTestSub(AutoTest):
         self.frame = frame
         self.params = params
         self.gdbserver = gdbserver
+        self.breakpoints = breakpoints
 
         self.home = "%f,%f,%u,%u" % (HOME.lat,
                                      HOME.lng,
@@ -40,7 +42,6 @@ class AutoTestSub(AutoTest):
                                      HOME.heading)
         self.homeloc = None
         self.speedup = speedup
-        self.speedup_default = 10
 
         self.sitl = None
         self.hasInit = False
@@ -58,21 +59,14 @@ class AutoTestSub(AutoTest):
                                     valgrind=self.valgrind,
                                     gdb=self.gdb,
                                     gdbserver=self.gdbserver,
+                                    breakpoints=self.breakpoints,
                                     wipe=True)
         self.mavproxy = util.start_MAVProxy_SITL(
             'ArduSub', options=self.mavproxy_options())
         self.mavproxy.expect('Telemetry log: (\S+)\r\n')
-        logfile = self.mavproxy.match.group(1)
-        self.progress("LOGFILE %s" % logfile)
-
-        buildlog = self.buildlogs_path("ArduSub-test.tlog")
-        self.progress("buildlog=%s" % buildlog)
-        if os.path.exists(buildlog):
-            os.unlink(buildlog)
-        try:
-            os.link(logfile, buildlog)
-        except Exception:
-            pass
+        self.logfile = self.mavproxy.match.group(1)
+        self.progress("LOGFILE %s" % self.logfile)
+        self.try_symlink_tlog()
 
         self.progress("WAITING FOR PARAMETERS")
         self.mavproxy.expect('Received [0-9]+ parameters')

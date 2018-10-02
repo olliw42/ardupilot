@@ -71,7 +71,7 @@ bool Copter::ModeGuided::do_user_takeoff_start(float final_alt_above_home)
     set_throttle_takeoff();
 
     // get initial alt for WP_NAVALT_MIN
-    copter.auto_takeoff_set_start_alt();
+    auto_takeoff_set_start_alt();
 
     return true;
 }
@@ -365,6 +365,15 @@ void Copter::ModeGuided::run()
 //      called by guided_run at 100hz or more
 void Copter::ModeGuided::takeoff_run()
 {
+    auto_takeoff_run();
+    if (wp_nav->reached_wp_destination()) {
+        const Vector3f target = wp_nav->get_wp_destination();
+        set_destination(target);
+    }
+}
+
+void Copter::Mode::auto_takeoff_run()
+{
     // if not auto armed or motor interlock not enabled set throttle to zero and exit immediately
     if (!motors->armed() || !ap.auto_armed || !motors->get_interlock()) {
         // initialise wpnav targets
@@ -404,7 +413,7 @@ void Copter::ModeGuided::takeoff_run()
     copter.pos_control->update_z_controller();
 
     // call attitude controller
-    copter.auto_takeoff_attitude_run(target_yaw_rate);
+    auto_takeoff_attitude_run(target_yaw_rate);
 }
 
 // guided_pos_control_run - runs the guided position controller

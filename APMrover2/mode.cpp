@@ -268,6 +268,11 @@ bool Mode::stop_vehicle()
     bool stopped = false;
     float throttle_out = 100.0f * attitude_control.get_throttle_out_stop(g2.motors.limit.throttle_lower, g2.motors.limit.throttle_upper, g.speed_cruise, g.throttle_cruise * 0.01f, rover.G_Dt, stopped);
 
+    // if vehicle is balance bot, calculate actual throttle required for balancing
+    if (rover.is_balancebot()) {
+        rover.balancebot_pitch_control(throttle_out, rover.arming.is_armed());
+    }
+
     // send to motor
     g2.motors.set_throttle(throttle_out);
 
@@ -430,7 +435,10 @@ void Mode::calc_steering_from_lateral_acceleration(float lat_accel, bool reverse
 // calculate steering output to drive towards desired heading
 void Mode::calc_steering_to_heading(float desired_heading_cd, float rate_max, bool reversed)
 {
-    // calculate yaw error (in radians) and pass to steering angle controller
+    // calculate yaw error so it can be used for reporting and slowing the vehicle
+    _yaw_error_cd = wrap_180_cd(desired_heading_cd - ahrs.yaw_sensor);
+
+    // call heading controller
     const float steering_out = attitude_control.get_steering_out_heading(radians(desired_heading_cd*0.01f),
                                                                          rate_max,
                                                                          g2.motors.limit.steer_left,

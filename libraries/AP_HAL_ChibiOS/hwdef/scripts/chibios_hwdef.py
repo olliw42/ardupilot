@@ -447,15 +447,19 @@ def write_mcu_config(f):
 #define CH_CFG_USE_WAITEXIT FALSE
 #define CH_CFG_USE_DYNAMIC FALSE
 #define CH_CFG_USE_MEMPOOLS FALSE
+#define CH_CFG_USE_OBJ_FIFOS FALSE
 #define CH_DBG_FILL_THREADS FALSE
 #define CH_CFG_USE_SEMAPHORES FALSE
 #define CH_CFG_USE_HEAP FALSE        
 #define CH_CFG_USE_MUTEXES FALSE
 #define CH_CFG_USE_CONDVARS FALSE
 #define CH_CFG_USE_CONDVARS_TIMEOUT FALSE
+#define CH_CFG_USE_EVENTS FALSE
 #define CH_CFG_USE_EVENTS_TIMEOUT FALSE
 #define CH_CFG_USE_MESSAGES FALSE
 #define CH_CFG_USE_MAILBOXES FALSE
+#define CH_CFG_USE_FACTORY FALSE
+#define CH_CFG_USE_MEMCORE FALSE
 #define HAL_USE_I2C FALSE
 #define HAL_USE_PWM FALSE
 ''')
@@ -925,8 +929,8 @@ def write_GPIO_config(f):
         f.write('#define HAL_GPIO_LINE_GPIO%u PAL_LINE(GPIO%s, %2uU)\n' % (gpio, port, pin))
     f.write('#define HAL_GPIO_PINS { \\\n')
     for (gpio, pwm, port, pin, p) in gpios:
-        f.write('{ %3u, true, %2u, PAL_LINE(GPIO%s, %2uU), EXT_MODE_GPIO%s }, /* %s */ \\\n' %
-                (gpio, pwm, port, pin, port, p))
+        f.write('{ %3u, true, %2u, PAL_LINE(GPIO%s, %2uU)}, /* %s */ \\\n' %
+                (gpio, pwm, port, pin, p))
     # and write #defines for use by config code
     f.write('}\n\n')
     f.write('// full pin define list\n')
