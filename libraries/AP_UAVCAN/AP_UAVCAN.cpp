@@ -396,7 +396,10 @@ static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<u
         data->charge_consumed_mAh = msg.charge_consumed_mAh;
         data->energy_consumed_Wh = msg.energy_consumed_Wh;
         data->status_flags = msg.status_flags;
-        //TODO: add cell_voltages!!
+        data->cell_voltages_num = msg.cell_voltages.size();
+        for (uint16_t i = 0; i < 12; i++) { //TODO: fund and use the macro for that
+            data->cell_voltages[i] = (i < data->cell_voltages_num ) ? msg.cell_voltages[i] : 0.0f; //NAN;
+        }
         ap_uavcan->uc4hgenericbatteryinfo_update_i(data->i);
     }
 }

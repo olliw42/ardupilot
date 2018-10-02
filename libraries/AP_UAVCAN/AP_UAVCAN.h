@@ -302,6 +302,7 @@ public:
         uint8_t status_flags;
         //auxiliary meta data
         uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
+        uint8_t cell_voltages_num; //this counts the number of received cell voltages
     };
 
     uint8_t uc4hgenericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
