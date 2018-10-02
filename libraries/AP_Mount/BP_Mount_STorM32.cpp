@@ -235,17 +235,38 @@ void BP_Mount_STorM32::status_msg(mavlink_channel_t chan)
     // MAVLink MOUNT_STATUS: int32_t pitch(deg*100), int32_t roll(deg*100), int32_t yaw(deg*100)
     mavlink_msg_mount_status_send(chan, 0, 0, pitch_deg*100.0f, roll_deg*100.0f, yaw_deg*100.0f);
 
+// disabled, since in rc7 this confuses the Solo
+/*
     //this function is typically called at 2 Hz
-    // but it is not garanteed to be called, so it's a bit dirty,
-    // but there is currently no other way, unless one would a sort of mavlink_update(chan) and link it in upstream
+    // but it is not guaranteed to be called, so it's a bit dirty,
+    // but there is currently no other way, unless one would add a sort of mavlink_update(chan) and link it in upstream
     //we could send it from early on, and not wait for _initialised, as this would work a bit "better"
     // but this here is more logical, and e.g. allows the user to check if the connection is present
-    // we probably could stop sending after a while, though
+
+    //issue: sending the heartbeat makes the Solo not switch flight modes
+    // ui_bottombox.cpp, ui_alert.cpp suggest that presence of Solo is checked only pre-flight, Event::GimbalNotConnected
+    // in sologimbal.cpp:  Don't display gimbal connected/disconnected messages while armed or in-flight since it is unlikely that
+    //   if (!fm.armed() && !fm.inFlight()) {  Ui::instance.pendEvent(Event::GimbalConnected); }
+    // not sending it once armed, avoids the issue, but brings back the Solo Gimbal not found message!!!
+    // the event probably means to not show a message when the gimbal connects/disconnects, but it does not mean it wouldn't show a not found !!
+    //=> this doesn't work !!!
+//#if (CONFIG_HAL_BOARD == HAL_BOARD_PX4) && (CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_PX4_V3) //see Notify
+//#if defined(CONFIG_ARCH_BOARD_PX4FMU_V3) //see Util.cpp
+//both should be identical, see px4.h
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V3)
+
     uint32_t now_ms = AP_HAL::millis();
-    if ((_bitmask & SEND_SOLOGIMBALHEARTBEAT) && ((now_ms - _sologimbal_send_last) >= 740)) {
+    if ((_bitmask & SEND_SOLOGIMBALHEARTBEAT) && (!hal.util->get_soft_armed()) ((now_ms - _sologimbal_send_last) >= 740)) {
+//    if ((_bitmask & SEND_SOLOGIMBALHEARTBEAT) && (!hal.util->get_soft_armed()) && (gcs().system_status() != MAV_STATE_ACTIVE) && ((now_ms - _sologimbal_send_last) >= 740)) {
+//        send_heartbeat_msg
+//        if (gcs().system_status() == MAV_STATE_ACTIVE)
+
         _sologimbal_send_last = now_ms;
         send_sologimbal_heartbeat_msg(chan);
     }
+
+#endif
+*/
 }
 
 
@@ -255,7 +276,7 @@ void BP_Mount_STorM32::status_msg(mavlink_channel_t chan)
 
 void BP_Mount_STorM32::send_sologimbal_heartbeat_msg(mavlink_channel_t chan)
 {
-    //mimic SoloGimbal heartbeat
+    //mimic SoloGimbal heartbeat, see mavlink.h
     // HEARTBEAT: uint8_t type, uint8_t autopilot, uint8_t base_mode, uint32_t custom_mode, uint8_t system_status)
 
     //this is to make use of the mavlink library and not having to reinvent the wheel
