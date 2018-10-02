@@ -21,7 +21,9 @@
 
 /*
 changed files:
-    APM_Config.h: 1x
+    APM_Config.h: 1x  //to keep v2 within flash limit
+
+UC4H stuff:
     ArduCopter.cpp: 1x
     Copter.h: 2x
     AP_BattMonitor_Backend.h: 1x
@@ -29,25 +31,10 @@ changed files:
     AP_BattMonitor_UAVCAN.cpp: 2x
     AP_BattMonitor_UAVCAN.h: 2x
     AP_BattMonitor.cpp: 1x
-    AP_Camera.cpp: 2x
-    AP_HAL_PX4/UartDRIVER.cpp: 3x
-    AP_HAL_PX4/UartDRIVER.h: 2x
-    AP_Mount.cpp: 3x
-    AP_Mount.h: 4x
     AP_Notify.cpp: 2x
-    AP_SerialManager.cpp: 5x
-    AP_SerialManager.h: 4x
     AP_UAVCAN.cpp: 6x
     AP_UAVCAN.h: 3x
-    GCS_Common.cpp: 4x
-    GCS.cpp: 1x
-    GCS.h: 3x
-
 added files:
-    BP_Mount_STorM32.cpp
-    BP_Mount_STorM32.h
-    STorM32_lib.cpp
-    STorM32_lib.h
     Uc4hNotifyDevice.cpp
     Uc4hNotifyDevice.h
     BP_Tunnel_Backend.h
@@ -56,6 +43,23 @@ added files:
     TunnelUARTDriver.cpp
     TunnelUARTDriver.h
     some more in AP_UAVCAN
+    
+STorM32 native stuff:    
+    AP_Camera.cpp: 2x
+    AP_HAL_PX4/UartDRIVER.cpp: 3x
+    AP_HAL_PX4/UartDRIVER.h: 2x
+    AP_Mount.cpp: 3x
+    AP_Mount.h: 4x
+    AP_SerialManager.cpp: 5x  //has also UAVCAN changes: 3x
+    AP_SerialManager.h: 4x    //has also UAVCAN changes: 2x
+    GCS_Common.cpp: 4x
+    GCS.cpp: 1x
+    GCS.h: 3x
+added files:
+    BP_Mount_STorM32.cpp
+    BP_Mount_STorM32.h
+    STorM32_lib.cpp
+    STorM32_lib.h
 */
 
 /*
@@ -72,11 +76,14 @@ v0.12:
  - powerbrick stuff changed, adapted to new uc4h.GenericBatteryInfo message
    benchtested v4
    energy calculation appears to be reasonable
+ - STorM32 stuff updated to latest, taken from c36-rc10-bc-merge
+2018-10-02: flightested v2
+   energy calculation appears to be reasonable
 
 v0.11:
  - merge master of 3.08.2018, using master-bcdev-merge method,
    only one merge conflict
-   but needs serious changes to Notify stuff => needs carefull testing
+   but needs serious changes to Notify stuff => needs careful testing
    newtunnel stuff could be removed
 
 v0.10:
