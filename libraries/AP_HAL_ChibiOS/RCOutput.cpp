@@ -68,6 +68,7 @@ void RCOutput::init()
             pwmStart(group.pwm_drv, &group.pwm_cfg);
             group.pwm_started = true;
         }
+        chVTObjectInit(&group.dma_timeout);
     }
 
 #if HAL_WITH_IO_MCU
@@ -358,7 +359,7 @@ void RCOutput::push_local(void)
 
     for (uint8_t i = 0; i < NUM_GROUPS; i++ ) {
         pwm_group &group = pwm_group_list[i];
-        if (serial_group == &group) {
+        if (serial_group) {
             continue;
         }
         if (!group.pwm_started) {
@@ -595,8 +596,8 @@ void RCOutput::set_group_mode(pwm_group &group)
     case MODE_PWM_DSHOT150 ... MODE_PWM_DSHOT1200: {
         const uint16_t rates[(1 + MODE_PWM_DSHOT1200) - MODE_PWM_DSHOT150] = { 150, 300, 600, 1200 };
         uint32_t rate = rates[uint8_t(group.current_mode - MODE_PWM_DSHOT150)] * 1000UL;
-        const uint32_t bit_period = 19;
-        
+        const uint32_t bit_period = 20;
+
         // configure timer driver for DMAR at requested rate
         if (!setup_group_DMA(group, rate, bit_period, true)) {
             group.current_mode = MODE_PWM_NONE;
@@ -745,13 +746,12 @@ void RCOutput::trigger_groups(void)
     }
     osalSysUnlock();
 
-    for (uint8_t i = 0; i < NUM_GROUPS; i++) {
-        pwm_group &group = pwm_group_list[i];
-        if (serial_group == &group) {
-            continue;
-        }
-        if (group.current_mode >= MODE_PWM_DSHOT150 && group.current_mode <= MODE_PWM_DSHOT1200) {
-            dshot_send(group, false);
+    if (!serial_group) {
+        for (uint8_t i = 0; i < NUM_GROUPS; i++) {
+            pwm_group &group = pwm_group_list[i];
+            if (group.current_mode >= MODE_PWM_DSHOT150 && group.current_mode <= MODE_PWM_DSHOT1200) {
+                dshot_send(group, false);
+            }
         }
     }
     
@@ -775,10 +775,10 @@ void RCOutput::timer_tick(void)
     uint64_t now = AP_HAL::micros64();
     for (uint8_t i = 0; i < NUM_GROUPS; i++ ) {
         pwm_group &group = pwm_group_list[i];
-        if (serial_group != &group &&
+        if (!serial_group &&
             group.current_mode >= MODE_PWM_DSHOT150 &&
             group.current_mode <= MODE_PWM_DSHOT1200 &&
-            now - group.last_dshot_send_us > 900) {
+            now - group.last_dshot_send_us > 400) {
             // do a blocking send now, to guarantee DShot sends at
             // above 1000 Hz. This makes the protocol more reliable on
             // long cables, and also keeps some ESCs happy that don't
@@ -805,7 +805,9 @@ void RCOutput::dma_allocate(Shared_DMA *ctx)
     for (uint8_t i = 0; i < NUM_GROUPS; i++ ) {
         pwm_group &group = pwm_group_list[i];
         if (group.dma_handle == ctx) {
+            chSysLock();
             dmaStreamAllocate(group.dma, 10, dma_irq_callback, &group);
+            chSysUnlock();
         }
     }
 }
@@ -818,7 +820,9 @@ void RCOutput::dma_deallocate(Shared_DMA *ctx)
     for (uint8_t i = 0; i < NUM_GROUPS; i++ ) {
         pwm_group &group = pwm_group_list[i];
         if (group.dma_handle == ctx) {
+            chSysLock();
             dmaStreamRelease(group.dma);
+            chSysUnlock();
         }
     }
 }
@@ -855,9 +859,16 @@ void RCOutput::fill_DMA_buffer_dshot(uint32_t *buffer, uint8_t stride, uint16_t 
 {
     const uint32_t DSHOT_MOTOR_BIT_0 = 7 * clockmul;
     const uint32_t DSHOT_MOTOR_BIT_1 = 14 * clockmul;
-    for (uint16_t i = 0; i < 16; i++) {
+    uint16_t i = 0;
+    for (; i < dshot_pre; i++) {
+        buffer[i * stride] = 0;
+    }
+    for (; i < 16 + dshot_pre; i++) {
         buffer[i * stride] = (packet & 0x8000) ? DSHOT_MOTOR_BIT_1 : DSHOT_MOTOR_BIT_0;
         packet <<= 1;
+    }
+    for (; i<dshot_bit_length; i++) {
+        buffer[i * stride] = 0;
     }
 }
 
@@ -882,6 +893,8 @@ void RCOutput::dshot_send(pwm_group &group, bool blocking)
     }
     
     bool safety_on = hal.util->safety_switch_state() == AP_HAL::Util::SAFETY_DISARMED;
+
+    memset((uint8_t *)group.dma_buffer, 0, dshot_buffer_length);
     
     for (uint8_t i=0; i<4; i++) {
         uint8_t chan = group.chan[i];
@@ -895,6 +908,7 @@ void RCOutput::dshot_send(pwm_group &group, bool blocking)
             
             pwm = constrain_int16(pwm, _esc_pwm_min, _esc_pwm_max);
             uint16_t value = 2000UL * uint32_t(pwm - _esc_pwm_min) / uint32_t(_esc_pwm_max - _esc_pwm_min);
+            //uint32_t value = (chan+1) * 3;
             if (value != 0) {
                 // dshot values are from 48 to 2047. Zero means off.
                 value += 47;
@@ -952,6 +966,17 @@ void RCOutput::send_pulses_DMAR(pwm_group &group, uint32_t buffer_length)
 }
 
 /*
+  unlock DMA channel after a dshot send completes
+ */
+void RCOutput::dma_unlock(void *p)
+{
+    pwm_group *group = (pwm_group *)p;
+    chSysLockFromISR();
+    group->dma_handle->unlock_from_IRQ();
+    chSysUnlockFromISR();    
+}
+
+/*
   DMA interrupt handler. Used to mark DMA completed for DShot
  */
 void RCOutput::dma_irq_callback(void *p, uint32_t flags)
@@ -963,7 +988,8 @@ void RCOutput::dma_irq_callback(void *p, uint32_t flags)
         // tell the waiting process we've done the DMA
         chEvtSignalI(irq.waiter, serial_event_mask);
     } else {
-        group->dma_handle->unlock_from_IRQ();
+        // this prevents us ever having two dshot pulses too close together
+        chVTSetI(&group->dma_timeout, US2ST(dshot_min_gap_us), dma_unlock, p);
     }
     chSysUnlockFromISR();
 }
@@ -977,10 +1003,11 @@ void RCOutput::dma_irq_callback(void *p, uint32_t flags)
   While serial output is active normal output to the channel group is
   suspended.
 */
-bool RCOutput::serial_setup_output(uint8_t chan, uint32_t baudrate)
+bool RCOutput::serial_setup_output(uint8_t chan, uint32_t baudrate, uint16_t chanmask)
 {
     // account for IOMCU channels
     chan -= chan_offset;
+    chanmask >>= chan_offset;
     pwm_group *new_serial_group = nullptr;
     
     // find the channel group
@@ -991,10 +1018,6 @@ bool RCOutput::serial_setup_output(uint8_t chan, uint32_t baudrate)
             continue;
         }
         if (group.ch_mask & (1U<<chan)) {
-            if (serial_group && serial_group != &group) {
-                // we're changing to a new group, end the previous output
-                serial_end();
-            }
             new_serial_group = &group;
             for (uint8_t j=0; j<4; j++) {
                 if (group.chan[j] == chan) {
@@ -1013,9 +1036,17 @@ bool RCOutput::serial_setup_output(uint8_t chan, uint32_t baudrate)
         return false;
     }
 
-    // setup the group for serial output. We ask for a bit width of 1, which gets modified by the 
-    if (!setup_group_DMA(*new_serial_group, baudrate, 10, false)) {
-        return false;
+    // setup the groups for serial output. We ask for a bit width of 1, which gets modified by the
+    // we setup all groups so they all are setup with the right polarity, and to make switching between
+    // channels in blheli pass-thru fast
+    for (uint8_t i = 0; i < NUM_GROUPS; i++ ) {
+        pwm_group &group = pwm_group_list[i];
+        if (group.ch_mask & chanmask) {
+            if (!setup_group_DMA(group, baudrate, 10, false)) {
+                serial_end();
+                return false;
+            }
+        }
     }
 
     serial_group = new_serial_group;
@@ -1130,6 +1161,11 @@ void RCOutput::serial_bit_irq(void)
             irq.nbits = 1;
             irq.byte_start_tick = now;
             irq.bitmask = 0;
+            // setup a timeout for 11 bits width, so we aren't left
+            // waiting at the end of bytes
+            chSysLockFromISR();
+            chVTSetI(&irq.serial_timeout, irq.bit_time_tick*11, serial_byte_timeout, irq.waiter);
+            chSysUnlockFromISR();
         }
     } else {
         systime_t dt = now - irq.byte_start_tick;
@@ -1156,18 +1192,31 @@ void RCOutput::serial_bit_irq(void)
     
     if (send_signal) {
         chSysLockFromISR();
+        chVTResetI(&irq.serial_timeout);
         chEvtSignalI(irq.waiter, serial_event_mask);
         chSysUnlockFromISR();
     }
 }
 
+/*
+  timeout a byte read
+ */
+void RCOutput::serial_byte_timeout(void *ctx)
+{
+    chSysLockFromISR();
+    irq.timed_out = true;
+    chEvtSignalI((thread_t *)ctx, serial_event_mask);
+    chSysUnlockFromISR();
+}
 
 /*
   read a byte from a port, using serial parameters from serial_setup_output()
 */
 bool RCOutput::serial_read_byte(uint8_t &b)
 {
-    bool timed_out = ((chEvtWaitAnyTimeout(serial_event_mask, MS2ST(10)) & serial_event_mask) == 0);
+    irq.timed_out = false;
+    chVTSet(&irq.serial_timeout, MS2ST(10), serial_byte_timeout, irq.waiter);
+    bool timed_out = ((chEvtWaitAny(serial_event_mask) & serial_event_mask) == 0) || irq.timed_out;
 
     uint16_t byteval = irq.byteval;
 
@@ -1211,6 +1260,7 @@ uint16_t RCOutput::serial_read_bytes(uint8_t *buf, uint16_t len)
     // assume GPIO mappings for PWM outputs start at 50
     palSetLineMode(line, gpio_mode);
 
+    chVTObjectInit(&irq.serial_timeout);
     chEvtGetAndClearEvents(serial_event_mask);
 
     irq.line = group.pal_lines[group.serial.chan];
@@ -1254,18 +1304,20 @@ uint16_t RCOutput::serial_read_bytes(uint8_t *buf, uint16_t len)
 void RCOutput::serial_end(void)
 {
     if (serial_group) {
-        pwm_group &group = *serial_group;
-        // restore normal output
-        if (group.pwm_started) {
-            pwmStop(group.pwm_drv);
-            group.pwm_started = false;
-        }
-        set_group_mode(group);
-        set_freq_group(group);
-        irq.waiter = nullptr;
         if (serial_thread == chThdGetSelfX()) {
             chThdSetPriority(serial_priority);
             serial_thread = nullptr;
+        }
+        irq.waiter = nullptr;
+        for (uint8_t i = 0; i < NUM_GROUPS; i++ ) {
+            pwm_group &group = pwm_group_list[i];
+            // restore normal output
+            if (group.pwm_started) {
+                pwmStop(group.pwm_drv);
+                group.pwm_started = false;
+            }
+            set_group_mode(group);
+            set_freq_group(group);
         }
     }
     serial_group = nullptr;
@@ -1363,11 +1415,11 @@ void RCOutput::safety_update(void)
         safety_pressed = false;
     }
     if (safety_state==AP_HAL::Util::SAFETY_DISARMED &&
-        !(safety_options & AP_BoardConfig::BOARD_SAFETY_OPTION_BUTTON_ACTIVE_SAFETY_ON)) {
+        !(safety_options & AP_BoardConfig::BOARD_SAFETY_OPTION_BUTTON_ACTIVE_SAFETY_OFF)) {
         safety_pressed = false;        
     }
     if (safety_state==AP_HAL::Util::SAFETY_ARMED &&
-        !(safety_options & AP_BoardConfig::BOARD_SAFETY_OPTION_BUTTON_ACTIVE_SAFETY_OFF)) {
+        !(safety_options & AP_BoardConfig::BOARD_SAFETY_OPTION_BUTTON_ACTIVE_SAFETY_ON)) {
         safety_pressed = false;        
     }
     if (safety_pressed) {

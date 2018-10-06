@@ -13,26 +13,32 @@ void Copter::arm_motors_check()
 {
     static int16_t arming_counter;
 
+    // check if arming/disarm using rudder is allowed
+    AP_Arming::ArmingRudder arming_rudder = arming.get_rudder_arming_type();
+    if (arming_rudder == AP_Arming::ARMING_RUDDER_DISABLED) {
+        return;
+    }
+
 #if TOY_MODE_ENABLED == ENABLED
     if (g2.toy_mode.enabled()) {
         // not armed with sticks in toy mode
         return;
     }
 #endif
-    
+
     // ensure throttle is down
     if (channel_throttle->get_control_in() > 0) {
         arming_counter = 0;
         return;
     }
 
-    int16_t tmp = channel_yaw->get_control_in();
+    int16_t yaw_in = channel_yaw->get_control_in();
 
     // full right
-    if (tmp > 4000) {
+    if (yaw_in > 4000) {
 
         // increase the arming counter to a maximum of 1 beyond the auto trim counter
-        if( arming_counter <= AUTO_TRIM_DELAY ) {
+        if (arming_counter <= AUTO_TRIM_DELAY) {
             arming_counter++;
         }
 
@@ -51,15 +57,15 @@ void Copter::arm_motors_check()
             auto_disarm_begin = millis();
         }
 
-    // full left
-    }else if (tmp < -4000) {
+    // full left and rudder disarming is enabled
+    } else if ((yaw_in < -4000) && (arming_rudder == AP_Arming::ARMING_RUDDER_ARMDISARM)) {
         if (!flightmode->has_manual_throttle() && !ap.land_complete) {
             arming_counter = 0;
             return;
         }
 
         // increase the counter to a maximum of 1 beyond the disarm delay
-        if( arming_counter <= DISARM_DELAY ) {
+        if (arming_counter <= DISARM_DELAY) {
             arming_counter++;
         }
 
@@ -69,7 +75,7 @@ void Copter::arm_motors_check()
         }
 
     // Yaw is centered so reset arming counter
-    }else{
+    } else {
         arming_counter = 0;
     }
 }

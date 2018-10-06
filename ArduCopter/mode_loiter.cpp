@@ -8,8 +8,20 @@
 bool Copter::ModeLoiter::init(bool ignore_checks)
 {
     if (copter.position_ok() || ignore_checks) {
+        if (!copter.failsafe.radio) {
+            float target_roll, target_pitch;
+            // apply SIMPLE mode transform to pilot inputs
+            update_simple_mode();
 
-        // set target to current position
+            // convert pilot input to lean angles
+            get_pilot_desired_lean_angles(target_roll, target_pitch, loiter_nav->get_angle_max_cd(), attitude_control->get_althold_lean_angle_max());
+
+            // process pilot's roll and pitch input
+            loiter_nav->set_pilot_desired_acceleration(target_roll, target_pitch, G_Dt);
+        } else {
+            // clear out pilot desired acceleration in case radio failsafe event occurs and we do not switch to RTL for some reason
+            loiter_nav->clear_pilot_desired_acceleration();
+        }
         loiter_nav->init_target();
 
         // initialise position and desired velocity
@@ -19,7 +31,7 @@ bool Copter::ModeLoiter::init(bool ignore_checks)
         }
 
         return true;
-    }else{
+    } else {
         return false;
     }
 }
@@ -120,10 +132,17 @@ void Copter::ModeLoiter::run()
 
         motors->set_desired_spool_state(AP_Motors::DESIRED_SHUT_DOWN);
 #if FRAME_CONFIG == HELI_FRAME
+        if (!motors->get_interlock() && ap.land_complete) {
+            loiter_nav->init_target();
+            attitude_control->reset_rate_controller_I_terms();
+            attitude_control->set_yaw_target_to_current_heading();
+            pos_control->relax_alt_hold_controllers(0.0f);   // forces throttle output to go to zero
+        } else {
         // force descent rate and call position controller
-        pos_control->set_alt_target_from_climb_rate(-abs(g.land_speed), G_Dt, false);
-        if (ap.land_complete_maybe) {
-            pos_control->relax_alt_hold_controllers(0.0f);
+            pos_control->set_alt_target_from_climb_rate(-abs(g.land_speed), G_Dt, false);
+            if (ap.land_complete_maybe) {
+                pos_control->relax_alt_hold_controllers(0.0f);
+            }
         }
 #else
         loiter_nav->init_target();

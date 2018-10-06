@@ -1,5 +1,51 @@
 ArduPilot Copter Release Notes:
 ------------------------------------------------------------------
+Copter 3.6.0-rc12 05-Oct-2018
+Changes from 3.6.0-rc11
+1) Bug Fixes:
+    a) DSHot ESC driver race condition fix (could result in board freezing up)
+    b) EKF fix to rounding off home altitude (could result in slightly inaccurate home altitude)
+    c) Pixracer safety switch fix (BRD_SAFETYOPTION parameter was handled incorrectly)
+------------------------------------------------------------------
+Copter 3.6.0-rc11 01-Oct-2018
+Changes from 3.6.0-rc10
+1) Bug Fixes:
+    a) PosHold fix to initialise desired accelerations
+    b) Automatic compass orientation fix to account for equivalent rotations
+    c) ChibiOS fix to RSSI voltage reading
+------------------------------------------------------------------
+Copter 3.6.0-rc10 15-Sep-2018
+Changes from 3.6.0-rc9
+1) Arming/disarming from transmitter can be disabled with ARMING_RUDDER parameter
+2) ChibiOS fixes:
+    a) UART baud rate rounding fix (allow 921600 baud to work)
+    b) ADC fix to allow more simultaneous channels
+3) Bug Fixes:
+    a) Lean angle limit (to maintain altitude) always allows at least 10deg of lean
+    b) Attitude Control and PID initialisation fix to reduce twitches when switching modes
+------------------------------------------------------------------
+Copter 3.6.0-rc9 08-Sep-2018
+Changes from 3.6.0-rc8
+1) Landing gear can be operated using AIRFRAME_CONFIGURATION mavlink messages
+2) Support playing tunes received via MAVLink (i.e. from GCS)
+3) Bug Fixes:
+    a) Twitch reduced when entering Loiter at high speed
+    b) Safety switch state fix when Pixhawk/Cube I/O board reset in flight
+    c) External display fix to allow plugging into either I2C port
+------------------------------------------------------------------
+Copter 3.6.0-rc8 28-Aug-2018
+Changes from 3.6.0-rc7
+1) TeraRanger Tower EVO lidar support added
+2) PCA9685 and NCA5623 LED support added (replacements for Toshiba LED that is becoming end-of-life)
+3) Missions can start with DO_ commands (first NAV command must still be takeoff)
+4) ChibiOS fixes:
+    a) DShot and BLHeli stability improvements
+    b) added OmnibusNanoV6 bootloader
+5) Bug fixes:
+    a) AP_Stat only saves values to eeprom if they change (reduces CPU impact)
+    b) boost throttle respects safety switch
+    c) TradHeli reduce chance of tip-over when landed in Loiter
+------------------------------------------------------------------
 Copter 3.6.0-rc7 01-Aug-2018
 Changes from 3.6.0-rc6
 1) Compass rotation detection during calibration (see COMPASS_AUTO_ROT param)
