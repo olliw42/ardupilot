@@ -11,6 +11,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #endif
+//OW
+#include <AP_Mount/BP_Mount_STorM32.h>
+//OWEND
 
 // ------------------------------
 #define CAM_DEBUG DISABLED
@@ -150,6 +153,11 @@ void AP_Camera::trigger_pic()
         relay_pic();                    // basic relay activation
         break;
     }
+
+//OW
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    if (notify) notify->actions.camera_trigger_pic = true;
+//OWEND
 
     log_picture();
 }
