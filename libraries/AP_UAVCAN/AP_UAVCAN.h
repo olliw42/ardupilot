@@ -19,6 +19,11 @@
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
+//OW
+#include "bp_dsdl_generated/olliw/uc4h/Notify.hpp"
+#include <uavcan/tunnel/Broadcast.hpp> //#include "newtunnel/Broadcast.hpp" are identical, thus deleted
+#include "BP_UavcanTunnelManager.h"
+//OWEND
 
 #ifndef UAVCAN_NODE_POOL_SIZE
 #define UAVCAN_NODE_POOL_SIZE 8192
@@ -37,6 +42,10 @@
 #define AP_UAVCAN_MAX_MAG_NODES 4
 #define AP_UAVCAN_MAX_BARO_NODES 4
 #define AP_UAVCAN_MAX_BI_NUMBER 4
+//OW
+#define AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER 4
+#define AP_UAVCAN_ESCSTATUS_MAX_NUMBER 8
+//OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
 #define AP_UAVCAN_SW_VERS_MINOR 0
@@ -279,6 +288,106 @@ public:
     {
         _parent_can_mgr = parent_can_mgr;
     }
+
+//OW
+// --- uc4h.GenericBatteryInfo ---
+    // incoming message, by device id
+public:
+    struct Uc4hGenericBatteryInfo_Data {
+        float voltage; //float16
+        float current; //float16
+        float charge_consumed_mAh; //float16
+        float energy_consumed_Wh; //float16
+        float cell_voltages[12]; //float16[<=12] cell_voltages
+        uint8_t status_flags;
+        //auxiliary meta data
+        uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
+        uint8_t cell_voltages_num; //this counts the number of received cell voltages
+    };
+
+    uint8_t uc4hgenericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
+    void uc4hgenericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
+    Uc4hGenericBatteryInfo_Data* uc4hgenericbatteryinfo_getptrto_data(uint8_t id);
+    void uc4hgenericbatteryinfo_update_i(uint8_t i);
+
+private:
+    struct {
+        uint16_t id[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t id_taken[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+        AP_BattMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+        Uc4hGenericBatteryInfo_Data data[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
+    } _uc4hgenericbatteryinfo;
+
+// --- EscStatus ---
+    // incoming message, by device id
+public:
+    // currently, we do nothing than to write the data to dataflash
+    // => we do not need a listener, we can do it in _update_i()
+    // this of course needs to change once we have a proper class which wants to listen to EscStatus
+    struct EscStatus_Data {
+        uint32_t error_count;
+        float voltage;
+        float current;
+        float temperature;
+        int32_t rpm;
+        uint8_t power_rating_pct;
+        //auxiliary meta data
+        uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
+    };
+    //has no external listener
+    EscStatus_Data* escstatus_getptrto_data(uint8_t id);
+    void escstatus_update_i(uint8_t i);
+
+private:
+    struct {
+        uint16_t id[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+        EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+    } _escstatus;
+
+// --- uc4h.Notify ---
+    // outgoing message
+public:
+    bool uc4hnotify_sem_take();
+    void uc4hnotify_sem_give();
+    void uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len);
+
+private:
+    struct {
+        uavcan::olliw::uc4h::Notify msg;
+        uavcan::TransferPriority priority;
+        bool to_send;
+        AP_HAL::Semaphore* sem;
+    } _uc4hnotify;
+
+    // --- outgoing message handler ---
+    void uc4h_do_cyclic(uint64_t current_time_ms);
+
+// --- tunnel.Broadcast ---
+    // incoming message, by channel_id
+    // the handling of the channel_id is done by the BP_UavcanTunnelManager class!
+    // we write directly to this class, so nothing to keep here
+
+// --- tunnel.Broadcast ---
+    // outgoing message
+    // the handling is simple since most is done in the BP_UavcanTunnelManager class! we just fetch a ptr to data
+public:
+    bool tunnelbroadcast_out_sem_take();
+    void tunnelbroadcast_out_sem_give();
+    bool tunnelbroadcast_is_to_send(uint8_t tunnel_index);
+    void tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uint8_t channel_id, uint8_t* buffer, uint8_t buffer_len, uint8_t priority);
+
+private:
+    struct {
+        uavcan::tunnel::Broadcast msg[TUNNELMANAGER_NUM_CHANNELS];
+        uavcan::TransferPriority priority[TUNNELMANAGER_NUM_CHANNELS];
+        bool to_send[TUNNELMANAGER_NUM_CHANNELS];
+        AP_HAL::Semaphore* sem;
+    } _tunnelbroadcast_out;
+
+    // --- outgoing message handler ---
+    void tunnelbroadcast_out_do_cyclic(void);
+//OWEND
 };
 
 #endif /* AP_UAVCAN_H_ */
