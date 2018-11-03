@@ -83,6 +83,9 @@
 #include <AP_Arming/AP_Arming.h>
 #include <AP_SmartRTL/AP_SmartRTL.h>
 #include <AP_TempCalibration/AP_TempCalibration.h>
+//OW
+#include <AP_UAVCAN/BP_UavcanTunnelManager.h>
+//OWEND
 
 // Configuration
 #include "defines.h"
@@ -522,6 +525,9 @@ private:
     // current_loc uses the baro/gps solution for altitude rather than gps only.
     AP_Mount camera_mount{ahrs, current_loc};
 #endif
+//OW
+    BP_UavcanTunnelManager tunnel_manager;
+//OWEND
 
     // AC_Fence library to reduce fly-aways
 #if AC_FENCE == ENABLED
