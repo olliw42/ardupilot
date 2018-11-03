@@ -21,7 +21,10 @@ public:
         BattMonitor_TYPE_BEBOP                      = 6,
         BattMonitor_TYPE_MAXELL                     = 7,
         BattMonitor_TYPE_UAVCAN_BatteryInfo         = 8,
-        BattMonitor_TYPE_BLHeliESC                  = 9
+        BattMonitor_TYPE_BLHeliESC                  = 9,
+//OW
+        BattMonitor_TYPE_UAVCAN_Uc4hGenericBatteryInfo  = 83,
+//OWEND
     };
 
     // low voltage sources (used for BATT_LOW_TYPE parameter)

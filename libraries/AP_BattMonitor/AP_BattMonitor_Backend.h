@@ -52,6 +52,9 @@ public:
     // callback for UAVCAN messages
     virtual void handle_bi_msg(float voltage, float current,
             float temperature) {}
+//OW
+    virtual void handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy) {}
+//OWEND
 
 protected:
     AP_BattMonitor                      &_mon;      // reference to front-end
