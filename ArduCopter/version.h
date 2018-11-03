@@ -69,4 +69,6 @@ added files:
     TunnelUARTDriver.cpp            (AP_UAVCAN/)
     TunnelUARTDriver.h              (AP_UAVCAN/)
     some more in AP_UAVCAN
+
+git submodule uavcan had to be updated to 72d4b9a, to get the new tunnel.Broadcast in
 */
