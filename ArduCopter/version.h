@@ -24,10 +24,15 @@ features:
  - STorM32 Native @ 83, complete
  - bitmask parameter handling, MNT_STRM_BM
  - passthrough, MNT_STRM_PTSER
- - any CAN stuff removed, much simplified and streamlined
  - Solo gimbal mimicry
+ - all UC4H stuff added
+ - barometer proper gcs sendtext
 
 changed files:
+
+    AP_Baro.cpp: 2x
+
+STorM32 stuff:
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
 
     AP_Camera.cpp: 2x
@@ -57,6 +62,8 @@ UC4H stuff:
     AP_BattMonitor_UAVCAN.cpp: 2x
     AP_BattMonitor_UAVCAN.h: 2x
     AP_BattMonitor.cpp: 1x
+    AP_SerialManager.cpp: +3x
+    AP_SerialManager.h: +2x
     AP_Notify.cpp: 2x
     AP_UAVCAN.cpp: 6x
     AP_UAVCAN.h: 3x
