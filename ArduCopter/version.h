@@ -44,6 +44,7 @@ changed files:
 added files:
     BP_Mount_STorM32.cpp
     BP_Mount_STorM32.h
-    STorM32_lib.cpp
+    STorM32_class.cpp
+    STorM32_class.h
     STorM32_lib.h
 */
