@@ -47,4 +47,26 @@ added files:
     STorM32_class.cpp
     STorM32_class.h
     STorM32_lib.h
+
+
+UC4H stuff:
+    ArduCopter.cpp: 1x
+    Copter.h: 2x
+    AP_BattMonitor_Backend.h: 1x
+    AP_BattMonitor_Params.h: 1x
+    AP_BattMonitor_UAVCAN.cpp: 2x
+    AP_BattMonitor_UAVCAN.h: 2x
+    AP_BattMonitor.cpp: 1x
+    AP_Notify.cpp: 2x
+    AP_UAVCAN.cpp: 6x
+    AP_UAVCAN.h: 3x
+added files:
+    Uc4hNotifyDevice.cpp            (AP_Notify/)
+    Uc4hNotifyDevice.h              (AP_Notify/)
+    BP_Tunnel_Backend.h             (AP_UAVCAN/)
+    BP_UavcanTunnelManager.cpp      (AP_UAVCAN/)
+    BP_UavcanTunnelManager.h        (AP_UAVCAN/)
+    TunnelUARTDriver.cpp            (AP_UAVCAN/)
+    TunnelUARTDriver.h              (AP_UAVCAN/)
+    some more in AP_UAVCAN
 */
