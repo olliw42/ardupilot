@@ -10,7 +10,7 @@
 
 #include "AP_Mount.h"
 #include "AP_Mount_Backend.h"
-#include "STorM32_lib.h"
+#include "STorM32_class.h"
 
 #define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
@@ -49,7 +49,7 @@ private:
 
 
 // that's the main class
-class BP_Mount_STorM32 : public AP_Mount_Backend, public STorM32_lib
+class BP_Mount_STorM32 : public AP_Mount_Backend, public STorM32_class
 {
 
 public:

@@ -150,7 +150,7 @@ void BP_Mount_STorM32::update_fast()
     if ((now_ms - _task_time_last) >= 10) {
         _task_time_last = now_ms;
 
-        const uint16_t LIVEDATA_FLAGS = LIVEDATA_STATUS_V2 | LIVEDATA_ATTITUDE_RELATIVE;
+        const uint16_t LIVEDATA_FLAGS = STORM32LIVEDATA_STATUS_V2 | STORM32LIVEDATA_ATTITUDE_RELATIVE;
 
         switch (_task_counter) {
             case TASK_SLOT0:

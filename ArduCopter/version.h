@@ -7,17 +7,17 @@
 #include "ap_version.h"
 
 //OW
-//#define THISFIRMWARE "ArduCopter V3.6.0-rc12"
-#define THISFIRMWARE "BetaCopter V3.6.0-rc12 v012s"
+//#define THISFIRMWARE "ArduCopter V3.6.0"
+#define THISFIRMWARE "BetaCopter V3.6.0 v013s"
 //OW
 
 // the following line is parsed by the autotest scripts
-#define FIRMWARE_VERSION 3,6,0,FIRMWARE_VERSION_TYPE_RC
+#define FIRMWARE_VERSION 3,6,0,FIRMWARE_VERSION_TYPE_OFFICIAL
 
 #define FW_MAJOR 3
 #define FW_MINOR 6
 #define FW_PATCH 0
-#define FW_TYPE FIRMWARE_VERSION_TYPE_RC
+#define FW_TYPE FIRMWARE_VERSION_TYPE_OFFICIAL
 
 /*
 features:
@@ -44,6 +44,7 @@ changed files:
 added files:
     BP_Mount_STorM32.cpp
     BP_Mount_STorM32.h
-    STorM32_lib.cpp
+    STorM32_class.cpp
+    STorM32_class.h
     STorM32_lib.h
 */
