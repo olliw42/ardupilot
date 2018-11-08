@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.0"
-#define THISFIRMWARE "BetaCopter V3.6.0 v013u"
+#define THISFIRMWARE "BetaCopter V3.6.0 v014u"
 //OW
 
 // the following line is parsed by the autotest scripts
