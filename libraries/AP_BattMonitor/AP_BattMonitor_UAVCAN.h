@@ -49,7 +49,7 @@ protected:
         bool healthy;
         bool detected;
     };
-    struct escstatus_data escstatus[8];
-    uint16_t escstatus_maxindex;
+    struct escstatus_data _escstatus[8];
+    uint16_t _escstatus_maxindex;
 //OWEND
 };

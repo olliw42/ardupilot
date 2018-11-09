@@ -76,14 +76,14 @@ void AP_BattMonitor_UAVCAN::read()
         bool all_healthy = true;
 
         for (uint16_t i=0; i<8; i++) {
-            if (!escstatus[i].detected) continue;
+            if (!_escstatus[i].detected) continue;
             num_escs++;
-            voltage += escstatus[i].voltage;
-            current += escstatus[i].current;
-            consumed_mah += escstatus[i].consumed_mah;
-            consumed_wh += escstatus[i].consumed_wh;
+            voltage += _escstatus[i].voltage;
+            current += _escstatus[i].current;
+            consumed_mah += _escstatus[i].consumed_mah;
+            consumed_wh += _escstatus[i].consumed_wh;
 
-            if ((tnow - escstatus[i].time_micros) > 1000) all_healthy = false; //at least one of the data is old
+            if ((tnow - _escstatus[i].time_micros) > 1000) all_healthy = false; //at least one of the data is old
         }
 
         _state.voltage = (num_escs > 0) ? voltage/num_escs : 0.0f;
@@ -95,7 +95,7 @@ void AP_BattMonitor_UAVCAN::read()
 
         _state.healthy = true;
         //TODO: is it possible to figure out how many motors we are supposed to have, i.e., get FRAME_CLASS, FRAME_TYPE, BRD_PWM_COUNT(?)
-        if ((num_escs < escstatus_maxindex) || !all_healthy) {
+        if ((num_escs < _escstatus_maxindex) || !all_healthy) {
             _state.healthy = false;
         }
     }
@@ -160,23 +160,23 @@ void AP_BattMonitor_UAVCAN::handle_uc4hgenericbatteryinfo_msg(float voltage, flo
 
 void AP_BattMonitor_UAVCAN::handle_escstatus_msg(uint16_t esc_index, float voltage, float current)
 {
-    escstatus[esc_index].voltage = voltage;
-    escstatus[esc_index].current = current;
+    _escstatus[esc_index].voltage = voltage;
+    _escstatus[esc_index].current = current;
 
     uint32_t tnow = AP_HAL::micros();
-    uint32_t dt = tnow - escstatus[esc_index].time_micros;
+    uint32_t dt = tnow - _escstatus[esc_index].time_micros;
 
-    if (escstatus[esc_index].time_micros != 0 && dt < 2000000) {
-        float mah = (float) ((double) escstatus[esc_index].current * (double) dt * (double) 0.0000002778f);
-        escstatus[esc_index].consumed_mah += mah;
-        escstatus[esc_index].consumed_wh  += 0.001f * mah * escstatus[esc_index].voltage;
+    if (_escstatus[esc_index].time_micros != 0 && dt < 2000000) {
+        float mah = (float) ((double) _escstatus[esc_index].current * (double) dt * (double) 0.0000002778f);
+        _escstatus[esc_index].consumed_mah += mah;
+        _escstatus[esc_index].consumed_wh  += 0.001f * mah * _escstatus[esc_index].voltage;
     }
 
-    escstatus[esc_index].time_micros = tnow;
+    _escstatus[esc_index].time_micros = tnow;
 
-    escstatus[esc_index].detected = true; //this is used to figure out how many escs are there
+    _escstatus[esc_index].detected = true; //this is used to figure out how many escs are there
 
-    if( esc_index >= escstatus_maxindex ) escstatus_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
+    if( esc_index >= _escstatus_maxindex ) _escstatus_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
 }
 //OWEND
 
