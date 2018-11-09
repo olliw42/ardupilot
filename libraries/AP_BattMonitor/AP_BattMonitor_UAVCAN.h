@@ -46,6 +46,8 @@ protected:
         float current;
         float consumed_mah;
         float consumed_wh;
+        bool healthy;
+        bool detected;
     };
     struct escstatus_data escstatus[8];
     uint16_t escstatus_maxindex;

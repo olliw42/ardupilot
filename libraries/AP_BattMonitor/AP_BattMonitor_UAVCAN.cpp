@@ -48,9 +48,9 @@ void AP_BattMonitor_UAVCAN::init()
                 }
                 break;
             case UAVCAN_ESCSTATUS:
-//XX                if (ap_uavcan->escstatus_register_listener(this, _params._serial_number)) {
-//XX                    debug_bm_uavcan(2, "UAVCAN BattMonitor EscStatus registered id: %d\n\r", _params._serial_number);
-//XX                }
+                if (ap_uavcan->escstatus_register_listener(this, _params._serial_number)) {
+                    debug_bm_uavcan(2, "UAVCAN BattMonitor EscStatus registered id: %d\n\r", _params._serial_number);
+                }
                 break;
 //OWEND
         }
@@ -65,6 +65,38 @@ void AP_BattMonitor_UAVCAN::read()
     // timeout after 5 seconds
     if ((tnow - _state.last_time_micros) > AP_BATTMONITOR_UAVCAN_TIMEOUT_MICROS) {
         _state.healthy = false;
+    }
+
+    if (_type == UAVCAN_ESCSTATUS) {
+        float voltage = 0.0f;
+        float current = 0.0f;
+        float consumed_mah = 0.0f;
+        float consumed_wh = 0.0f;
+        uint8_t num_escs = 0;
+        bool all_healthy = true;
+
+        for (uint16_t i=0; i<8; i++) {
+            if (!escstatus[i].detected) continue;
+            num_escs++;
+            voltage += escstatus[i].voltage;
+            current += escstatus[i].current;
+            consumed_mah += escstatus[i].consumed_mah;
+            consumed_wh += escstatus[i].consumed_wh;
+
+            if ((tnow - escstatus[i].time_micros) > 1000) all_healthy = false; //at least one of the data is old
+        }
+
+        //TODO: is it possible to figure out how many motors we are supposed to have, i.e., get FRAME_CLASS, FRAME_TYPE, BRD_PWM_COUNT(?)
+        if ((num_escs < escstatus_maxindex) || !all_healthy) {
+            _state.healthy = false;
+        }
+
+        _state.voltage = (num_escs > 0) ? voltage/num_escs : 0.0f;
+        _state.current_amps = current;
+        _state.consumed_mah = consumed_mah;
+        _state.consumed_wh = consumed_wh;
+
+       _state.last_time_micros = tnow;
     }
 }
 
@@ -100,7 +132,7 @@ void AP_BattMonitor_UAVCAN::handle_uc4hgenericbatteryinfo_msg(float voltage, flo
 //    _state.energy_total_Wh = energy;
 
     // much of the following is not really needed for uc4h.genericbatteryinfo
-    // but we want to be able to fallback whenever needed, and to avoid timeout
+    // but we want to be able to fall back whenever needed, and to avoid timeout
 
     uint32_t tnow = AP_HAL::micros();
 
@@ -140,6 +172,8 @@ void AP_BattMonitor_UAVCAN::handle_escstatus_msg(uint16_t esc_index, float volta
     }
 
     escstatus[esc_index].time_micros = tnow;
+
+    escstatus[esc_index].detected = true; //this is used to figure out how many escs are there
 
     if( esc_index >= escstatus_maxindex ) escstatus_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
 }
