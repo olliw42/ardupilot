@@ -48,9 +48,9 @@ void AP_BattMonitor_UAVCAN::init()
                 }
                 break;
             case UAVCAN_ESCSTATUS:
-                if (ap_uavcan->escstatus_register_listener(this, _params._serial_number)) {
-                    debug_bm_uavcan(2, "UAVCAN BattMonitor EscStatus registered id: %d\n\r", _params._serial_number);
-                }
+//XX                if (ap_uavcan->escstatus_register_listener(this, _params._serial_number)) {
+//XX                    debug_bm_uavcan(2, "UAVCAN BattMonitor EscStatus registered id: %d\n\r", _params._serial_number);
+//XX                }
                 break;
 //OWEND
         }

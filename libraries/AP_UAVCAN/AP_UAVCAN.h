@@ -322,8 +322,9 @@ private:
 
 // --- EscStatus ---
     // incoming message, by device id
+    // the handling is partially done by the BP_UavcanEscStatusManager class!
+    // we write directly to this class, so just the BattMonitor stuff to keep here
 public:
-    // there is one listener for all EscStatus messages
     struct EscStatus_Data {
         uint32_t error_count;
         float voltage;

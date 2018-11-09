@@ -418,6 +418,14 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
         return;
     }
 
+    //different to usual: we do write here directly to the BP_UavcanEscStatusManager class
+    BP_UavcanEscStatusManager* escstatusmgr = BP_UavcanEscStatusManager::instance();
+    if (escstatusmgr && (msg.esc_index < 8)) {
+        escstatusmgr->write_to_escindex(msg.esc_index,
+                msg.error_count, msg.voltage, msg.current, msg.temperature,
+                msg.rpm, msg.power_rating_pct);
+    }
+
     uint8_t id = msg.esc_index; //by device id
 
     AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data(id); //i is in data->i
@@ -1721,7 +1729,7 @@ uint8_t AP_UAVCAN::escstatus_register_listener(AP_BattMonitor_Backend* new_liste
     uint8_t i = 0;
     _escstatus.listener = new_listener;
     ret = i + 1;
-    debug_uavcan(2, "reg_UC4HGENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
+    debug_uavcan(2, "reg_ESCSTATUS place:%d, chan: %d\n\r", sel_place, i);
 
 /*
     //find first free place in listeners list
@@ -1786,10 +1794,17 @@ void AP_UAVCAN::escstatus_update_i(uint8_t i)
     // however, I think, ArduPilot implicitly enforces continuous esc_index, so should be no problem
     uint8_t id = _escstatus.id[i];
     if (id >= 8) return;
-
+/*
     if (_escstatus.listener != nullptr) {
-        _escstatus.listener->handle_escstatus_msg(id, _escstatus.data[i].voltage, _escstatus.data[i].current );
-    }
+        _escstatus.listener->handle_escstatus_msg(
+                id,
+                _escstatus.data[i].error_count,
+                _escstatus.data[i].voltage,
+                _escstatus.data[i].current,
+                _escstatus.data[i].temperature,
+                _escstatus.data[i].rpm,
+                _escstatus.data[i].power_rating_pct );
+    }*/
 
 //TODO: do not log packets with error???
 // no, it would be better to extend the ESC log message, and to drop wrong packages on the node side

@@ -27,17 +27,21 @@ public:
     // send ESC telemetry messages over MAVLink
     void send_esc_telemetry_mavlink(uint8_t mav_chan);
     
-    // callback for UAVCAN messages
-    void handle_escstatus_msg(uint16_t esc_index, float rpm,  float voltage, float current, float temperature);
+    // is called in AP_UAVCAN tunnel message in-coming handler, and writes to the specified esc_index
+    void write_to_escindex(uint16_t esc_index,
+            uint32_t error_count, float voltage, float current, float temperature,
+            int32_t rpm, uint8_t power_rating_pct);
 
 private:
     static BP_UavcanEscStatusManager* _instance;
 
     struct escstatus_data {
-        float rpm;
+        uint32_t error_count;
         float voltage;
         float current;
         float temperature;
+        int32_t rpm;
+        uint8_t power_rating_pct;
         //private
         uint64_t timestamp;
         float consumed_mah;
@@ -45,6 +49,4 @@ private:
     };
     struct escstatus_data _escstatus[8];
     uint16_t _escstatus_maxindex;
-
-    AP_HAL::Semaphore *_sem;
 };

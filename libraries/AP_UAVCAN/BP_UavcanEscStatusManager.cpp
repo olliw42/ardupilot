@@ -21,28 +21,23 @@ BP_UavcanEscStatusManager::BP_UavcanEscStatusManager()
         AP_HAL::panic("BP_UavcanEscStatusManager must be singleton");
     }
     _instance = this;
-
-    _sem = hal.util->new_semaphore();
 }
 
 
-void BP_UavcanEscStatusManager::handle_escstatus_msg(uint16_t esc_index, float rpm,  float voltage, float current, float temperature)
+void BP_UavcanEscStatusManager::write_to_escindex(uint16_t esc_index,
+        uint32_t error_count, float voltage, float current, float temperature,
+        int32_t rpm, uint8_t power_rating_pct)
 {
     if (esc_index >= 8) return;
 
-    if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    _escstatus[esc_index].rpm = rpm;
+    _escstatus[esc_index].voltage = voltage;
+    _escstatus[esc_index].current = current;
+    _escstatus[esc_index].temperature = temperature;
 
-        _escstatus[esc_index].rpm = rpm;
-        _escstatus[esc_index].voltage = voltage;
-        _escstatus[esc_index].current = current;
-        _escstatus[esc_index].temperature = temperature;
+    _escstatus[esc_index].timestamp = AP_HAL::micros64();
 
-        _escstatus[esc_index].timestamp = AP_HAL::micros64();
-
-        if (esc_index >= _escstatus_maxindex) _escstatus_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
-
-        _sem->give();
-    }
+    if (esc_index >= _escstatus_maxindex) _escstatus_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
 }
 
 
