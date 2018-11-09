@@ -62,17 +62,20 @@ UC4H stuff:
     AP_BattMonitor_Backend.h: 1x
     AP_BattMonitor_Params.h: 1x
     AP_BattMonitor_UAVCAN.cpp: 2x
-    AP_BattMonitor_UAVCAN.h: 2x
+    AP_BattMonitor_UAVCAN.h: 3x
     AP_BattMonitor.cpp: 1x
     AP_SerialManager.cpp: +3x
     AP_SerialManager.h: +2x
     AP_Notify.cpp: 2x
     AP_UAVCAN.cpp: 6x
     AP_UAVCAN.h: 3x
+    GCS_Common.cpp: +1x
 added files:
     Uc4hNotifyDevice.cpp            (AP_Notify/)
     Uc4hNotifyDevice.h              (AP_Notify/)
     BP_Tunnel_Backend.h             (AP_UAVCAN/)
+    BP_UavcanEscStatusManager.cpp   (AP_UAVCAN/)
+    BP_UavcanEscStatusManager.h     (AP_UAVCAN/)
     BP_UavcanTunnelManager.cpp      (AP_UAVCAN/)
     BP_UavcanTunnelManager.h        (AP_UAVCAN/)
     TunnelUARTDriver.cpp            (AP_UAVCAN/)
