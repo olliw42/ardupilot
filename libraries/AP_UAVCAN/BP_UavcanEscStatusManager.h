@@ -4,10 +4,8 @@
 //******************************************************
 // this is the listener for the uavcan.EscStatus message
 // it holds the latest status data
-// it can be called form GCS_Common.cpp, MSG_ESC_TELEMETRY, to send out the status data per MAVLINK
+// it is called from GCS_Common.cpp, MSG_ESC_TELEMETRY, to send out the status data per MAVLINK
 // see AP_BLHeli class for reference
-
-
 
 #pragma once
 
@@ -43,10 +41,10 @@ private:
         int32_t rpm;
         uint8_t power_rating_pct;
         //private
-        uint64_t timestamp;
+        uint32_t timestamp_us;
         float consumed_mah;
-        float consumed_wh;
+        uint32_t rx_count;
     };
-    struct escstatus_data _escstatus[8];
-    uint16_t _escstatus_maxindex;
+    struct escstatus_data _escstatus[12];
+    uint16_t _esc_maxindex;
 };

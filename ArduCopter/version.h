@@ -26,7 +26,7 @@ features:
  - passthrough, MNT_STRM_PTSER
  - Solo gimbal mimicry
  - all UC4H stuff added
-   new: BattMonitor for uavcan EscStatus
+   new: BattMonitor for uavcan EscStatus, 3 BattMonitors, EscStatus MAVLink
  - barometer proper gcs sendtext
 
 

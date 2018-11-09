@@ -167,9 +167,9 @@ void AP_BattMonitor_UAVCAN::handle_escstatus_msg(uint16_t esc_index, float volta
     uint32_t dt = tnow - _escstatus[esc_index].time_micros;
 
     if (_escstatus[esc_index].time_micros != 0 && dt < 2000000) {
-        float mah = (float) ((double) _escstatus[esc_index].current * (double) dt * (double) 0.0000002778f);
+        float mah = (float) ((double) current * (double) dt * (double) 0.0000002778f);
         _escstatus[esc_index].consumed_mah += mah;
-        _escstatus[esc_index].consumed_wh  += 0.001f * mah * _escstatus[esc_index].voltage;
+        _escstatus[esc_index].consumed_wh  += 0.001f * mah * voltage;
     }
 
     _escstatus[esc_index].time_micros = tnow;

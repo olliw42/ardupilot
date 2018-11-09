@@ -527,8 +527,10 @@ private:
     AP_Mount camera_mount{ahrs, current_loc};
 #endif
 //OW
+#if HAL_WITH_UAVCAN
     BP_UavcanTunnelManager tunnel_manager;
     BP_UavcanEscStatusManager escstatus_manager;
+#endif
 //OWEND
 
     // AC_Fence library to reduce fly-aways

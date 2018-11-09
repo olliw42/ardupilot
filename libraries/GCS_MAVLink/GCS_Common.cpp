@@ -44,6 +44,7 @@
 
 //OW
 #include <AP_Mount/BP_Mount_STorM32.h>
+#include <AP_UAVCAN/BP_UavcanEscStatusManager.h>
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -3059,6 +3060,15 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
             blheli->send_esc_telemetry_mavlink(uint8_t(chan));
         }
 #endif
+//OW
+#if HAL_WITH_UAVCAN
+        CHECK_PAYLOAD_SIZE(ESC_TELEMETRY_1_TO_4);
+        BP_UavcanEscStatusManager *escstatusmanager = BP_UavcanEscStatusManager::instance();
+        if (escstatusmanager) {
+            escstatusmanager->send_esc_telemetry_mavlink(uint8_t(chan));
+        }
+#endif
+//OWEND
         break;
     }
 
