@@ -24,7 +24,13 @@ const AP_Param::GroupInfo AP_BattMonitor::var_info[] = {
     // @Group: 2_
     // @Path: AP_BattMonitor_Params.cpp
     AP_SUBGROUPINFO(_params[1], "2_", 24, AP_BattMonitor, AP_BattMonitor_Params),
-
+//OW
+#if AP_BATT_MONITOR_MAX_INSTANCES > 2
+    // @Group: 3_
+    // @Path: AP_BattMonitor_Params.cpp
+    AP_SUBGROUPINFO(_params[2], "3_", 25, AP_BattMonitor, AP_BattMonitor_Params),
+#endif
+//OWEND
     AP_GROUPEND
 };
 
