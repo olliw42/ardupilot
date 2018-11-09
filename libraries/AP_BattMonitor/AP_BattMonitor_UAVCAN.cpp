@@ -47,6 +47,11 @@ void AP_BattMonitor_UAVCAN::init()
                     debug_bm_uavcan(2, "UAVCAN BattMonitor Uc4hGenericBatteryInfo registered id: %d\n\r", _params._serial_number);
                 }
                 break;
+            case UAVCAN_ESCSTATUS:
+                if (ap_uavcan->escstatus_register_listener(this, _params._serial_number)) {
+                    debug_bm_uavcan(2, "UAVCAN BattMonitor EscStatus registered id: %d\n\r", _params._serial_number);
+                }
+                break;
 //OWEND
         }
     }
@@ -118,6 +123,25 @@ void AP_BattMonitor_UAVCAN::handle_uc4hgenericbatteryinfo_msg(float voltage, flo
     _state.last_time_micros = tnow;
 
     _state.healthy = true;
+}
+
+void AP_BattMonitor_UAVCAN::handle_escstatus_msg(uint16_t esc_index, float voltage, float current)
+{
+    escstatus[esc_index].voltage = voltage;
+    escstatus[esc_index].current = current;
+
+    uint32_t tnow = AP_HAL::micros();
+    uint32_t dt = tnow - escstatus[esc_index].time_micros;
+
+    if (escstatus[esc_index].time_micros != 0 && dt < 2000000) {
+        float mah = (float) ((double) escstatus[esc_index].current * (double) dt * (double) 0.0000002778f);
+        escstatus[esc_index].consumed_mah += mah;
+        escstatus[esc_index].consumed_wh  += 0.001f * mah * escstatus[esc_index].voltage;
+    }
+
+    escstatus[esc_index].time_micros = tnow;
+
+    if( esc_index >= escstatus_maxindex ) escstatus_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
 }
 //OWEND
 

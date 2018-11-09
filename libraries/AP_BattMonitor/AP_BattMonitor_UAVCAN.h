@@ -14,6 +14,7 @@ public:
         UAVCAN_BATTERY_INFO = 0,
 //OW
         UAVCAN_UC4HGENERICBATTERY_INFO = 83,
+        UAVCAN_ESCSTATUS = 84,
 //OWEND
     };
 
@@ -32,8 +33,22 @@ public:
     void handle_bi_msg(float voltage, float current, float temperature) override;
 //OW
     void handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy) override;
+    void handle_escstatus_msg(uint16_t esc_index, float voltage, float current) override;
 //OWEND
 
 protected:
     BattMonitor_UAVCAN_Type _type;
+
+//OW
+    struct escstatus_data {
+        uint32_t time_micros;
+        float voltage;
+        float current;
+        float consumed_mah;
+        float consumed_wh;
+    };
+    struct escstatus_data escstatus[8];
+    uint16_t escstatus_maxindex;
+//OWEND
+
 };

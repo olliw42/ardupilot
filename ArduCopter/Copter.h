@@ -85,6 +85,7 @@
 #include <AP_TempCalibration/AP_TempCalibration.h>
 //OW
 #include <AP_UAVCAN/BP_UavcanTunnelManager.h>
+#include <AP_UAVCAN/BP_UavcanEscStatusManager.h>
 //OWEND
 
 // Configuration
@@ -527,6 +528,7 @@ private:
 #endif
 //OW
     BP_UavcanTunnelManager tunnel_manager;
+    BP_UavcanEscStatusManager escstatus_manager;
 //OWEND
 
     // AC_Fence library to reduce fly-aways

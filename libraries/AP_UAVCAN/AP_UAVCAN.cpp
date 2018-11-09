@@ -536,6 +536,7 @@ AP_UAVCAN::AP_UAVCAN() :
     }
 
     // --- EscStatus ---
+    _escstatus.listener = nullptr;
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
         _escstatus.id[i] = UINT8_MAX;
     }
@@ -1664,7 +1665,7 @@ AP_UAVCAN::Uc4hGenericBatteryInfo_Data* AP_UAVCAN::uc4hgenericbatteryinfo_getptr
     // check if id is already in list, and if it is, take it
     for (uint8_t i = 0; i < AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER; i++) {
         if (_uc4hgenericbatteryinfo.id[i] == id) {
-            _uc4hgenericbatteryinfo.data[i].i = i;
+            _uc4hgenericbatteryinfo.data[i].i = i; //this avoids needing a 2nd loop in update_i()
             return &_uc4hgenericbatteryinfo.data[i];
         }
     }
@@ -1675,7 +1676,7 @@ AP_UAVCAN::Uc4hGenericBatteryInfo_Data* AP_UAVCAN::uc4hgenericbatteryinfo_getptr
             continue;
         }
         _uc4hgenericbatteryinfo.id[i] = id;
-        _uc4hgenericbatteryinfo.data[i].i = i;
+        _uc4hgenericbatteryinfo.data[i].i = i; //this avoids needing a 2nd loop in update_i()
         return &_uc4hgenericbatteryinfo.data[i];
     }
 
@@ -1699,17 +1700,68 @@ void AP_UAVCAN::uc4hgenericbatteryinfo_update_i(uint8_t i)
 
 
 //--- EscStatus ---
-// incoming message, by device id
+// incoming message, there is just one listener
+
+uint8_t AP_UAVCAN::escstatus_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id)
+{
+    uint8_t sel_place = UINT8_MAX, ret = 0;
+
+    //find first free place in listeners list
+    // we have just one listener
+    if (_escstatus.listener == nullptr) {
+        sel_place = 0;
+    }
+    //no free place, abort
+    if (sel_place == UINT8_MAX) {
+        return ret;
+    }
+
+    //insert listener
+    // we have just one listener
+    uint8_t i = 0;
+    _escstatus.listener = new_listener;
+    ret = i + 1;
+    debug_uavcan(2, "reg_UC4HGENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
+
+/*
+    //find first free place in listeners list
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_uc4hgenericbatteryinfo.listeners[li] == nullptr) {
+            sel_place = li;
+            break;
+        }
+    }
+
+    //no free place, abort
+    if (sel_place == UINT8_MAX) {
+        return ret;
+    }
+
+    //insert listener
+    for (uint8_t i = 0; i < AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER; i++) {
+        if (_uc4hgenericbatteryinfo.id[i] != id) {
+            continue;
+        }
+        _uc4hgenericbatteryinfo.listeners[sel_place] = new_listener;
+        _uc4hgenericbatteryinfo.listener_to_id[sel_place] = i;
+        _uc4hgenericbatteryinfo.id_taken[i]++;
+        ret = i + 1;
+        debug_uavcan(2, "reg_UC4HGENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
+        break;
+    }
+*/
+    return ret;
+}
 
 AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
 {
-    // I think the esc_index are continues, by how ArduPilot works
+    // I think the esc_index are continuous, by how ArduPilot works
     // so we could just directly jump with id into the data list, return &_escstatus.data[id], with id<8 overflow protection of course
 
     // check if id is already in list, and if it is take it
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
         if (_escstatus.id[i] == id) {
-            _escstatus.data[i].i = i;
+            _escstatus.data[i].i = i; //this avoids needing a 2nd loop in update_i()
             return &_escstatus.data[i];
         }
     }
@@ -1720,7 +1772,7 @@ AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
             continue;
         }
         _escstatus.id[i] = id;
-        _escstatus.data[i].i = i;
+        _escstatus.data[i].i = i; //this avoids needing a 2nd loop in update_i()
         return &_escstatus.data[i];
     }
 
@@ -1734,6 +1786,10 @@ void AP_UAVCAN::escstatus_update_i(uint8_t i)
     // however, I think, ArduPilot implicitly enforces continuous esc_index, so should be no problem
     uint8_t id = _escstatus.id[i];
     if (id >= 8) return;
+
+    if (_escstatus.listener != nullptr) {
+        _escstatus.listener->handle_escstatus_msg(id, _escstatus.data[i].voltage, _escstatus.data[i].current );
+    }
 
 //TODO: do not log packets with error???
 // no, it would be better to extend the ESC log message, and to drop wrong packages on the node side
