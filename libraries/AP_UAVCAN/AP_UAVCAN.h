@@ -323,8 +323,8 @@ private:
 // --- EscStatus ---
     // incoming message, by device id
     // some of the handling is done by the BP_UavcanEscStatusManager class!
-    // we write directly to this class, so just the BattMonitor stuff to keep here
-    // since the EscStatus can come from different nodes and different esc_index, we allow just one BattMonitor listener
+    // we write directly to this class, and write directly to the DataFlash, so just the BattMonitor=84 stuff to keep here
+    // since EscStatus can come from different nodes and different esc_index, we allow just one BattMonitor listener
 public:
     struct EscStatus_Data {
         uint32_t error_count;
