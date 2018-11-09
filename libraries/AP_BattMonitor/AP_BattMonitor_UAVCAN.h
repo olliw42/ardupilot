@@ -52,5 +52,4 @@ protected:
     struct escstatus_data escstatus[8];
     uint16_t escstatus_maxindex;
 //OWEND
-
 };

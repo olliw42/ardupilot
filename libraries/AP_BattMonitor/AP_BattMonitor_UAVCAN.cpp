@@ -86,17 +86,18 @@ void AP_BattMonitor_UAVCAN::read()
             if ((tnow - escstatus[i].time_micros) > 1000) all_healthy = false; //at least one of the data is old
         }
 
-        //TODO: is it possible to figure out how many motors we are supposed to have, i.e., get FRAME_CLASS, FRAME_TYPE, BRD_PWM_COUNT(?)
-        if ((num_escs < escstatus_maxindex) || !all_healthy) {
-            _state.healthy = false;
-        }
-
         _state.voltage = (num_escs > 0) ? voltage/num_escs : 0.0f;
         _state.current_amps = current;
         _state.consumed_mah = consumed_mah;
         _state.consumed_wh = consumed_wh;
 
-       _state.last_time_micros = tnow;
+        _state.last_time_micros = tnow;
+
+        _state.healthy = true;
+        //TODO: is it possible to figure out how many motors we are supposed to have, i.e., get FRAME_CLASS, FRAME_TYPE, BRD_PWM_COUNT(?)
+        if ((num_escs < escstatus_maxindex) || !all_healthy) {
+            _state.healthy = false;
+        }
     }
 }
 
