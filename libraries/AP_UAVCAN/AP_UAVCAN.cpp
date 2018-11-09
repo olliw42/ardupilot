@@ -418,14 +418,21 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
         return;
     }
 
-    //different to usual: we do write here directly to the BP_UavcanEscStatusManager class
-    BP_UavcanEscStatusManager* escstatusmgr = BP_UavcanEscStatusManager::instance();
-    if (escstatusmgr && (msg.esc_index < 8)) {
-        escstatusmgr->write_to_escindex(msg.esc_index,
-                msg.error_count, msg.voltage, msg.current, msg.temperature,
-                msg.rpm, msg.power_rating_pct);
+    if ( (uavcan::isNaN(msg.temperature) || (msg.temperature == 0.0f)) &&
+         (uavcan::isNaN(msg.voltage) || (msg.voltage == 0.0f)) &&
+         (uavcan::isNaN(msg.current) || (msg.current == 0.0f)) &&
+         (uavcan::isNaN(msg.rpm) || (msg.rpm == 0.0f)) ) { //this is likely an invalid packet, so ignore it
+        return;
     }
 
+    // write directly to BP_UavcanEscStatusManager class
+    BP_UavcanEscStatusManager* escstatusmgr = BP_UavcanEscStatusManager::instance();
+    if (escstatusmgr && (msg.esc_index < 8)) {
+        escstatusmgr->write_to_escindex(msg.esc_index, msg.error_count, msg.voltage, msg.current, msg.temperature,
+                                        msg.rpm, msg.power_rating_pct);
+    }
+
+    // write directly to DataFlash
     // only 8 LOG_ESC1_MSG are defined, see /libraries/DataFlash/LogStructure.h
     //TODO: do not log packets with error???
     // no, it would be better to extend the ESC log message, and to drop wrong packages on the node side
@@ -447,6 +454,7 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
         }
     }
 
+    // do stuff for BattMonitor 84
     uint8_t id = msg.esc_index; //by device id
 
     AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data(id); //i is in data->i
