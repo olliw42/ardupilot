@@ -51,6 +51,7 @@ void AP_BattMonitor_UAVCAN::init()
                 if (ap_uavcan->escstatus_register_listener(this, _params._serial_number)) {
                     debug_bm_uavcan(2, "UAVCAN BattMonitor EscStatus registered id: %d\n\r", _params._serial_number);
                 }
+                //_params._low_voltage = 0.0f; is this good or bad idea?
                 break;
 //OWEND
         }
