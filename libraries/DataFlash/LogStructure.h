@@ -1081,8 +1081,12 @@ struct PACKED log_DSTL {
 
 #define ESC_LABELS "TimeUS,RPM,Volt,Curr,Temp,CTot"
 #define ESC_FMT   "QeCCcH"
-#define ESC_UNITS "sqvAO-"
-#define ESC_MULTS "FBBBB-"
+//OW
+//#define ESC_UNITS "sqvAO-"
+//#define ESC_MULTS "FBBBB-"
+#define ESC_UNITS "sqvAOi"
+#define ESC_MULTS "FBBBB!"
+//OWEND
 
 #define GPA_LABELS "TimeUS,VDop,HAcc,VAcc,SAcc,VV,SMS,Delta"
 #define GPA_FMT   "QCCCCBIH"
