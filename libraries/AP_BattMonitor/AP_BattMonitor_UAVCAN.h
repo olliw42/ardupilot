@@ -40,12 +40,13 @@ protected:
     BattMonitor_UAVCAN_Type _type;
 
 //OW
-    struct escstatus_data {
-        uint32_t time_micros;
+    struct escstatus_data { //this is as received from uavcan.equipment.esc.Status
         float voltage;
         float current;
-        float consumed_mah;
-        float consumed_wh;
+        //private
+        uint32_t time_micros;
+        float consumed_charge_mah;
+        float consumed_energy_wh;
         bool healthy;
         bool detected;
     };

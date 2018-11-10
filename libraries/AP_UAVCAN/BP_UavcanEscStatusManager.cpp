@@ -32,19 +32,23 @@ void BP_UavcanEscStatusManager::write_to_escindex(uint16_t esc_index,
     if (esc_index >= 12) return;
 
     uint32_t tnow = AP_HAL::micros();
-    uint32_t dt = tnow - _escstatus[esc_index].timestamp_us; //this is the time of the previously received msg
 
+    //calculate the consumed charge in mAh and energy in Wh, for later use by whoever might be interested
+    uint32_t dt = tnow - _escstatus[esc_index].timestamp_us; //this is the time of the previously received msg
     if (_escstatus[esc_index].timestamp_us != 0 && dt < 2000000) {
         float mah = (float) ((double) current * (double) dt * (double) 0.0000002778f);
-        _escstatus[esc_index].consumed_mah += mah;
+        _escstatus[esc_index].consumed_charge_mah += mah;
+        _escstatus[esc_index].consumed_energy_wh  += 0.001f * mah * voltage;
     }
+    //calculate the temperature in C°, for later use by whoever might be interested
+    _escstatus[esc_index].temperature_degC = (!uavcan::isNaN(temperature) && (temperature != 0.0f)) ? temperature - C_TO_KELVIN : 0.0f;
 
     _escstatus[esc_index].rpm = rpm;
     _escstatus[esc_index].voltage = voltage;
     _escstatus[esc_index].current = current;
     _escstatus[esc_index].temperature = temperature;
 
-    _escstatus[esc_index].timestamp_us = tnow; //AP_HAL::micros();
+    _escstatus[esc_index].timestamp_us = tnow;
     _escstatus[esc_index].rx_count++;
     if (esc_index >= _esc_maxindex) _esc_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
 }
@@ -80,11 +84,11 @@ void BP_UavcanEscStatusManager::send_esc_telemetry_mavlink(uint8_t mav_chan)
         if (_escstatus[i].timestamp_us && ((tnow - _escstatus[i].timestamp_us) < 1000000)) {
             voltage[idx]      = (uint16_t)(_escstatus[i].voltage*100.0f + 0.5f);
             current[idx]      = (uint16_t)(_escstatus[i].current*100.0f + 0.5f);
-            totalcurrent[idx] = _escstatus[i].consumed_mah;
+            totalcurrent[idx] = _escstatus[i].consumed_charge_mah;
             rpm[idx]          = _escstatus[i].rpm;
             count[idx]        = _escstatus[i].rx_count;
 
-            float temp_degC = (!uavcan::isNaN(_escstatus[i].temperature)) ? _escstatus[i].temperature - 273.15f : 0.0f;
+            float temp_degC = _escstatus[i].temperature_degC;
             if (temp_degC < 0.0f) temp_degC = 0.0f;
             temperature[idx]  = (int8_t)(temp_degC + 0.5f);
 

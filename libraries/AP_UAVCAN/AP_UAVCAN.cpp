@@ -440,7 +440,7 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
         DataFlash_Class* df = DataFlash_Class::instance();
         if (df && df->logging_enabled()) {
             uint64_t time_us = AP_HAL::micros64();
-            float temp_degC = (!uavcan::isNaN(msg.temperature) && (msg.temperature > 0.1f)) ? msg.temperature - 273.15f : 0.0f;
+            float temp_degC = (!uavcan::isNaN(msg.temperature) && (msg.temperature != 0.0f)) ? msg.temperature - C_TO_KELVIN : 0.0f; //C_TO_KELVIN 273.15f
             struct log_Esc pkt = {
                 LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + msg.esc_index)),
                 time_us     : time_us,
@@ -930,9 +930,8 @@ void AP_UAVCAN::do_cyclic(void)
     }
 
 //OW
-    uint64_t current_time_ms = AP_HAL::millis64();
     tunnelbroadcast_out_do_cyclic(); //give it preference
-    uc4h_do_cyclic(current_time_ms);
+    uc4h_do_cyclic();
 //OWEND
 }
 
@@ -1833,7 +1832,7 @@ void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload,
 }
 
 
-void AP_UAVCAN::uc4h_do_cyclic(uint64_t current_time_ms)
+void AP_UAVCAN::uc4h_do_cyclic(void)
 {
     if (uc4hnotify_array[_uavcan_i] == nullptr) {
         return;
