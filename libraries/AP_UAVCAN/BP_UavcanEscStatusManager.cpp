@@ -31,7 +31,8 @@ void BP_UavcanEscStatusManager::write_to_escindex(uint16_t esc_index,
 {
     if (esc_index >= 12) return;
 
-    uint32_t tnow = AP_HAL::micros();
+    uint64_t tnow64 = AP_HAL::micros64();
+    uint32_t tnow = tnow64; //AP_HAL::micros();
 
     //calculate the consumed charge in mAh and energy in Wh, for later use by whoever might be interested
     uint32_t dt = tnow - _escstatus[esc_index].timestamp_us; //this is the time of the previously received msg
@@ -40,8 +41,10 @@ void BP_UavcanEscStatusManager::write_to_escindex(uint16_t esc_index,
         _escstatus[esc_index].consumed_charge_mah += mah;
         _escstatus[esc_index].consumed_energy_wh  += 0.001f * mah * voltage;
     }
+
     //calculate the temperature in C°, for later use by whoever might be interested
-    _escstatus[esc_index].temperature_degC = (!uavcan::isNaN(temperature) && (temperature != 0.0f)) ? temperature - C_TO_KELVIN : 0.0f;
+    //TODO: use is_equal(), but check if it does exactly what is the intention here
+    _escstatus[esc_index].temperature_degC = (!uavcan::isNaN(temperature) && (!temperature != 0.0f)) ? temperature - C_TO_KELVIN : 0.0f;
 
     _escstatus[esc_index].rpm = rpm;
     _escstatus[esc_index].voltage = voltage;
@@ -49,8 +52,30 @@ void BP_UavcanEscStatusManager::write_to_escindex(uint16_t esc_index,
     _escstatus[esc_index].temperature = temperature;
 
     _escstatus[esc_index].timestamp_us = tnow;
+    _escstatus[esc_index].timestamp64_us = tnow64;
     _escstatus[esc_index].rx_count++;
+
     if (esc_index >= _esc_maxindex) _esc_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
+}
+
+
+void BP_UavcanEscStatusManager::log_to_dataflash(uint16_t esc_index)
+{
+    if (esc_index >= 8) return; //DataFlash supports only up to 8 ESCs
+
+    DataFlash_Class* df = DataFlash_Class::instance();
+    if (df && df->logging_enabled()) {
+        struct log_Esc pkt = {
+            LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + esc_index)),
+            time_us     : _escstatus[esc_index].timestamp64_us,
+            rpm         : (int32_t)(_escstatus[esc_index].rpm),
+            voltage     : (uint16_t)(_escstatus[esc_index].voltage * 100.0f + 0.5f),
+            current     : (uint16_t)(_escstatus[esc_index].current * 100.0f + 0.5f),
+            temperature : (int16_t)(_escstatus[esc_index].temperature_degC * 100.0f + 0.5f),
+            current_tot : (uint16_t)(_escstatus[esc_index].consumed_charge_mah + 0.5f)
+        };
+        df->WriteBlock(&pkt, sizeof(pkt));
+    }
 }
 
 
@@ -63,7 +88,7 @@ void BP_UavcanEscStatusManager::write_to_escindex(uint16_t esc_index,
 //taken from AP_BLHeli as reference
 void BP_UavcanEscStatusManager::send_esc_telemetry_mavlink(uint8_t mav_chan)
 {
-    if (_esc_maxindex == 0) {
+    if (_esc_maxindex == 0) { //nothing ever received
         return;
     }
 

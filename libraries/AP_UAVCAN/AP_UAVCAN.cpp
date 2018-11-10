@@ -418,6 +418,7 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
         return;
     }
 
+    //TODO: use is_equal(), but check if it does exactly what is the intention here
     if ( (uavcan::isNaN(msg.temperature) || (msg.temperature == 0.0f)) &&
          (uavcan::isNaN(msg.voltage) || (msg.voltage == 0.0f)) &&
          (uavcan::isNaN(msg.current) || (msg.current == 0.0f)) &&
@@ -426,35 +427,18 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
     }
 
     // write directly to BP_UavcanEscStatusManager class
+    // write directly to DataFlash
     BP_UavcanEscStatusManager* escstatusmgr = BP_UavcanEscStatusManager::instance();
-    if (escstatusmgr && (msg.esc_index < 8)) {
+    if (escstatusmgr) {
+        //the class supports up to 12 ESCs, but that's tested in the function, no need to do it here
         escstatusmgr->write_to_escindex(msg.esc_index, msg.error_count, msg.voltage, msg.current, msg.temperature,
                                         msg.rpm, msg.power_rating_pct);
+
+        //dataflash supports only up to 8 ESCs, but that's tested in the function, no need to do it here
+        escstatusmgr->log_to_dataflash(msg.esc_index);
     }
 
-    // write directly to DataFlash
-    // only 8 LOG_ESC1_MSG are defined, see /libraries/DataFlash/LogStructure.h
-    //TODO: do not log packets with error???
-    // no, it would be better to extend the ESC log message, and to drop wrong packages on the node side
-    if (msg.esc_index < 8) {
-        DataFlash_Class* df = DataFlash_Class::instance();
-        if (df && df->logging_enabled()) {
-            uint64_t time_us = AP_HAL::micros64();
-            float temp_degC = (!uavcan::isNaN(msg.temperature) && (msg.temperature != 0.0f)) ? msg.temperature - C_TO_KELVIN : 0.0f; //C_TO_KELVIN 273.15f
-            struct log_Esc pkt = {
-                LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + msg.esc_index)),
-                time_us     : time_us,
-                rpm         : (int32_t)(msg.rpm),
-                voltage     : (uint16_t)(msg.voltage*100.0f + 0.5f),
-                current     : (uint16_t)(msg.current*100.0f + 0.5f),
-                temperature : (int16_t)(temp_degC*100.0f + 0.5f),
-                current_tot : (uint16_t)(0)
-            };
-            df->WriteBlock(&pkt, sizeof(pkt));
-        }
-    }
-
-    // do stuff for BattMonitor 84
+    // do stuff for BattMonitor type 84
     uint8_t id = msg.esc_index; //by device id
 
     AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data(id); //i is in data->i
