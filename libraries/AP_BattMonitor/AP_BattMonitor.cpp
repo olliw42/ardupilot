@@ -24,7 +24,13 @@ const AP_Param::GroupInfo AP_BattMonitor::var_info[] = {
     // @Group: 2_
     // @Path: AP_BattMonitor_Params.cpp
     AP_SUBGROUPINFO(_params[1], "2_", 24, AP_BattMonitor, AP_BattMonitor_Params),
-
+//OW
+#if AP_BATT_MONITOR_MAX_INSTANCES > 2
+    // @Group: 3_
+    // @Path: AP_BattMonitor_Params.cpp
+    AP_SUBGROUPINFO(_params[2], "3_", 25, AP_BattMonitor, AP_BattMonitor_Params),
+#endif
+//OWEND
     AP_GROUPEND
 };
 
@@ -105,6 +111,20 @@ AP_BattMonitor::init()
                 _num_instances++;
 #endif
                 break;
+//OW
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_Uc4hGenericBatteryInfo:
+#if HAL_WITH_UAVCAN
+                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], AP_BattMonitor_UAVCAN::UAVCAN_UC4HGENERICBATTERY_INFO, _params[instance]);
+                _num_instances++;
+#endif
+                break;
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_EscStatus:
+#if HAL_WITH_UAVCAN
+                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], AP_BattMonitor_UAVCAN::UAVCAN_ESCSTATUS, _params[instance]);
+                _num_instances++;
+#endif
+                break;
+//OWEND
             case AP_BattMonitor_Params::BattMonitor_TYPE_NONE:
             default:
                 break;
