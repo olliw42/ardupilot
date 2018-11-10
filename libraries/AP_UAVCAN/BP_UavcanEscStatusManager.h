@@ -33,7 +33,7 @@ public:
 private:
     static BP_UavcanEscStatusManager* _instance;
 
-    struct escstatus_data {
+    struct escstatus_data { //this is as received from uavcan.equipment.esc.Status
         uint32_t error_count;
         float voltage;
         float current;
@@ -42,7 +42,9 @@ private:
         uint8_t power_rating_pct;
         //private
         uint32_t timestamp_us;
-        float consumed_mah;
+        float consumed_charge_mah;
+        float consumed_energy_wh;
+        float temperature_degC;
         uint32_t rx_count;
     };
     struct escstatus_data _escstatus[12];
