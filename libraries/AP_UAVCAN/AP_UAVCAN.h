@@ -23,6 +23,7 @@
 #include "bp_dsdl_generated/olliw/uc4h/Notify.hpp"
 #include <uavcan/tunnel/Broadcast.hpp> //#include "newtunnel/Broadcast.hpp" are identical, thus deleted
 #include "BP_UavcanTunnelManager.h"
+#include "BP_UavcanEscStatusManager.h"
 //OWEND
 
 #ifndef UAVCAN_NODE_POOL_SIZE
@@ -321,10 +322,10 @@ private:
 
 // --- EscStatus ---
     // incoming message, by device id
+    // some of the handling is done by the BP_UavcanEscStatusManager class!
+    // we write directly to this class, and write directly to the DataFlash, so just the BattMonitor=84 stuff to keep here
+    // since EscStatus can come from different nodes and different esc_index, we allow just one BattMonitor listener
 public:
-    // currently, we do nothing than to write the data to dataflash
-    // => we do not need a listener, we can do it in _update_i()
-    // this of course needs to change once we have a proper class which wants to listen to EscStatus
     struct EscStatus_Data {
         uint32_t error_count;
         float voltage;
@@ -335,13 +336,15 @@ public:
         //auxiliary meta data
         uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
     };
-    //has no external listener
+
+    uint8_t escstatus_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
     EscStatus_Data* escstatus_getptrto_data(uint8_t id);
     void escstatus_update_i(uint8_t i);
 
 private:
     struct {
         uint16_t id[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+        AP_BattMonitor_Backend* listener; //there is only one listener for all EscStatus messages
         EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
     } _escstatus;
 

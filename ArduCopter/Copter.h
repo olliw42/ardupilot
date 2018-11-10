@@ -85,6 +85,7 @@
 #include <AP_TempCalibration/AP_TempCalibration.h>
 //OW
 #include <AP_UAVCAN/BP_UavcanTunnelManager.h>
+#include <AP_UAVCAN/BP_UavcanEscStatusManager.h>
 //OWEND
 
 // Configuration
@@ -526,7 +527,10 @@ private:
     AP_Mount camera_mount{ahrs, current_loc};
 #endif
 //OW
+#if HAL_WITH_UAVCAN
     BP_UavcanTunnelManager tunnel_manager;
+    BP_UavcanEscStatusManager escstatus_manager;
+#endif
 //OWEND
 
     // AC_Fence library to reduce fly-aways
