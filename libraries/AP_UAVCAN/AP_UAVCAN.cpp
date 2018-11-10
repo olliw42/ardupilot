@@ -483,7 +483,7 @@ static void (*tunnelbroadcast_cb[2])(const uavcan::ReceivedDataStructure<uavcan:
 // publisher interfaces
 //--- uc4h.Notify ---
 // outgoing message
-static uavcan::Publisher<uavcan::olliw::uc4h::Notify>* uc4hnotify_array[MAX_NUMBER_OF_CAN_DRIVERS];
+static uavcan::Publisher<uavcan::olliw::uc4h::Notify>* uc4hnotify_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
 // --- tunnel.Broadcast ---
 // outgoing message
 static uavcan::Publisher<uavcan::tunnel::Broadcast>* tunnelbroadcast_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
@@ -563,8 +563,8 @@ AP_UAVCAN::AP_UAVCAN() :
     }
 
     // --- uc4h.Notify ---
-    _uc4hnotify.to_send = false;
-    _uc4hnotify.sem = hal.util->new_semaphore();
+    _uc4hnotify_out.to_send = false;
+    _uc4hnotify_out.sem = hal.util->new_semaphore();
 
     // --- tunnel.Broadcast in ---
     // nothing to do
@@ -736,13 +736,13 @@ bool AP_UAVCAN::try_init(void)
         return false;
     }
 
-    uc4hnotify_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::uc4h::Notify>(*node);
-    uc4hnotify_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
-    uc4hnotify_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower);
+    uc4hnotify_out_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::uc4h::Notify>(*node);
+    uc4hnotify_out_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+    uc4hnotify_out_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower); //will/can be overwritten later
 
     tunnelbroadcast_out_array[_uavcan_i] = new uavcan::Publisher<uavcan::tunnel::Broadcast>(*node);
     tunnelbroadcast_out_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
-    tunnelbroadcast_out_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower); //this will be overwritten later
+    tunnelbroadcast_out_array[_uavcan_i]->setPriority(OneHigherThanDefault); //will/can be overwritten later
 //OWEND
 
     /*
@@ -915,7 +915,7 @@ void AP_UAVCAN::do_cyclic(void)
 
 //OW
     tunnelbroadcast_out_do_cyclic(); //give it preference
-    uc4h_do_cyclic();
+    uc4hnotify_out_do_cyclic();
 //OWEND
 }
 
@@ -1778,9 +1778,9 @@ void AP_UAVCAN::escstatus_update_i(uint8_t i)
 //--- uc4h.Notify ---
 // outgoing message
 
-bool AP_UAVCAN::uc4hnotify_sem_take()
+bool AP_UAVCAN::uc4hnotify_out_sem_take()
 {
-    bool sem_ret = _uc4hnotify.sem->take(10);
+    bool sem_ret = _uc4hnotify_out.sem->take(10);
     if (!sem_ret) {
         debug_uavcan(1, "AP_UAVCAN Uc4h Out semaphore fail\n\r");
     }
@@ -1788,9 +1788,9 @@ bool AP_UAVCAN::uc4hnotify_sem_take()
 }
 
 
-void AP_UAVCAN::uc4hnotify_sem_give()
+void AP_UAVCAN::uc4hnotify_out_sem_give()
 {
-    _uc4hnotify.sem->give();
+    _uc4hnotify_out.sem->give();
 }
 
 
@@ -1798,38 +1798,38 @@ void AP_UAVCAN::uc4hnotify_sem_give()
 // the msg is copied into two fields, so, double work for nothing, "performance killer"
 void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len)
 {
-    if (_uc4hnotify.sem->take(1)) {
+    if (_uc4hnotify_out.sem->take(1)) {
 
-        _uc4hnotify.msg.type = type;
-        _uc4hnotify.msg.subtype = subtype;
+        _uc4hnotify_out.msg.type = type;
+        _uc4hnotify_out.msg.subtype = subtype;
         if (payload_len > 64) payload_len = 64; //play it safe
-        _uc4hnotify.msg.payload.resize(payload_len);
+        _uc4hnotify_out.msg.payload.resize(payload_len);
         for (uint8_t i = 0; i < payload_len; i++) {
-            _uc4hnotify.msg.payload[i] = payload[i];
+            _uc4hnotify_out.msg.payload[i] = payload[i];
         }
 
-        _uc4hnotify.priority = uavcan::TransferPriority::MiddleLower;
+        _uc4hnotify_out.priority = uavcan::TransferPriority::MiddleLower;
 
-        _uc4hnotify.to_send = true;
-        uc4hnotify_sem_give();
+        _uc4hnotify_out.to_send = true;
+        uc4hnotify_out_sem_give();
     }
 }
 
 
-void AP_UAVCAN::uc4h_do_cyclic(void)
+void AP_UAVCAN::uc4hnotify_out_do_cyclic(void)
 {
-    if (uc4hnotify_array[_uavcan_i] == nullptr) {
+    if (uc4hnotify_out_array[_uavcan_i] == nullptr) {
         return;
     }
 
     //always send only one message per cycle
-    if (_uc4hnotify.to_send && uc4hnotify_sem_take()) {
+    if (_uc4hnotify_out.to_send && uc4hnotify_out_sem_take()) {
 
-        uc4hnotify_array[_uavcan_i]->setPriority(_uc4hnotify.priority);
-        uc4hnotify_array[_uavcan_i]->broadcast(_uc4hnotify.msg);
+        uc4hnotify_out_array[_uavcan_i]->setPriority(_uc4hnotify_out.priority);
+        uc4hnotify_out_array[_uavcan_i]->broadcast(_uc4hnotify_out.msg);
 
-        _uc4hnotify.to_send = false;
-        uc4hnotify_sem_give();
+        _uc4hnotify_out.to_send = false;
+        uc4hnotify_out_sem_give();
     }
 }
 
@@ -1872,7 +1872,7 @@ void AP_UAVCAN::tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uin
             _tunnelbroadcast_out.msg[tunnel_index].buffer[i] = buffer[i];
         }
 
-        _tunnelbroadcast_out.priority[tunnel_index] = uavcan::TransferPriority::MiddleLower;
+        _tunnelbroadcast_out.priority[tunnel_index] = OneHigherThanDefault;
 
         _tunnelbroadcast_out.to_send[tunnel_index] = true;
         tunnelbroadcast_out_sem_give();

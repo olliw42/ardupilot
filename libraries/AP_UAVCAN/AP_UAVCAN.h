@@ -351,8 +351,8 @@ private:
 // --- uc4h.Notify ---
     // outgoing message
 public:
-    bool uc4hnotify_sem_take();
-    void uc4hnotify_sem_give();
+    bool uc4hnotify_out_sem_take();
+    void uc4hnotify_out_sem_give();
     void uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len);
 
 private:
@@ -361,10 +361,10 @@ private:
         uavcan::TransferPriority priority;
         bool to_send;
         AP_HAL::Semaphore* sem;
-    } _uc4hnotify;
+    } _uc4hnotify_out;
 
     // --- outgoing message handler ---
-    void uc4h_do_cyclic(void);
+    void uc4hnotify_out_do_cyclic(void);
 
 // --- tunnel.Broadcast ---
     // incoming message, by channel_id
@@ -394,3 +394,53 @@ private:
 };
 
 #endif /* AP_UAVCAN_H_ */
+
+
+
+
+/*
+about priorities:
+
+uc_transfer.cpp:
+const TransferPriority TransferPriority::Default((1U << BitLen) / 2);
+const TransferPriority TransferPriority::MiddleLower((1U << BitLen) / 2 + (1U << BitLen) / 4);
+const TransferPriority TransferPriority::OneHigherThanLowest(NumericallyMax - 1);
+const TransferPriority TransferPriority::OneLowerThanHighest(NumericallyMin + 1);
+const TransferPriority TransferPriority::Lowest(NumericallyMax);
+
+transfer.hpp:
+static const uint8_t BitLen = 5U;
+static const uint8_t NumericallyMax = (1U << BitLen) - 1;
+static const uint8_t NumericallyMin = 0;
+
+me:
+const uavcan::TransferPriority TwoLowerThanHighest(uavcan::TransferPriority::NumericallyMin + 2);
+const uavcan::TransferPriority OneHigherThanDefault((1U << uavcan::TransferPriority::BitLen) / 2 - 1);
+
+=>
+
+OneLowerThanHighest     = 1
+Default                 = 16
+MiddleLower             = 24
+OneHigherThanLowest     = 30
+Lowest                  = 31
+
+TwoLowerThanHighest     = 2
+OneHigherThanDefault    = 15
+
+usage:
+act_out_array[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);   = 1
+esc_raw[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);         = 1
+rgb_led[_uavcan_i]->setPriority(uavcan::TransferPriority::OneHigherThanLowest);         = 30
+
+my "old" usage:
+_uc4hnotify.priority = uavcan::TransferPriority::MiddleLower;                           = 24
+_tunnelbroadcast_out.priority[tunnel_index] = uavcan::TransferPriority::MiddleLower;    = 24
+
+notifications can be low, but tunnels should be higher, so set
+
+_tunnelbroadcast_out.priority[tunnel_index] = uavcan::TransferPriority::OneHigherThanDefault;  = 15
+
+
+*/
+
