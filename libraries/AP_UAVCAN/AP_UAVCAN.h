@@ -364,7 +364,7 @@ private:
     } _uc4hnotify;
 
     // --- outgoing message handler ---
-    void uc4h_do_cyclic(uint64_t current_time_ms);
+    void uc4h_do_cyclic(void);
 
 // --- tunnel.Broadcast ---
     // incoming message, by channel_id
