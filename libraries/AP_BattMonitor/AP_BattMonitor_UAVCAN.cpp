@@ -81,8 +81,8 @@ void AP_BattMonitor_UAVCAN::read()
             num_escs++;
             voltage += _escstatus[i].voltage;
             current += _escstatus[i].current;
-            consumed_mah += _escstatus[i].consumed_mah;
-            consumed_wh += _escstatus[i].consumed_wh;
+            consumed_mah += _escstatus[i].consumed_charge_mah;
+            consumed_wh += _escstatus[i].consumed_energy_wh;
 
             if ((tnow - _escstatus[i].time_micros) > 1000) all_healthy = false; //at least one of the data is old
         }
@@ -169,8 +169,8 @@ void AP_BattMonitor_UAVCAN::handle_escstatus_msg(uint16_t esc_index, float volta
 
     if (_escstatus[esc_index].time_micros != 0 && dt < 2000000) {
         float mah = (float) ((double) current * (double) dt * (double) 0.0000002778f);
-        _escstatus[esc_index].consumed_mah += mah;
-        _escstatus[esc_index].consumed_wh  += 0.001f * mah * voltage;
+        _escstatus[esc_index].consumed_charge_mah += mah;
+        _escstatus[esc_index].consumed_energy_wh  += 0.001f * mah * voltage;
     }
 
     _escstatus[esc_index].time_micros = tnow;
