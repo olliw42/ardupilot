@@ -33,6 +33,7 @@ features:
 changed files:
 
     AP_Baro.cpp: 2x
+    DataFlash/LogStructure.h: 2x
 
 STorM32 stuff:
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
