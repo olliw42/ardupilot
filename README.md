@@ -2,7 +2,7 @@
 
 This is the BetaCopter fork of the ArduPilot project.
 
-I use it for developing new features, mainly related to the [STorM32 gimbal controller](http://www.olliw.eu/2013/storm32bgc/) and the [Uavcan for Hobbyist](http://www.olliw.eu/2017/uavcan-for-hobbyists/) projects. I generally try to make all additions in BetaCopter in a "least-intrusive" way, meaning that e.g. features can be disabled/enabled, and when disabled have no effect, also no side effects. This is to help ensuring that the core ArduPilot behavior is not negatively impacted in any way. BetaCopter is ArduPilot, with some extensions.
+I use it for developing new features, mainly related to the [STorM32 gimbal controller](http://www.olliw.eu/2013/storm32bgc/) and the [Uavcan for Hobbyist](http://www.olliw.eu/2017/uavcan-for-hobbyists/) projects.
 
 
 ## Acknowledgements and License ##
