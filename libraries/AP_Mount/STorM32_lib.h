@@ -146,9 +146,9 @@ struct STORM32LIBPACKED tSTorM32CmdGetVersionStr { //len = 0x00
 };
 
 struct STORM32LIBPACKED tSTorM32CmdGetVersionStrAckPayload { //response to CmdGetVersionStr, let's keep just the payload
-  char versionstr[16];
-  char namestr[16];
-  char boardstr[16];
+  char versionstr[16+1]; //16 chars + 1 to be able to close it with a \0
+  char namestr[16+1]; //16 chars + 1 to be able to close it with a \0
+  char boardstr[16+1]; //16 chars + 1 to be able to close it with a \0
 };
 
 
