@@ -18,6 +18,15 @@
 
 #define UAVCAN_TUNNELBROADCAST_BUFFER_MAX   60
 
+//this is for data which is emitted via the tunnel message on the CAN bus
+// the size is such that the data fits perfectly into a multiframe message, in order to optimize bandwidth
+// it can be calculate such:
+// 1st frame:        2xcrc 1xprotocol 1xchannel_id 3xdata 1xtailbyte
+// following frames: 7xdata 1xtailbyte
+// => 3 + (n-1)*7 = 3, 10, 17, 24, 31, 38, 45, 52, 59, 66, ...
+//thus, 60 bytes just fails to fit by one byte, hence use 59
+#define UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX   59
+
 
 //BP_UavcanTunnelManager tunnel_manager; is called in Copter.h
 
