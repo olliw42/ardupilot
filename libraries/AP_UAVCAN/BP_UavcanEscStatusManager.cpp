@@ -68,7 +68,7 @@ void BP_UavcanEscStatusManager::log_to_dataflash(uint16_t esc_index)
         struct log_Esc pkt = {
             LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + esc_index)),
             time_us     : _escstatus[esc_index].timestamp64_us,
-            rpm         : (int32_t)(_escstatus[esc_index].rpm),
+            rpm         : (int32_t)(_escstatus[esc_index].rpm  * 100), //see comment in LogStructure.h !!!
             voltage     : (uint16_t)(_escstatus[esc_index].voltage * 100.0f + 0.5f),
             current     : (uint16_t)(_escstatus[esc_index].current * 100.0f + 0.5f),
             temperature : (int16_t)(_escstatus[esc_index].temperature_degC * 100.0f + 0.5f),

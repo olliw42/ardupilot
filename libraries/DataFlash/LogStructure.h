@@ -1082,10 +1082,13 @@ struct PACKED log_DSTL {
 #define ESC_LABELS "TimeUS,RPM,Volt,Curr,Temp,CTot"
 #define ESC_FMT   "QeCCcH"
 //OW
-//#define ESC_UNITS "sqvAO-"
-//#define ESC_MULTS "FBBBB-"
+//original: #define ESC_UNITS "sqvAO-"
+//original: #define ESC_MULTS "FBBBB-"
 #define ESC_UNITS "sqvAOi"
 #define ESC_MULTS "FBBBB!"
+//TODO/BUG: RPM is divided by 100, and it appears that MP doesn't correct for that!!
+// don't correct it here but feed it with *100, since that's what BLHeli is doing, to not break it, see AP_BLHeli::read_telemetry_packet()
+// don't think that's a feature but a bug
 //OWEND
 
 #define GPA_LABELS "TimeUS,VDop,HAcc,VAcc,SAcc,VV,SMS,Delta"
