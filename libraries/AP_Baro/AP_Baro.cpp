@@ -228,13 +228,19 @@ void AP_Baro::calibrate(bool save)
 
     _guessed_ground_temperature = get_external_temperature();
 
-    // panic if all sensors are not calibrated
+//OW changed to PR #9542
+    // inform GCS about each sensor, and panic if all sensors are not calibrated
+    uint8_t num_calibrated = 0;
     for (uint8_t i=0; i<_num_sensors; i++) {
         if (sensors[i].calibrated) {
-            gcs().send_text(MAV_SEVERITY_INFO, "Barometer calibration complete");
-            return;
+            gcs().send_text(MAV_SEVERITY_INFO, "Barometer %u: calibration complete", i+1);
+            num_calibrated++;
         }
     }
+    if (num_calibrated) {
+        return;
+    }
+//OW
     AP_HAL::panic("AP_Baro: all sensors uncalibrated");
 }
 
@@ -245,19 +251,27 @@ void AP_Baro::calibrate(bool save)
 */
 void AP_Baro::update_calibration()
 {
-    for (uint8_t i=0; i<_num_sensors; i++) {
+//OW //changed to PR #9538, also set all instances to a value
+    const uint32_t now = AP_HAL::millis();
+    const bool do_notify = (now - _last_notify_ms) > 10000;
+    if (do_notify) {
+        _last_notify_ms = now;
+    }
+
+    for (uint8_t i=0; i<BARO_MAX_INSTANCES; i++) {
+        if (i >= _num_sensors) {
+            sensors[i].ground_pressure.set(0.0f);
+        } else
         if (healthy(i)) {
             float corrected_pressure = get_pressure(i) + sensors[i].p_correction;
             sensors[i].ground_pressure.set(corrected_pressure);
         }
-
         // don't notify the GCS too rapidly or we flood the link
-        uint32_t now = AP_HAL::millis();
-        if (now - _last_notify_ms > 10000) {
+        if (do_notify) {
             sensors[i].ground_pressure.notify();
-            _last_notify_ms = now;
         }
     }
+//OWEND
 
     // always update the guessed ground temp
     _guessed_ground_temperature = get_external_temperature();
