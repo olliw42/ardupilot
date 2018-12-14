@@ -35,6 +35,12 @@ changed files:
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
     AP_Baro.cpp: 2x
 
+MAG stuff:
+    AP_Compass.cpp: 2x
+    AP_Compass.h: 1x
+    GCS_Common.cpp: +1x
+
+
 STorM32 stuff:
     AP_Camera.cpp: 2x
     AP_HAL_PX4 UARTDriver.cpp: 3x
