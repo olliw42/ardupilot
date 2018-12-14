@@ -32,12 +32,10 @@ features:
 
 changed files:
 
+    APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
     AP_Baro.cpp: 2x
-    DataFlash/LogStructure.h: 2x
 
 STorM32 stuff:
-    APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
-
     AP_Camera.cpp: 2x
     AP_HAL_PX4 UARTDriver.cpp: 3x
     AP_HAL_PX4 UARTDriver.h: 2x
@@ -62,14 +60,16 @@ UC4H stuff:
     Copter.h: 2x
     AP_BattMonitor_Backend.h: 1x
     AP_BattMonitor_Params.h: 1x
-    AP_BattMonitor_UAVCAN.cpp: 2x
+    AP_BattMonitor_UAVCAN.cpp: 3x
     AP_BattMonitor_UAVCAN.h: 3x
-    AP_BattMonitor.cpp: 1x
+    AP_BattMonitor.cpp: 2x
+    AP_BattMonitor.h: 1x
     AP_SerialManager.cpp: +3x
     AP_SerialManager.h: +2x
     AP_Notify.cpp: 2x
     AP_UAVCAN.cpp: 6x
     AP_UAVCAN.h: 3x
+    DataFlash/LogStructure.h: 2x
     GCS_Common.cpp: +1x
 added files:
     Uc4hNotifyDevice.cpp            (AP_Notify/)

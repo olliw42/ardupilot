@@ -240,7 +240,7 @@ void AP_Baro::calibrate(bool save)
     if (num_calibrated) {
         return;
     }
-//OW
+//OWEND
     AP_HAL::panic("AP_Baro: all sensors uncalibrated");
 }
 

@@ -67,7 +67,7 @@ void AP_BattMonitor_UAVCAN::read()
     if ((tnow - _state.last_time_micros) > AP_BATTMONITOR_UAVCAN_TIMEOUT_MICROS) {
         _state.healthy = false;
     }
-
+//OW
     if (_type == UAVCAN_ESCSTATUS) {
         float voltage = 0.0f;
         float current = 0.0f;
@@ -100,6 +100,7 @@ void AP_BattMonitor_UAVCAN::read()
             _state.healthy = false;
         }
     }
+//OWEND
 }
 
 void AP_BattMonitor_UAVCAN::handle_bi_msg(float voltage, float current, float temperature)
