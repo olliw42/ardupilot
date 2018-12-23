@@ -29,6 +29,8 @@ features:
  - barometer proper gcs sendtext
  - UC4H uavcan EscStatus: simplified DataFlash, BattMonitor type 84, 3 BattMonitors, MAVLink EscStatus
 
+20181223:
+ - cell voltages for UC4H PowerBrick
 
 changed files:
 

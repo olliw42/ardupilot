@@ -21,6 +21,9 @@ AP_BattMonitor_UAVCAN::AP_BattMonitor_UAVCAN(AP_BattMonitor &mon, AP_BattMonitor
 {
     // starts with not healthy
     _state.healthy = false;
+//OW
+    _has_cell_voltages = false;
+//OWEND
 }
 
 void AP_BattMonitor_UAVCAN::init()
@@ -127,7 +130,8 @@ void AP_BattMonitor_UAVCAN::handle_bi_msg(float voltage, float current, float te
 }
 
 //OW
-void AP_BattMonitor_UAVCAN::handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy)
+void AP_BattMonitor_UAVCAN::handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy,
+                                                              uint16_t cells_num, float* cells)
 {
     _state.voltage = voltage;
     _state.current_amps = current;
@@ -158,6 +162,16 @@ void AP_BattMonitor_UAVCAN::handle_uc4hgenericbatteryinfo_msg(float voltage, flo
     _state.last_time_micros = tnow;
 
     _state.healthy = true;
+
+    // read cell voltages
+    for (uint8_t i = 0; i < MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN; i++) {
+        if (i < cells_num) {
+            _state.cell_voltages.cells[i] = (uint16_t)(1000.0f*cells[i]);
+            _has_cell_voltages = true;
+        } else {
+            _state.cell_voltages.cells[i] = UINT16_MAX;
+        }
+    }
 }
 
 void AP_BattMonitor_UAVCAN::handle_escstatus_msg(uint16_t esc_index, float voltage, float current)

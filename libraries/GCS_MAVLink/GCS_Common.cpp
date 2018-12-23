@@ -227,10 +227,18 @@ bool GCS_MAVLINK::send_battery_status() const
 {
     const AP_BattMonitor &battery = AP::battery();
 
+//OW    MP seems to not be able to correctly handle more than one of them !!!
+/*
     for(uint8_t i = 0; i < battery.num_instances(); i++) {
         CHECK_PAYLOAD_SIZE(BATTERY_STATUS);
         send_battery_status(battery, i);
     }
+*/
+    if (battery.num_instances() > 0) {
+        CHECK_PAYLOAD_SIZE(BATTERY_STATUS);
+        send_battery_status(battery, 0);
+    }
+//OWEND
     return true;
 }
 
