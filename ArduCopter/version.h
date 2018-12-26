@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.3"
-#define THISFIRMWARE "BetaCopter V3.6.3 v017u rc01"
+#define THISFIRMWARE "BetaCopter V3.6.3 v017u rc02"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -29,9 +29,10 @@ features:
  - barometer proper gcs sendtext
  - UC4H uavcan EscStatus: simplified DataFlash, BattMonitor type 84, 3 BattMonitors, MAVLink EscStatus
 
-20181223:
+20181226:
  - cell voltages for UC4H PowerBrick, AP_UAVCAN, AP_BattMonitor_UAVCAN, AP_BattMonitor_Backend, LogStructure, GCS_Common
    workaround to MP bug: send BATTERY_STATUS only for instance 0
+ - mag send_banner()
 
 
 changed files:
