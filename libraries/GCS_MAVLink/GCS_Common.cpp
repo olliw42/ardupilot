@@ -2498,6 +2498,11 @@ void GCS_MAVLINK::send_banner()
         notify->actions.gcs_send_banner = true;
     }
 //OWEND
+//OW
+    // there is probably a more reasonable place/procedure to call that, but that's an easy approach
+    Compass *compass = get_compass();
+    if (compass) { compass->send_banner(); }
+//OWEND
 }
 
 
