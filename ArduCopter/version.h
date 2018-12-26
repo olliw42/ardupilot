@@ -8,8 +8,8 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.3"
-#define THISFIRMWARE "BetaCopter V3.6.3 v017u"
-//OW
+#define THISFIRMWARE "BetaCopter V3.6.3 v017u rc01"
+//OWEND
 
 // the following line is parsed by the autotest scripts
 #define FIRMWARE_VERSION 3,6,3,FIRMWARE_VERSION_TYPE_OFFICIAL
@@ -30,7 +30,9 @@ features:
  - UC4H uavcan EscStatus: simplified DataFlash, BattMonitor type 84, 3 BattMonitors, MAVLink EscStatus
 
 20181223:
- - cell voltages for UC4H PowerBrick
+ - cell voltages for UC4H PowerBrick, AP_UAVCAN, AP_BattMonitor_UAVCAN, AP_BattMonitor_Backend, LogStructure, GCS_Common
+   workaround to MP bug: send BATTERY_STATUS only for instance 0
+
 
 changed files:
 
@@ -62,7 +64,7 @@ UC4H stuff:
     Copter.h: 2x
     AP_BattMonitor_Backend.h: 1x
     AP_BattMonitor_Params.h: 1x
-    AP_BattMonitor_UAVCAN.cpp: 3x
+    AP_BattMonitor_UAVCAN.cpp: 4x
     AP_BattMonitor_UAVCAN.h: 3x
     AP_BattMonitor.cpp: 2x
     AP_BattMonitor.h: 1x
@@ -71,8 +73,8 @@ UC4H stuff:
     AP_Notify.cpp: 2x
     AP_UAVCAN.cpp: 6x
     AP_UAVCAN.h: 3x
-    DataFlash/LogStructure.h: 2x
-    GCS_Common.cpp: +1x
+    DataFlash/LogStructure.h: 3x
+    GCS_Common.cpp: +2x
 added files:
     Uc4hNotifyDevice.cpp            (AP_Notify/)
     Uc4hNotifyDevice.h              (AP_Notify/)
