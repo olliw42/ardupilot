@@ -397,9 +397,14 @@ static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<u
         data->energy_consumed_Wh = msg.energy_consumed_Wh;
         data->status_flags = msg.status_flags;
         data->cell_voltages_num = msg.cell_voltages.size();
-        for (uint16_t i = 0; i < 12; i++) { //TODO: fund and use the macro for that
-            data->cell_voltages[i] = (i < data->cell_voltages_num ) ? msg.cell_voltages[i] : 0.0f; //NAN;
+        //don't bother with higher cell voltage fields, can be whatever they want, any follow up code should check cells num
+        bool cell_voltages_healthy = true;
+        for (uint16_t i = 0; i < data->cell_voltages_num; i++) {
+            if (uavcan::isNaN(msg.cell_voltages[i]) || is_equal(msg.cell_voltages[i], 0.0f)) { cell_voltages_healthy = false; }
+            data->cell_voltages[i] = msg.cell_voltages[i];
         }
+        if (!cell_voltages_healthy) data->cell_voltages_num = 0; //something is wrong, so report no cells
+
         ap_uavcan->uc4hgenericbatteryinfo_update_i(data->i);
     }
 }
@@ -419,10 +424,10 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
     }
 
     //TODO: use is_equal(), but check if it does exactly what is the intention here
-    if ( (uavcan::isNaN(msg.temperature) || (msg.temperature == 0.0f)) &&
-         (uavcan::isNaN(msg.voltage) || (msg.voltage == 0.0f)) &&
-         (uavcan::isNaN(msg.current) || (msg.current == 0.0f)) &&
-         (uavcan::isNaN(msg.rpm) || (msg.rpm == 0.0f)) ) { //this is likely an invalid packet, so ignore it
+    if ( (uavcan::isNaN(msg.temperature) || is_equal(msg.temperature, 0.0f)) &&
+         (uavcan::isNaN(msg.voltage) || is_equal(msg.voltage, 0.0f)) &&
+         (uavcan::isNaN(msg.current) || is_equal(msg.current, 0.0f)) &&
+         (msg.rpm == 0) ) { //this is likely an invalid packet, so ignore it
         return;
     }
 
@@ -1714,7 +1719,9 @@ void AP_UAVCAN::uc4hgenericbatteryinfo_update_i(uint8_t i)
                 _uc4hgenericbatteryinfo.data[i].voltage,
                 _uc4hgenericbatteryinfo.data[i].current,
                 _uc4hgenericbatteryinfo.data[i].charge_consumed_mAh,
-                _uc4hgenericbatteryinfo.data[i].energy_consumed_Wh );
+                _uc4hgenericbatteryinfo.data[i].energy_consumed_Wh,
+                _uc4hgenericbatteryinfo.data[i].cell_voltages_num,
+                _uc4hgenericbatteryinfo.data[i].cell_voltages);
     }
 }
 

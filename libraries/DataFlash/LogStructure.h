@@ -1156,7 +1156,10 @@ struct PACKED log_DSTL {
 #define CURR_CELL_LABELS "TimeUS,Volt,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10"
 #define CURR_CELL_FMT    "QfHHHHHHHHHH"
 #define CURR_CELL_UNITS  "svvvvvvvvvvv"
-#define CURR_CELL_MULTS  "F00000000000"
+//OW
+//#define CURR_CELL_MULTS  "F00000000000"
+#define CURR_CELL_MULTS  "FCCCCCCCCCCC"
+//OWEND
 
 #define ARSP_LABELS "TimeUS,Airspeed,DiffPress,Temp,RawPress,Offset,U,Health,Primary"
 #define ARSP_FMT "QffcffBBB"

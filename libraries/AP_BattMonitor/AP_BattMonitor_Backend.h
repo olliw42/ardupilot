@@ -53,7 +53,7 @@ public:
     virtual void handle_bi_msg(float voltage, float current,
             float temperature) {}
 //OW
-    virtual void handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy) {}
+    virtual void handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy, uint16_t cells_num, float* cells) {}
     virtual void handle_escstatus_msg(uint16_t esc_index, float voltage, float current) {}
 //OWEND
 
