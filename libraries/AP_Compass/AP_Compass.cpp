@@ -24,6 +24,9 @@
 #include "AP_Compass_MMC3416.h"
 #include "AP_Compass_MAG3110.h"
 #include "AP_Compass.h"
+//OW
+#include <GCS_MAVLink/GCS.h>
+//OWEND
 
 extern AP_HAL::HAL& hal;
 
@@ -1371,6 +1374,37 @@ bool Compass::consistent() const
     return true;
 }
 
+//OW
+void Compass::send_banner(void)
+{
+    for (uint8_t i = 0; i < _compass_count; i++) {
+        char extstr[16], usedstr[16], busstr[32];
+        if (_state[i].external) strcpy(extstr, "ext"); else strcpy(extstr, "int");
+        if (_state[i].use_for_yaw) strcpy(usedstr, ""); else strcpy(usedstr, "  notused");
+        //see AP_HAL/Device.h, DeviceStructure
+        struct DeviceStructure {
+            uint8_t bus_type : 3;
+            uint8_t bus: 5;
+            uint8_t address;
+            uint8_t devtype;
+        };
+        union DeviceId {
+            struct DeviceStructure devid_s;
+            uint32_t devid;
+        };
+        union DeviceId d;
+        d.devid = _state[i].dev_id;
+        switch (d.devid_s.bus_type) {
+            case 1: strcpy(busstr, "I2C"); break;
+            case 2: strcpy(busstr, "SPI"); break;
+            case 3: strcpy(busstr, "UAVCAN"); break;
+            default: strcpy(busstr, "?");
+        }
+        gcs().send_text(MAV_SEVERITY_INFO, "Compass %u:  %s%s  devid %u  %s%u  %u",
+                                            i+1, extstr, usedstr, _state[i].dev_id, busstr, d.devid_s.bus, d.devid_s.address);
+    }
+}
+//OWEND
 
 // singleton instance
 Compass *Compass::_singleton;
