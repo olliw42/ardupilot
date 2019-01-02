@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.4"
-#define THISFIRMWARE "BetaCopter V3.6.4 v017u rc03"
+#define THISFIRMWARE "BetaCopter V3.6.4 v017u"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -33,12 +33,14 @@ features:
  - cell voltages for UC4H PowerBrick, AP_UAVCAN, AP_BattMonitor_UAVCAN, AP_BattMonitor_Backend, LogStructure, GCS_Common
    workaround to MP bug: send BATTERY_STATUS only for instance 0
  - mag send_banner()
-
+20181231:
+ - support of MAV_CMD_UAVCAN_GET_NODE_INFO, is very helpful, but should be done by MissionPlanner, v2 test flown
 
 changed files:
 
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
     AP_Baro.cpp: 2x
+
 
 MAG stuff:
     AP_Compass.cpp: 2x
@@ -81,7 +83,8 @@ UC4H stuff:
     AP_UAVCAN.cpp: 6x
     AP_UAVCAN.h: 3x
     DataFlash/LogStructure.h: 3x
-    GCS_Common.cpp: +2x
+    GCS_Common.cpp: +3x
+    GCS.h: +2x
 added files:
     Uc4hNotifyDevice.cpp            (AP_Notify/)
     Uc4hNotifyDevice.h              (AP_Notify/)
