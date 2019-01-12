@@ -33,8 +33,9 @@ features:
  - cell voltages for UC4H PowerBrick, AP_UAVCAN, AP_BattMonitor_UAVCAN, AP_BattMonitor_Backend, LogStructure, GCS_Common
    workaround to MP bug: send BATTERY_STATUS only for instance 0
  - mag send_banner()
-20181231:
- - support of MAV_CMD_UAVCAN_GET_NODE_INFO, is very helpful, but should be done by MissionPlanner, v2 test flown
+20190112:
+ - workaround to MP bug could be removed, since resolved in MP beta
+
 
 changed files:
 
@@ -83,8 +84,7 @@ UC4H stuff:
     AP_UAVCAN.cpp: 6x
     AP_UAVCAN.h: 3x
     DataFlash/LogStructure.h: 3x
-    GCS_Common.cpp: +3x
-    GCS.h: +2x
+    GCS_Common.cpp: +2x
 added files:
     Uc4hNotifyDevice.cpp            (AP_Notify/)
     Uc4hNotifyDevice.h              (AP_Notify/)
