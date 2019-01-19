@@ -1778,7 +1778,7 @@ void AP_UAVCAN::uc4hgenericbatteryinfo_update_i(uint8_t i)
 
 
 //--- uc4h.Distance ---
-// incoming message, by device id
+// incoming message, by node id
 
 uint8_t AP_UAVCAN::uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint8_t id)
 {
@@ -1860,7 +1860,7 @@ void AP_UAVCAN::uc4hdistance_update_i(uint8_t i)
         if (_uc4hdistance.listener_to_id[li] != i) {
             continue;
         }
-/*
+
         _uc4hdistance.listeners[li]->handle_uc4hdistance_msg(
                 _uc4hdistance.data[i].fixed_axis_pitch,
                 _uc4hdistance.data[i].fixed_axis_yaw,
@@ -1871,8 +1871,8 @@ void AP_UAVCAN::uc4hdistance_update_i(uint8_t i)
                 _uc4hdistance.data[i].range_min,
                 _uc4hdistance.data[i].range_max,
                 _uc4hdistance.data[i].vertical_field_of_view,
-                _uc4hdistance.data[i].horizontal_field_of_view,
-        ); */
+                _uc4hdistance.data[i].horizontal_field_of_view
+        );
     }
 }
 

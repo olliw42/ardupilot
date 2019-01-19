@@ -323,13 +323,13 @@ private:
     } _uc4hgenericbatteryinfo;
 
 // --- uc4h.Distance ---
-// incoming message, by node id
+// incoming message, by node id //XX TODO: we probably want to id it by the orientation, or we just have one for all?
     public:
         struct Uc4hDistance_Data {
-            int16_t fixed_axis_pitch; // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
-            int16_t fixed_axis_yaw;   // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
-            uint16_t sensor_sub_id;   // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
-            uint16_t range_flag;      // uint3 range_flag
+            int8_t fixed_axis_pitch; // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
+            int8_t fixed_axis_yaw;   // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
+            uint8_t sensor_sub_id;   // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
+            uint8_t range_flag;      // uint3 range_flag
             float range;              // float16 range                 # Meters
             float range_min;          // float16 range_min                    # Meters. Can be NAN if unknown.
             float range_max;          // float16 range_max                    # Meters. Can be NAN if unknown.

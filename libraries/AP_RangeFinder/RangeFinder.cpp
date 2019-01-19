@@ -36,6 +36,11 @@
 #include "AP_RangeFinder_Wasp.h"
 #include "AP_RangeFinder_Benewake.h"
 #include <AP_BoardConfig/AP_BoardConfig.h>
+//OW
+//#include <GCS_MAVLink/GCS_MAVLink.h>
+#include <GCS_MAVLink/GCS.h>
+#include "BP_RangeFinder_UC4H.h"
+//OWEND
 
 extern const AP_HAL::HAL &hal;
 
@@ -758,6 +763,21 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
             drivers[instance] = new AP_RangeFinder_Benewake(state[instance], serial_manager, serial_instance++, AP_RangeFinder_Benewake::BENEWAKE_TFmini);
         }
         break;
+//OW
+#if HAL_WITH_UAVCAN
+    case RangeFinder_TYPE_UC4H:{
+        //drivers[instance] = new BP_RangeFinder_UC4H(*this, state[instance]);
+        BP_RangeFinder_UC4H* rf = new BP_RangeFinder_UC4H(*this, state[instance]);
+
+        if (rf && !rf->init()) {
+            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder UC4H[%u] init failed", instance);
+    //XX            delete drivers[instance];
+    //XX            drivers[instance] = nullptr;
+        }
+        drivers[instance] = rf;
+        }break;
+#endif
+//OWEND
     default:
         break;
     }
