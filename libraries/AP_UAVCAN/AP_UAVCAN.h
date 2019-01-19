@@ -20,6 +20,7 @@
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
 //OW
+#include <AP_RangeFinder/RangeFinder_Backend.h>
 #include "bp_dsdl_generated/olliw/uc4h/Notify.hpp"
 #include <uavcan/tunnel/Broadcast.hpp> //#include "newtunnel/Broadcast.hpp" are identical, thus deleted
 #include "BP_UavcanTunnelManager.h"
@@ -45,6 +46,7 @@
 #define AP_UAVCAN_MAX_BI_NUMBER 4
 //OW
 #define AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER 4
+#define AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER 4 //we may want up to 10!
 #define AP_UAVCAN_ESCSTATUS_MAX_NUMBER 8
 //OWEND
 
@@ -319,6 +321,38 @@ private:
         AP_BattMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
         Uc4hGenericBatteryInfo_Data data[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
     } _uc4hgenericbatteryinfo;
+
+// --- uc4h.Distance ---
+// incoming message, by node id
+    public:
+        struct Uc4hDistance_Data {
+            int16_t fixed_axis_pitch; // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
+            int16_t fixed_axis_yaw;   // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
+            uint16_t sensor_sub_id;   // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
+            uint16_t range_flag;      // uint3 range_flag
+            float range;              // float16 range                 # Meters
+            float range_min;          // float16 range_min                    # Meters. Can be NAN if unknown.
+            float range_max;          // float16 range_max                    # Meters. Can be NAN if unknown.
+            float vertical_field_of_view;   // float16 vertical_field_of_view       # Radians. Can be NAN if unknown.
+            float horizontal_field_of_view; // float16 horizontal_field_of_view     # Radians. Can be NAN if unknown.
+            //auxiliary meta data
+            uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
+            bool sensor_proerties_available;
+        };
+
+        uint8_t uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint8_t id);
+        void uc4hdistance_remove_listener(AP_RangeFinder_Backend* rem_listener);
+        Uc4hDistance_Data* uc4hdistance_getptrto_data(uint8_t id);
+        void uc4hdistance_update_i(uint8_t i);
+
+    private:
+        struct {
+            uint16_t id[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
+            uint16_t id_taken[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
+            uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+            AP_RangeFinder_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+            Uc4hDistance_Data data[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
+        } _uc4hdistance;
 
 // --- EscStatus ---
     // incoming message, by device id
