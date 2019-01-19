@@ -13,7 +13,7 @@
 #include <uavcan/node/global_data_type_registry.hpp>
 #include <uavcan/marshal/types.hpp>
 
-#include <uavcan\olliw\uc4h\DistanceSensorProperties.hpp>
+#include "DistanceSensorProperties.hpp"
 
 /******************************* Source text **********************************
 #
