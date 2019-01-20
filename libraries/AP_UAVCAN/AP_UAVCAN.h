@@ -323,7 +323,8 @@ private:
     } _uc4hgenericbatteryinfo;
 
 // --- uc4h.Distance ---
-// incoming message, by node id //XX TODO: we probably want to id it by the orientation, or we just have one for all?
+// incoming message, by orientation id
+    //we id it by the orientation and sub_id: pitch + (yaw << 8) + (sub_id << 16) => uint32_t
     public:
         struct Uc4hDistance_Data {
             int8_t fixed_axis_pitch; // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
@@ -336,20 +337,19 @@ private:
             float vertical_field_of_view;   // float16 vertical_field_of_view       # Radians. Can be NAN if unknown.
             float horizontal_field_of_view; // float16 horizontal_field_of_view     # Radians. Can be NAN if unknown.
             //auxiliary meta data
-            uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
             bool sensor_proerties_available;
         };
 
-        uint8_t uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint8_t id);
+        uint8_t uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint32_t id);
         void uc4hdistance_remove_listener(AP_RangeFinder_Backend* rem_listener);
-        Uc4hDistance_Data* uc4hdistance_getptrto_data(uint8_t id);
-        void uc4hdistance_update_i(uint8_t i);
+        Uc4hDistance_Data* uc4hdistance_getptrto_data(uint8_t* data_i, uint32_t id);
+        void uc4hdistance_update_i(uint8_t data_i);
 
     private:
         struct {
-            uint16_t id[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
-            uint16_t id_taken[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
-            uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+            uint32_t id[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
+            uint8_t id_taken[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
+            uint8_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
             AP_RangeFinder_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
             Uc4hDistance_Data data[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
         } _uc4hdistance;

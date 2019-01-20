@@ -52,9 +52,19 @@ bool BP_RangeFinder_UC4H::init()
             continue;
         }
 
-        uint16_t id = 53;  //, _params._serial_number)) { //XXXX
+        //uint16_t id = 53;  //, _params._serial_number)) { //XXXX
 
-        if (id == UINT8_MAX) {
+        // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
+        // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
+        // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
+        int8_t my_fixed_axis_pitch = -6;
+        int8_t my_fixed_axis_yaw = 0;
+        uint8_t my_sensor_sub_id = 0;
+        uint32_t id =   ((uint32_t)my_fixed_axis_pitch & 0x000000FF) +
+                      ( ((uint32_t)my_fixed_axis_yaw & 0x000000FF) << 8 ) +
+                      ( ((uint32_t)my_sensor_sub_id & 0x000000FF) << 16 ); //orientation id
+
+        if (id == UINT32_MAX) {
             continue;
         }
 
