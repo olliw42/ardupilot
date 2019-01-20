@@ -52,13 +52,19 @@ bool BP_RangeFinder_UC4H::init()
             continue;
         }
 
-        uint16_t id = 0;  //, _params._serial_number)) { //XXXX
+        uint16_t id = 53;  //, _params._serial_number)) { //XXXX
+
+        if (id == UINT8_MAX) {
+            continue;
+        }
 
         if (ap_uavcan->uc4hdistance_register_listener(this, id)) {
            debug_rf_uavcan(2, "UAVCAN RangeFinder Uc4hDistance registered id: %d\n\r", id);
+           //_initialized = true; //don't set this here, wait for data to have arrived
            return true;
         }
     }
+
     return false;
 }
 

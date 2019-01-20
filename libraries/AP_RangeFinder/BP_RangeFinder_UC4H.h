@@ -5,6 +5,15 @@
 #include "RangeFinder_Backend.h"
 
 // UC4H
+/*
+TODO's:
+
+- select the rangefinder according to its orientation
+- set the parameters according to the UC4H message info
+    such as RNGFND_MAX_CM, RNGFND_MIN_CM, RNGFND_ORIENT
+- work out the proper id-ing
+
+*/
 
 class BP_RangeFinder_UC4H : public AP_RangeFinder_Backend {
 
@@ -12,7 +21,7 @@ public:
     BP_RangeFinder_UC4H(RangeFinder &_frontend, RangeFinder::RangeFinder_State &_state);
 
     //the other RangeFinders use a static detect() function
-    // we don't here, since we can then access ap_uavcan easier
+    // we don't, since we can then access ap_uavcan easier
     bool init(void);
 
     void update(void) override;
