@@ -38,6 +38,11 @@ protected:
     virtual MAV_DISTANCE_SENSOR _get_mav_distance_sensor_type() const override { return MAV_DISTANCE_SENSOR_LASER; }
 
 private:
+    uint32_t _calc_id(int8_t pitch, int8_t yaw, uint8_t sub_id);
+    uint32_t _calc_id(uint8_t orientation, uint8_t sub_id);
+    int8_t _calc_pitch_from_id(uint32_t id);
+    int8_t _calc_yaw_from_id(uint32_t id);
+    uint8_t _calc_subid_from_id(uint32_t id);
 
     RangeFinder &frontend;
 

@@ -19,6 +19,7 @@
 
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include <AP_BoardConfig/AP_BoardConfig_CAN.h>
+#include <GCS_MAVLink/GCS.h>
 
 #include "BP_RangeFinder_UC4H.h"
 
@@ -52,17 +53,11 @@ bool BP_RangeFinder_UC4H::init()
             continue;
         }
 
-        //uint16_t id = 53;  //, _params._serial_number)) { //XXXX
-
         // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
         // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
         // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
-        int8_t my_fixed_axis_pitch = -6;
-        int8_t my_fixed_axis_yaw = 0;
-        uint8_t my_sensor_sub_id = 0;
-        uint32_t id =   ((uint32_t)my_fixed_axis_pitch & 0x000000FF) +
-                      ( ((uint32_t)my_fixed_axis_yaw & 0x000000FF) << 8 ) +
-                      ( ((uint32_t)my_sensor_sub_id & 0x000000FF) << 16 ); //orientation id
+        //uint32_t id = _calc_id(-6, -1, 5);
+        uint32_t id = _calc_id(state.orientation.get(), state.address.get());
 
         if (id == UINT32_MAX) {
             continue;
@@ -71,6 +66,8 @@ bool BP_RangeFinder_UC4H::init()
         if (ap_uavcan->uc4hdistance_register_listener(this, id)) {
            debug_rf_uavcan(2, "UAVCAN RangeFinder Uc4hDistance registered id: %d\n\r", id);
            //_initialized = true; //don't set this here, wait for data to have arrived
+
+           gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder%u: uc4h %u %u %u", _calc_pitch_from_id(id), _calc_yaw_from_id(id), _calc_subid_from_id(id));
            return true;
         }
     }
@@ -128,7 +125,7 @@ void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_
              _range = range;
              break;
          case UC4HDISTANCE_RANGE_TOOCLOSE:
-             _range = 0.0f; //for the moment use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
+             _range = 0.1f; //for the moment use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
              break;
          case UC4HDISTANCE_RANGE_TOOFAR:
              _range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
@@ -145,4 +142,103 @@ void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_
     }
 }
 
+
+uint32_t BP_RangeFinder_UC4H::_calc_id(int8_t pitch, int8_t yaw, uint8_t sub_id)
+{
+    return ((uint32_t)pitch & 0x000000FF) + ( ((uint32_t)yaw & 0x000000FF) << 8 ) + ( ((uint32_t)sub_id & 0x000000FF) << 16 );
+}
+
+// @Values: 0:Forward, 1:Forward-Right, 2:Right, 3:Back-Right, 4:Back, 5:Back-Left, 6:Left, 7:Forward-Left, 24:Up, 25:Down
+uint32_t BP_RangeFinder_UC4H::_calc_id(uint8_t orient, uint8_t sub_id)
+{
+int8_t pitch, yaw; //the angles are in integer, and 15° steps, i.e. 90° = 6, 180° = 12, -90° = -6
+
+    switch( orient ){
+    case ROTATION_NONE: //Forward
+        pitch = 0; yaw = 0;
+        break;
+    case ROTATION_YAW_45: //Forward-Right
+        pitch = 0; yaw = 3;
+        break;
+    case ROTATION_YAW_90: //Right
+        pitch = 0; yaw = 6;
+        break;
+    case ROTATION_YAW_135: //Back-Right
+        pitch = 0; yaw = 9;
+        break;
+    case ROTATION_YAW_180: //Back
+        pitch = 0; yaw = 12;
+        break;
+    case ROTATION_YAW_225: //Back-Left
+        pitch = 0; yaw = -9;
+        break;
+    case ROTATION_YAW_270: //Left
+        pitch = 0; yaw = -6;
+        break;
+    case ROTATION_YAW_315: //Forward-Left
+        pitch = 0; yaw = -3;
+        break;
+//    case ROTATION_ROLL_180:                     pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_180_YAW_45:              pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_180_YAW_90:              pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_180_YAW_135:             pitch = 0; yaw = 0; break;
+//    case ROTATION_PITCH_180:                    pitch = 0; yaw = 12; break;
+//    case ROTATION_ROLL_180_YAW_225:             pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_180_YAW_270:             pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_180_YAW_315:             pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90:                      pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_YAW_45:               pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_YAW_90:               pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_YAW_135:              pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_270:                     pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_270_YAW_45:              pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_270_YAW_90:              pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_270_YAW_135:             pitch = 0; yaw = 0; break;
+    case ROTATION_PITCH_90: //Up
+        pitch = 6;    yaw = 0;
+        break;
+    case ROTATION_PITCH_270: //Down
+        pitch = -6; yaw = 0;
+        break;
+//    case ROTATION_PITCH_180_YAW_90:             pitch = 0; yaw = 0; break;
+//    case ROTATION_PITCH_180_YAW_270:            pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_PITCH_90:             pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_180_PITCH_90:            pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_270_PITCH_90:            pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_PITCH_180:            pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_270_PITCH_180:           pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_PITCH_270:            pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_180_PITCH_270:           pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_270_PITCH_270:           pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_PITCH_180_YAW_90:     pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_YAW_270:              pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_PITCH_68_YAW_293:     pitch = 0; yaw = 0; break;
+//    case ROTATION_PITCH_315:                    pitch = 0; yaw = 0; break;
+//    case ROTATION_ROLL_90_PITCH_315:            pitch = 0; yaw = 0; break;
+//    case ROTATION_MAX:                          pitch = 0; yaw = 0; break;
+//    case ROTATION_CUSTOM:                       pitch = 0; yaw = 0; break;
+    default:
+        return UINT32_MAX; //don't accept
+    };
+
+    return _calc_id(pitch, yaw, sub_id);
+}
+
+
+int8_t BP_RangeFinder_UC4H::_calc_pitch_from_id(uint32_t id)
+{
+    return (int8_t)(id & 0x000000FF);
+}
+
+int8_t BP_RangeFinder_UC4H::_calc_yaw_from_id(uint32_t id)
+{
+    return (int8_t)((id >> 8) & 0x000000FF);
+}
+
+uint8_t BP_RangeFinder_UC4H::_calc_subid_from_id(uint32_t id)
+{
+    return (int8_t)((id >> 16) & 0x000000FF);
+}
+
 #endif
+

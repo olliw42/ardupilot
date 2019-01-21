@@ -37,7 +37,6 @@
 #include "AP_RangeFinder_Benewake.h"
 #include <AP_BoardConfig/AP_BoardConfig.h>
 //OW
-//#include <GCS_MAVLink/GCS_MAVLink.h>
 #include <GCS_MAVLink/GCS.h>
 #include "BP_RangeFinder_UC4H.h"
 //OWEND
