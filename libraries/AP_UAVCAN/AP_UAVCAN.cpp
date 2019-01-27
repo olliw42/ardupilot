@@ -46,6 +46,7 @@
 //and to place the new .hpp into the AP_UAVCAN library folder
 #include "bp_dsdl_generated/olliw/uc4h/GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
+#include "bp_dsdl_generated/olliw/uc4h/Distance.hpp"
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -413,6 +414,46 @@ static void uc4hgenericbatteryinfo_cb0(const uavcan::ReceivedDataStructure<uavca
 static void uc4hgenericbatteryinfo_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg){ uc4hgenericbatteryinfo_cb_func(msg, 1); }
 static void (*uc4hgenericbatteryinfo_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg) = { uc4hgenericbatteryinfo_cb0, uc4hgenericbatteryinfo_cb1 };
 
+// --- uc4h.Distance ---
+// incoming message
+
+static void uc4hdistance_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg, uint8_t mgr)
+{
+    AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    //uint32_t id = msg.getSrcNodeID().get(); //by node id //msg.battery_id; //by device id
+    // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
+    // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
+    // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
+    uint32_t id =   ((uint32_t)msg.fixed_axis_pitch & 0x000000FF) +
+                  ( ((uint32_t)msg.fixed_axis_yaw & 0x000000FF) << 8 ) +
+                  ( ((uint32_t)msg.sensor_sub_id & 0x000000FF) << 16 ); //orientation id
+
+    uint8_t data_i;
+    AP_UAVCAN::Uc4hDistance_Data* data = ap_uavcan->uc4hdistance_getptrto_data(&data_i, id);
+    if (data != nullptr) {
+        data->fixed_axis_pitch = msg.fixed_axis_pitch; //do not convert but keep
+        data->fixed_axis_yaw = msg.fixed_axis_yaw;
+        data->sensor_sub_id = msg.sensor_sub_id;
+        data->range_flag = msg.range_flag;
+        data->range = msg.range;
+        data->sensor_proerties_available = false;
+//ignored        data->range_min = msg.range_min;
+//ignored        data->range_max = msg.range_max;
+//ignored        data->vertical_field_of_view = msg.vertical_field_of_view;
+//ignored        data->horizontal_field_of_view = msg.horizontal_field_of_view;
+
+        ap_uavcan->uc4hdistance_update_i(data_i);
+    }
+}
+
+static void uc4hdistance_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg){ uc4hdistance_cb_func(msg, 0); }
+static void uc4hdistance_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg){ uc4hdistance_cb_func(msg, 1); }
+static void (*uc4hdistance_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg) = { uc4hdistance_cb0, uc4hdistance_cb1 };
+
 //--- EscStatus ---
 // incoming message, by id
 
@@ -483,7 +524,6 @@ static void tunnelbroadcast_cb_func(const uavcan::ReceivedDataStructure<uavcan::
 static void tunnelbroadcast_cb0(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg){ tunnelbroadcast_cb_func(msg, 0); }
 static void tunnelbroadcast_cb1(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg){ tunnelbroadcast_cb_func(msg, 1); }
 static void (*tunnelbroadcast_cb[2])(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg) = { tunnelbroadcast_cb0, tunnelbroadcast_cb1 };
-
 
 // publisher interfaces
 //--- uc4h.Notify ---
@@ -559,6 +599,16 @@ AP_UAVCAN::AP_UAVCAN() :
     for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
         _uc4hgenericbatteryinfo.listener_to_id[li] = UINT8_MAX;
         _uc4hgenericbatteryinfo.listeners[li] = nullptr;
+    }
+
+    // --- uc4h.Distance ---
+    for (uint8_t i = 0; i < AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER; i++) {
+        _uc4hdistance.id[i] = UINT32_MAX;
+        _uc4hdistance.id_taken[i] = 0;
+    }
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        _uc4hdistance.listener_to_id[li] = UINT8_MAX;
+        _uc4hdistance.listeners[li] = nullptr;
     }
 
     // --- EscStatus ---
@@ -722,6 +772,14 @@ bool AP_UAVCAN::try_init(void)
     const int uc4hgenericbatteryinfo_start_res = uc4hgenericbatteryinfo_sub->start(uc4hgenericbatteryinfo_cb[_uavcan_i]);
     if (uc4hgenericbatteryinfo_start_res < 0) {
         debug_uavcan(1, "UAVCAN Uc4hGenericBatteryInfo subscriber start problem\n\r");
+        return false;
+    }
+
+    uavcan::Subscriber<uavcan::olliw::uc4h::Distance>* uc4hdistance_sub;
+    uc4hdistance_sub = new uavcan::Subscriber<uavcan::olliw::uc4h::Distance>(*node);
+    const int uc4hdistance_start_res = uc4hdistance_sub->start(uc4hdistance_cb[_uavcan_i]);
+    if (uc4hdistance_start_res < 0) {
+        debug_uavcan(1, "UAVCAN Uc4hDistance subscriber start problem\n\r");
         return false;
     }
 
@@ -1722,6 +1780,106 @@ void AP_UAVCAN::uc4hgenericbatteryinfo_update_i(uint8_t i)
                 _uc4hgenericbatteryinfo.data[i].energy_consumed_Wh,
                 _uc4hgenericbatteryinfo.data[i].cell_voltages_num,
                 _uc4hgenericbatteryinfo.data[i].cell_voltages);
+    }
+}
+
+
+//--- uc4h.Distance ---
+// incoming message, by orientation id
+
+uint8_t AP_UAVCAN::uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint32_t id)
+{
+    uint8_t sel_place = UINT8_MAX, ret = 0;
+
+    //find first free place in listeners list
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_uc4hdistance.listeners[li] == nullptr) {
+            sel_place = li;
+            break;
+        }
+    }
+
+    //no free place, abort
+    if (sel_place == UINT8_MAX) {
+        return ret;
+    }
+
+    //insert listener
+    for (uint8_t i = 0; i < AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER; i++) {
+        if (_uc4hdistance.id[i] != id) {
+            continue;
+        }
+        _uc4hdistance.listeners[sel_place] = new_listener;
+        _uc4hdistance.listener_to_id[sel_place] = i;
+        _uc4hdistance.id_taken[i]++;
+        ret = i + 1;
+        debug_uavcan(2, "reg_UC4HDISTANCE place:%d, chan: %d\n\r", sel_place, i);
+        break;
+    }
+
+    return ret;
+}
+
+//is not used, since remove_BM_bi_listener() is also not used, AP_RangeFinder_UAVCAN doesn't have a destructor defined
+void AP_UAVCAN::uc4hdistance_remove_listener(AP_RangeFinder_Backend* rem_listener)
+{
+    // Check for all listeners and compare pointers
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_uc4hdistance.listeners[li] != rem_listener) {
+            continue;
+        }
+        _uc4hdistance.listeners[li] = nullptr;
+
+        // Also decrement usage counter and reset listening node
+        if (_uc4hdistance.id_taken[_uc4hdistance.listener_to_id[li]] > 0) {
+            _uc4hdistance.id_taken[_uc4hdistance.listener_to_id[li]]--;
+        }
+        _uc4hdistance.listener_to_id[li] = UINT8_MAX;
+    }
+}
+
+AP_UAVCAN::Uc4hDistance_Data* AP_UAVCAN::uc4hdistance_getptrto_data(uint8_t* data_i, uint32_t id)
+{
+    // check if id is already in list, and if it is, take it
+    for (uint8_t i = 0; i < AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER; i++) {
+        if (_uc4hdistance.id[i] == id) {
+            *data_i = i; //this avoids needing a 2nd loop in update_i()
+            return &_uc4hdistance.data[i];
+        }
+    }
+
+    // if id is not yet in list, find the first free spot, and take that
+    for (uint8_t i = 0; i < AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER; i++) {
+        if (_uc4hdistance.id[i] != UINT32_MAX) {
+            continue;
+        }
+        _uc4hdistance.id[i] = id;
+        *data_i = i; //this avoids needing a 2nd loop in update_i()
+        return &_uc4hdistance.data[i];
+    }
+
+    return nullptr;
+}
+
+void AP_UAVCAN::uc4hdistance_update_i(uint8_t i)
+{
+    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
+        if (_uc4hdistance.listener_to_id[li] != i) {
+            continue;
+        }
+
+        _uc4hdistance.listeners[li]->handle_uc4hdistance_msg(
+                _uc4hdistance.data[i].fixed_axis_pitch,
+                _uc4hdistance.data[i].fixed_axis_yaw,
+                _uc4hdistance.data[i].sensor_sub_id,
+                _uc4hdistance.data[i].range_flag,
+                _uc4hdistance.data[i].range,
+                _uc4hdistance.data[i].sensor_proerties_available,
+                _uc4hdistance.data[i].range_min,
+                _uc4hdistance.data[i].range_max,
+                _uc4hdistance.data[i].vertical_field_of_view,
+                _uc4hdistance.data[i].horizontal_field_of_view
+        );
     }
 }
 

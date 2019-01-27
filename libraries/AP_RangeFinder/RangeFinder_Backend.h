@@ -69,6 +69,15 @@ public:
     // in metres relative to the body frame origin
     const Vector3f &get_pos_offset() const { return state.pos_offset; }
 
+//OW
+    // callback for UAVCAN message
+    virtual void handle_uc4hdistance_msg(
+            int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id,
+            uint8_t range_flag, float range,
+            bool sensor_proerties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view
+            ) {};
+//OWEND
+
 protected:
 
     // update status based on distance measurement
