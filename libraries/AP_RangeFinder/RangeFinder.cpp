@@ -939,4 +939,26 @@ MAV_DISTANCE_SENSOR RangeFinder::get_mav_distance_sensor_type_orient(enum Rotati
     return backend->get_mav_distance_sensor_type();
 }
 
+//OW
+void RangeFinder::send_banner(void)
+{
+    for (uint8_t i = 0; i < num_instances; i++) {
+        if( state[i].type == RangeFinder_TYPE_UC4H ){
+            uint32_t id = state[i].uavcan_id;
+            int8_t pitch = (int8_t)(id & 0x000000FF);
+            int8_t yaw = (int8_t)((id >> 8) & 0x000000FF);
+            uint8_t sub_id = (uint8_t)((id >> 16) & 0x000000FF);
+            uint8_t node_id = (uint8_t)((id >> 24) & 0x0000007F);
+            if( id == 0 ){
+                gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H enabled notpresent", i+1);
+            } else {
+                gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u", i+1, node_id, pitch * 15, yaw * 15, sub_id);
+            }
+        } else {
+            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: used", i+1);
+        }
+    }
+}
+//OWEND
+
 RangeFinder *RangeFinder::_singleton;

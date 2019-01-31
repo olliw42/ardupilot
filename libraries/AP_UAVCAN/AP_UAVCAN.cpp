@@ -440,11 +440,13 @@ static void uc4hdistance_cb_func(const uavcan::ReceivedDataStructure<uavcan::oll
         data->sensor_sub_id = msg.sensor_sub_id;
         data->range_flag = msg.range_flag;
         data->range = msg.range;
-        data->sensor_proerties_available = false;
+        data->sensor_properties_available = false;
 //ignored        data->range_min = msg.range_min;
 //ignored        data->range_max = msg.range_max;
 //ignored        data->vertical_field_of_view = msg.vertical_field_of_view;
 //ignored        data->horizontal_field_of_view = msg.horizontal_field_of_view;
+
+        data->node_id = msg.getSrcNodeID().get();
 
         ap_uavcan->uc4hdistance_update_i(data_i);
     }
@@ -1787,7 +1789,7 @@ void AP_UAVCAN::uc4hgenericbatteryinfo_update_i(uint8_t i)
 //--- uc4h.Distance ---
 // incoming message, by orientation id
 
-uint8_t AP_UAVCAN::uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint32_t id)
+uint8_t AP_UAVCAN::uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint32_t id, uint8_t* node_id)
 {
     uint8_t sel_place = UINT8_MAX, ret = 0;
 
@@ -1814,6 +1816,7 @@ uint8_t AP_UAVCAN::uc4hdistance_register_listener(AP_RangeFinder_Backend* new_li
         _uc4hdistance.id_taken[i]++;
         ret = i + 1;
         debug_uavcan(2, "reg_UC4HDISTANCE place:%d, chan: %d\n\r", sel_place, i);
+        *node_id = _uc4hdistance.data[i].node_id;
         break;
     }
 
@@ -1874,7 +1877,7 @@ void AP_UAVCAN::uc4hdistance_update_i(uint8_t i)
                 _uc4hdistance.data[i].sensor_sub_id,
                 _uc4hdistance.data[i].range_flag,
                 _uc4hdistance.data[i].range,
-                _uc4hdistance.data[i].sensor_proerties_available,
+                _uc4hdistance.data[i].sensor_properties_available,
                 _uc4hdistance.data[i].range_min,
                 _uc4hdistance.data[i].range_max,
                 _uc4hdistance.data[i].vertical_field_of_view,

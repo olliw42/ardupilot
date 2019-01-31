@@ -63,11 +63,11 @@ bool BP_RangeFinder_UC4H::init()
             continue;
         }
 
-        if (ap_uavcan->uc4hdistance_register_listener(this, id)) {
+        uint8_t node_id;
+        if (ap_uavcan->uc4hdistance_register_listener(this, id, &node_id)) {
            debug_rf_uavcan(2, "UAVCAN RangeFinder Uc4hDistance registered id: %d\n\r", id);
            //_initialized = true; //don't set this here, wait for data to have arrived
-
-           gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder%u: uc4h %u %u %u", _calc_pitch_from_id(id), _calc_yaw_from_id(id), _calc_subid_from_id(id));
+           state.uavcan_id = (id & 0x00FFFFFF) + ((uint32_t)(node_id & 0x7F) << 24); //to keep it for e.g. send_text()
            return true;
         }
     }
@@ -107,7 +107,7 @@ void BP_RangeFinder_UC4H::update(void)
 
 void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id,
         uint8_t range_flag, float range,
-        bool sensor_proerties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view)
+        bool sensor_properties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view)
 {
     if (_my_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
 
@@ -125,7 +125,7 @@ void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_
              _range = range;
              break;
          case UC4HDISTANCE_RANGE_TOOCLOSE:
-             _range = 0.1f; //for the moment use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
+             _range = 0.02f; //for the moment use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
              break;
          case UC4HDISTANCE_RANGE_TOOFAR:
              _range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
@@ -237,7 +237,7 @@ int8_t BP_RangeFinder_UC4H::_calc_yaw_from_id(uint32_t id)
 
 uint8_t BP_RangeFinder_UC4H::_calc_subid_from_id(uint32_t id)
 {
-    return (int8_t)((id >> 16) & 0x000000FF);
+    return (uint8_t)((id >> 16) & 0x000000FF);
 }
 
 #endif

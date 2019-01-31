@@ -92,6 +92,9 @@ public:
         bool                   pre_arm_check;   // true if sensor has passed pre-arm checks
         uint16_t               pre_arm_distance_min;    // min distance captured during pre-arm checks
         uint16_t               pre_arm_distance_max;    // max distance captured during pre-arm checks
+//OW
+        uint32_t               uavcan_id;
+//OWEND
 
         AP_Int8  type;
         AP_Int8  pin;
@@ -170,6 +173,10 @@ public:
 
     static RangeFinder *get_singleton(void) { return _singleton; }
 
+//OW
+   // this reports the registered compasses to the ground station
+   void send_banner(void);
+//OWEND
 
 private:
     static RangeFinder *_singleton;

@@ -331,16 +331,17 @@ private:
             int8_t fixed_axis_yaw;   // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
             uint8_t sensor_sub_id;   // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
             uint8_t range_flag;      // uint3 range_flag
-            float range;              // float16 range                 # Meters
-            float range_min;          // float16 range_min                    # Meters. Can be NAN if unknown.
-            float range_max;          // float16 range_max                    # Meters. Can be NAN if unknown.
+            float range;             // float16 range                 # Meters
+            float range_min;         // float16 range_min             # Meters. Can be NAN if unknown.
+            float range_max;         // float16 range_max             # Meters. Can be NAN if unknown.
             float vertical_field_of_view;   // float16 vertical_field_of_view       # Radians. Can be NAN if unknown.
             float horizontal_field_of_view; // float16 horizontal_field_of_view     # Radians. Can be NAN if unknown.
             //auxiliary meta data
-            bool sensor_proerties_available;
+            bool sensor_properties_available;
+            uint8_t node_id;
         };
 
-        uint8_t uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint32_t id);
+        uint8_t uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint32_t id, uint8_t* node_id);
         void uc4hdistance_remove_listener(AP_RangeFinder_Backend* rem_listener);
         Uc4hDistance_Data* uc4hdistance_getptrto_data(uint8_t* data_i, uint32_t id);
         void uc4hdistance_update_i(uint8_t data_i);
