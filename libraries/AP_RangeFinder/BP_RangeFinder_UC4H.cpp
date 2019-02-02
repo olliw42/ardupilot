@@ -124,7 +124,12 @@ void BP_RangeFinder_UC4H::_do_send_banner(void)
         _send_banner = false;
 
         if (!_initialized) {
-            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H enabled notdetect", _instance+1);
+            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u notdet", _instance+1,
+                    _node_id,
+                    _calc_pitch_from_id(_id) * 15,
+                    _calc_yaw_from_id(_id) * 15,
+                    _calc_subid_from_id(_id)
+                    );
         } else {
             gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u", _instance+1,
                     _node_id,
@@ -157,10 +162,11 @@ void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_
              _range = range;
              break;
          case UC4HDISTANCE_RANGE_TOOCLOSE:
-             _range = 0.02f; //for the moment use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
+             _range = 0.02f; //use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
              break;
          case UC4HDISTANCE_RANGE_TOOFAR:
-             _range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
+             //_range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
+             _range = (state.max_distance_cm + 50) * 0.01f; //make it larger so that AP_RangeFinder_Backend's update_status() triggers
              break;
          default:
              //skip the data
