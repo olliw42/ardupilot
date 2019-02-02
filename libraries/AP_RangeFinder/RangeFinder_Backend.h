@@ -70,6 +70,9 @@ public:
     const Vector3f &get_pos_offset() const { return state.pos_offset; }
 
 //OW
+    // this reports the registered compasses to the ground station
+    virtual void send_banner(void) {};
+
     // callback for UAVCAN message
     virtual void handle_uc4hdistance_msg(
             int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id,

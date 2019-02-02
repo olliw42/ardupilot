@@ -18,13 +18,16 @@ TODO's:
 class BP_RangeFinder_UC4H : public AP_RangeFinder_Backend {
 
 public:
-    BP_RangeFinder_UC4H(RangeFinder &_frontend, RangeFinder::RangeFinder_State &_state);
+    BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, uint8_t instance);
 
     //the other RangeFinders use a static detect() function
     // we don't, since we can then access ap_uavcan easier
     bool init(void);
 
     void update(void) override;
+
+    // this reports the registered compasses to the ground station
+    void send_banner(void) override;
 
     // callback for UAVCAN message
     void handle_uc4hdistance_msg(
@@ -44,9 +47,15 @@ private:
     int8_t _calc_yaw_from_id(uint32_t id);
     uint8_t _calc_subid_from_id(uint32_t id);
 
-    RangeFinder &frontend;
+    uint8_t _instance;
 
     bool _initialized;
+    bool _registered;
+    uint8_t _node_id;
+    uint32_t _id; // UC4H orientation id field
+    bool _send_banner;
+
+    void _do_send_banner(void);
 
     enum uc4hdistance_flags {
       UC4HDISTANCE_RANGE_INVALID    = 0,

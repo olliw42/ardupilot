@@ -28,11 +28,14 @@ extern const AP_HAL::HAL& hal;
 #define debug_rf_uavcan(level, fmt, args...) do { if ((level) <= AP_BoardConfig_CAN::get_can_debug()) { printf(fmt, ##args); }} while (0)
 
 
-BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder &_frontend, RangeFinder::RangeFinder_State &_state) :
-    AP_RangeFinder_Backend(_state),
-    frontend(_frontend)
+BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, uint8_t instance) :
+    AP_RangeFinder_Backend(_state)
 {
+    _instance = instance;
+
     _initialized = false;
+    _registered = false;
+    _send_banner = false;
 
     _new_distance_received = false;
     _last_reading_ms = 0;
@@ -67,7 +70,9 @@ bool BP_RangeFinder_UC4H::init()
         if (ap_uavcan->uc4hdistance_register_listener(this, id, &node_id)) {
            debug_rf_uavcan(2, "UAVCAN RangeFinder Uc4hDistance registered id: %d\n\r", id);
            //_initialized = true; //don't set this here, wait for data to have arrived
-           state.uavcan_id = (id & 0x00FFFFFF) + ((uint32_t)(node_id & 0x7F) << 24); //to keep it for e.g. send_text()
+           _registered = true;
+           _node_id = node_id;
+           _id = id;
            return true;
         }
     }
@@ -79,6 +84,8 @@ bool BP_RangeFinder_UC4H::init()
 //TODO: we could sum up the data, similar to Benewake
 void BP_RangeFinder_UC4H::update(void)
 {
+    _do_send_banner();
+
     if (!_initialized) {
         return;
     }
@@ -101,6 +108,31 @@ void BP_RangeFinder_UC4H::update(void)
         }
 
         _my_sem->give();
+    }
+}
+
+
+void BP_RangeFinder_UC4H::send_banner(void)
+{
+    _send_banner = true;
+}
+
+
+void BP_RangeFinder_UC4H::_do_send_banner(void)
+{
+    if (_send_banner && _registered) {
+        _send_banner = false;
+
+        if (!_initialized) {
+            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H enabled notdetect", _instance+1);
+        } else {
+            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u", _instance+1,
+                    _node_id,
+                    _calc_pitch_from_id(_id) * 15,
+                    _calc_yaw_from_id(_id) * 15,
+                    _calc_subid_from_id(_id)
+                    );
+        }
     }
 }
 
