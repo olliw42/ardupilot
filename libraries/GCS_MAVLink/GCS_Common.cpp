@@ -42,6 +42,11 @@
 #include <SITL/SITL.h>
 #endif
 
+//OW
+#include <AP_Mount/BP_Mount_STorM32.h>
+#include <AP_UAVCAN/BP_UavcanEscStatusManager.h>
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 uint32_t GCS_MAVLINK::last_radio_status_remrssi_ms;
@@ -898,6 +903,15 @@ GCS_MAVLINK::update(uint32_t max_time_us)
 
     status.packet_rx_drop_count = 0;
 
+//OW
+// sadly the UARTDriver API doesn't offer a is_locked() function, so we have that ioctl
+// this works because the STorM32 GUI emits periodically
+    if (storm32.handler && gcs_alternative_active[chan] && (now_ms - storm32.last_alternate_ms > 4000)) {
+        storm32.handler(PROTOCOLHANDLER_IOCTL_UNLOCK, '\0', mavlink_comm_port[chan]);
+        gcs_alternative_active[chan] = false; //this is to reenable writes
+    }
+//OWEND
+
     // process received bytes
     uint16_t nbytes = comm_get_available(chan);
     for (uint16_t i=0; i<nbytes; i++)
@@ -925,6 +939,27 @@ GCS_MAVLINK::update(uint32_t max_time_us)
                 continue;
             }
         }
+//OW
+// why is _port->read() used in the above, not mavlink_comm_port[chan]->read() ???
+// it indeed appears that _port is identical to mavlink_comm_port[chan], and one of them is thus superfluous
+// lousy programming
+// the enclosed timeout only triggers if a new char is received, if not it blocks forever and e.g. a heartbeat is not emitted
+// not good, so don't use
+        if (storm32.handler) {
+            uint8_t res = storm32.handler(PROTOCOLHANDLER_IOCTL_CHARRECEIVED, c, mavlink_comm_port[chan]);
+
+            if ((res == PROTOCOLHANDLER_VALIDPACKET) || (res == PROTOCOLHANDLER_OPENED)) {
+                storm32.last_alternate_ms = now_ms;
+                gcs_alternative_active[chan] = true;
+                continue;
+            } else if (res == PROTOCOLHANDLER_CLOSE) {
+                gcs_alternative_active[chan] = false; //this is to reenable writes
+                continue;
+            } else {
+                gcs_alternative_active[chan] = false; //should not be needed, but play it safe
+            }
+        }
+//OWEND
 
         bool parsed_packet = false;
 
@@ -2447,6 +2482,19 @@ void GCS_MAVLINK::send_banner()
     if (hal.util->get_system_id(sysid)) {
         send_text(MAV_SEVERITY_INFO, sysid);
     }
+
+//OW
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    if (notify) {
+        notify->actions.gcs_connection_detected = true;
+        notify->actions.gcs_send_banner = true;
+    }
+//OWEND
+//OW
+    // there is probably a more reasonable place/procedure to call that, but that's an easy approach
+    Compass *compass = get_compass();
+    if (compass) { compass->send_banner(); }
+//OWEND
 }
 
 
@@ -3022,6 +3070,15 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
             blheli->send_esc_telemetry_mavlink(uint8_t(chan));
         }
 #endif
+//OW
+#if HAL_WITH_UAVCAN
+        CHECK_PAYLOAD_SIZE(ESC_TELEMETRY_1_TO_4);
+        BP_UavcanEscStatusManager *escstatusmanager = BP_UavcanEscStatusManager::instance();
+        if (escstatusmanager) {
+            escstatusmanager->send_esc_telemetry_mavlink(uint8_t(chan));
+        }
+#endif
+//OWEND
         break;
     }
 

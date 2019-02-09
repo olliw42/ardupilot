@@ -1083,8 +1083,15 @@ struct PACKED log_DSTL {
 
 #define ESC_LABELS "TimeUS,RPM,Volt,Curr,Temp,CTot"
 #define ESC_FMT   "QeCCcH"
-#define ESC_UNITS "sqvAO-"
-#define ESC_MULTS "FBBBB-"
+//OW
+//original: #define ESC_UNITS "sqvAO-"
+//original: #define ESC_MULTS "FBBBB-"
+#define ESC_UNITS "sqvAOi"
+#define ESC_MULTS "FBBBB!"
+//TODO/BUG: RPM is divided by 100, and it appears that MP doesn't correct for that!!
+// don't correct it here but feed it with *100, since that's what BLHeli is doing, to not break it, see AP_BLHeli::read_telemetry_packet()
+// don't think that's a feature but a bug
+//OWEND
 
 #define GPA_LABELS "TimeUS,VDop,HAcc,VAcc,SAcc,VV,SMS,Delta"
 #define GPA_FMT   "QCCCCBIH"
@@ -1139,13 +1146,20 @@ struct PACKED log_DSTL {
 
 #define CURR_LABELS "TimeUS,Volt,VoltR,Curr,CurrTot,EnrgTot,Temp,Res"
 #define CURR_FMT    "Qfffffcf"
-#define CURR_UNITS  "svvA?JOw"
-#define CURR_MULTS  "F000?/?0"
+//OW
+//#define CURR_UNITS  "svvA?JOw"
+//#define CURR_MULTS  "F000?/?0"
+#define CURR_UNITS  "svvAiJOw"
+#define CURR_MULTS  "F000!/?0"
+//OWEND
 
 #define CURR_CELL_LABELS "TimeUS,Volt,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10"
 #define CURR_CELL_FMT    "QfHHHHHHHHHH"
 #define CURR_CELL_UNITS  "svvvvvvvvvvv"
-#define CURR_CELL_MULTS  "F00000000000"
+//OW
+//#define CURR_CELL_MULTS  "F00000000000"
+#define CURR_CELL_MULTS  "FCCCCCCCCCCC"
+//OWEND
 
 #define ARSP_LABELS "TimeUS,Airspeed,DiffPress,Temp,RawPress,Offset,U,Health,Primary"
 #define ARSP_FMT "QffcffBBB"
