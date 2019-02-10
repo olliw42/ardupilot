@@ -45,6 +45,7 @@
 //OW
 #include <AP_Mount/BP_Mount_STorM32.h>
 #include <AP_UAVCAN/BP_UavcanEscStatusManager.h>
+#include <AP_RangeFinder/RangeFinder.h>
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -2494,6 +2495,9 @@ void GCS_MAVLINK::send_banner()
     // there is probably a more reasonable place/procedure to call that, but that's an easy approach
     Compass *compass = get_compass();
     if (compass) { compass->send_banner(); }
+    RangeFinder *rangefinder = RangeFinder::get_singleton();
+    if (rangefinder) { rangefinder->send_banner(); }
+
 //OWEND
 }
 

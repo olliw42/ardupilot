@@ -63,6 +63,9 @@ public:
         RangeFinder_TYPE_BenewakeTF02 = 19,
         RangeFinder_TYPE_BenewakeTFmini = 20,
         RangeFinder_TYPE_PLI2CV3HP = 21,
+//OW
+        RangeFinder_TYPE_UC4H = 83,
+//OWEND
     };
 
     enum RangeFinder_Function {
@@ -167,6 +170,10 @@ public:
 
     static RangeFinder *get_singleton(void) { return _singleton; }
 
+//OW
+   // this reports the registered compasses to the ground station
+   void send_banner(void);
+//OWEND
 
 private:
     static RangeFinder *_singleton;

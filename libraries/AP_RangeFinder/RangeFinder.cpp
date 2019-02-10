@@ -36,6 +36,10 @@
 #include "AP_RangeFinder_Wasp.h"
 #include "AP_RangeFinder_Benewake.h"
 #include <AP_BoardConfig/AP_BoardConfig.h>
+//OW
+#include <GCS_MAVLink/GCS.h>
+#include "BP_RangeFinder_UC4H.h"
+//OWEND
 
 extern const AP_HAL::HAL &hal;
 
@@ -758,6 +762,21 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
             drivers[instance] = new AP_RangeFinder_Benewake(state[instance], serial_manager, serial_instance++, AP_RangeFinder_Benewake::BENEWAKE_TFmini);
         }
         break;
+//OW
+#if HAL_WITH_UAVCAN
+    case RangeFinder_TYPE_UC4H:{
+        //drivers[instance] = new BP_RangeFinder_UC4H(*this, state[instance]);
+        BP_RangeFinder_UC4H* rf = new BP_RangeFinder_UC4H(state[instance], instance);
+
+        if (rf && !rf->init()) {
+            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder UC4H[%u] init failed", instance);
+    //XX            delete drivers[instance];
+    //XX            drivers[instance] = nullptr;
+        }
+        drivers[instance] = rf;
+        }break;
+#endif
+//OWEND
     default:
         break;
     }
@@ -919,5 +938,35 @@ MAV_DISTANCE_SENSOR RangeFinder::get_mav_distance_sensor_type_orient(enum Rotati
     }
     return backend->get_mav_distance_sensor_type();
 }
+
+//OW
+void RangeFinder::send_banner(void)
+{
+/*
+    for (uint8_t i = 0; i < num_instances; i++) {
+        if( state[i].type == RangeFinder_TYPE_UC4H ){
+            uint32_t id = state[i].uavcan_id;
+            int8_t pitch = (int8_t)(id & 0x000000FF);
+            int8_t yaw = (int8_t)((id >> 8) & 0x000000FF);
+            uint8_t sub_id = (uint8_t)((id >> 16) & 0x000000FF);
+            uint8_t node_id = (uint8_t)((id >> 24) & 0x0000007F);
+            if( id == 0 ){
+                gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H enabled notpresent", i+1);
+            } else {
+                gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u", i+1, node_id, pitch * 15, yaw * 15, sub_id);
+            }
+        } else {
+            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: used", i+1);
+        }
+    }
+*/
+    for (uint8_t i = 0; i < num_instances; i++) {
+        if ((drivers[i] != nullptr) && (state[i].type != RangeFinder_TYPE_NONE)) {
+            drivers[i]->send_banner();
+        }
+
+    }
+}
+//OWEND
 
 RangeFinder *RangeFinder::_singleton;

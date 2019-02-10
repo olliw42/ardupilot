@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.6-rc2"
-#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u 003"
+#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u 004"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -28,6 +28,7 @@ features:
  - all UC4H stuff added
  - barometer proper gcs sendtext
  - UC4H uavcan EscStatus: simplified DataFlash, BattMonitor type 84, 3 BattMonitors, MAVLink EscStatus
+ - UC4H uavcan RangeFinder: type 83
 
 20181226:
  - cell voltages for UC4H PowerBrick, AP_UAVCAN, AP_BattMonitor_UAVCAN, AP_BattMonitor_Backend, LogStructure, GCS_Common
@@ -35,6 +36,8 @@ features:
  - mag send_banner()
 20190112:
  - workaround to MP bug could be removed, since resolved in MP beta
+20190202:
+ - uc4h rangefinder stuff
 
 
 changed files:
