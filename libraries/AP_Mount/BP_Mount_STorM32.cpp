@@ -29,7 +29,7 @@ BP_Mount_STorM32_Notify* BP_Mount_STorM32_Notify::_singleton;
 BP_Mount_STorM32_Notify::BP_Mount_STorM32_Notify()
 {
     if (_singleton != nullptr) {
-        AP_HAL::panic("BP_Mount_STorM32_Notify must be singleton");
+        gcs().send_text(MAV_SEVERITY_EMERGENCY,"%s must be singleton", __FUNCTION__);
     }
     _singleton = this;
 }
@@ -114,7 +114,7 @@ void BP_Mount_STorM32::init(const AP_SerialManager& serial_manager)
     // however, the notify singleton is inited together with BP_Mount_STorM32, and this thus should not be needed here at all
     // to be super safe we check it here and shut off everything if it fails
     // we thereby also store it in a variable to make it a bit more efficient
-    _notify = BP_Mount_STorM32_Notify::instance();
+    _notify = BP_Mount_STorM32_Notify::get_singleton();
     if (!_notify) _serial_is_initialised = false;
 }
 

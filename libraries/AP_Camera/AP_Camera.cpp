@@ -155,7 +155,7 @@ void AP_Camera::trigger_pic()
     }
 
 //OW
-    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::get_singleton();
     if (notify) notify->actions.camera_trigger_pic = true;
 //OWEND
 

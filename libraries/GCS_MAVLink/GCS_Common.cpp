@@ -2485,7 +2485,7 @@ void GCS_MAVLINK::send_banner()
     }
 
 //OW
-    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::get_singleton();
     if (notify) {
         notify->actions.gcs_connection_detected = true;
         notify->actions.gcs_send_banner = true;
