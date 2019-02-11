@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.6-rc2"
-#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u tnl2 01"
+#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u 005"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -38,12 +38,21 @@ features:
  - workaround to MP bug could be removed, since resolved in MP beta
 20190202:
  - uc4h rangefinder stuff
+20190211:
+ - new tunnel stuff merged
+ - rename to _singleton, get_singleton merged
 
 
 changed files:
 
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
     AP_Baro.cpp: 2x
+
+
+RangeFinder stuff:
+    RangeFinder_Backend.h: 1x
+    RangeFinder.cpp: 3x
+    RangeFinder.h: 2x
 
 
 MAG stuff:
