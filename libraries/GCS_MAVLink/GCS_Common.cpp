@@ -2485,7 +2485,7 @@ void GCS_MAVLINK::send_banner()
     }
 
 //OW
-    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::instance();
+    BP_Mount_STorM32_Notify *notify = BP_Mount_STorM32_Notify::get_singleton();
     if (notify) {
         notify->actions.gcs_connection_detected = true;
         notify->actions.gcs_send_banner = true;
@@ -3077,7 +3077,7 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
 //OW
 #if HAL_WITH_UAVCAN
         CHECK_PAYLOAD_SIZE(ESC_TELEMETRY_1_TO_4);
-        BP_UavcanEscStatusManager *escstatusmanager = BP_UavcanEscStatusManager::instance();
+        BP_UavcanEscStatusManager *escstatusmanager = BP_UavcanEscStatusManager::get_singleton();
         if (escstatusmanager) {
             escstatusmanager->send_esc_telemetry_mavlink(uint8_t(chan));
         }

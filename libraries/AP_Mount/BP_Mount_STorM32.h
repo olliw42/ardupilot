@@ -28,9 +28,7 @@ public:
     BP_Mount_STorM32_Notify& operator=(const BP_Mount_STorM32_Notify&) = delete;
 
     // get singleton instance
-    static BP_Mount_STorM32_Notify* instance(void) {
-        return _singleton;
-    }
+    static BP_Mount_STorM32_Notify* get_singleton(void) { return _singleton; }
 
     // bitmask of flags, 'action' is either a flag or an event
     struct bpactions_type {

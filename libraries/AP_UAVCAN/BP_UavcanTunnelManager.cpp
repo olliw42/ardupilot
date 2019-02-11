@@ -7,21 +7,22 @@
 #include <AP_UAVCAN/AP_UAVCAN.h>
 #include "BP_UavcanTunnelManager.h"
 #include "TunnelUARTDriver.h"
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL& hal;
 
 
 // singleton instance
-BP_UavcanTunnelManager* BP_UavcanTunnelManager::_instance;
+BP_UavcanTunnelManager* BP_UavcanTunnelManager::_singleton;
 
 
 // Constructor
 BP_UavcanTunnelManager::BP_UavcanTunnelManager()
 {
-    if (_instance != nullptr) {
-        AP_HAL::panic("BP_UavcanTunnelManager must be singleton");
+    if (_singleton != nullptr) {
+        gcs().send_text(MAV_SEVERITY_EMERGENCY,"%s must be singleton", __FUNCTION__);
     }
-    _instance = this;
+    _singleton = this;
 
     _num_channels = 0;
     

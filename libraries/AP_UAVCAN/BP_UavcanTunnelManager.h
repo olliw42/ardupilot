@@ -41,7 +41,7 @@ public:
     BP_UavcanTunnelManager& operator=(const BP_UavcanTunnelManager&) = delete;
 
     // get singleton instance
-    static BP_UavcanTunnelManager* instance(void) { return _instance; }
+    static BP_UavcanTunnelManager* get_singleton(void) { return _singleton; }
 
     // is called in AP_SerialManager, to provide tunnel serials
     AP_HAL::UARTDriver* register_uart(uint8_t channel_id); //find a free channel_id and register this channel for an uart
@@ -53,7 +53,7 @@ public:
     void update_fast(void);
 
 private:
-    static BP_UavcanTunnelManager* _instance;
+    static BP_UavcanTunnelManager* _singleton;
 
     uint8_t _num_channels; // number of tunnels/channels instantiated
     
