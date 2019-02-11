@@ -517,7 +517,7 @@ static void tunnelbroadcast_cb_func(const uavcan::ReceivedDataStructure<uavcan::
     }
 
     //different to usual: we do write here directly to the BP_UavcanTunnelManager class
-    BP_UavcanTunnelManager* tunnelmgr = BP_UavcanTunnelManager::instance();
+    BP_UavcanTunnelManager* tunnelmgr = BP_UavcanTunnelManager::get_singleton();
     if (tunnelmgr) {
         tunnelmgr->write_to_channel(msg.channel_id, &(msg.buffer[0]), msg.buffer.size());
     }

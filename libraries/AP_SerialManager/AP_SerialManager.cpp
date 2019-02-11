@@ -213,7 +213,7 @@ void AP_SerialManager::init()
     state[7].uart = nullptr;
     state[8].uart = nullptr;
     state[9].uart = nullptr;
-    BP_UavcanTunnelManager* tunnelmgr = BP_UavcanTunnelManager::instance();
+    BP_UavcanTunnelManager* tunnelmgr = BP_UavcanTunnelManager::get_singleton();
     if (tunnelmgr) {
         state[7].uart = tunnelmgr->register_uart(channel_id[0]);
         state[8].uart = tunnelmgr->register_uart(channel_id[1]);

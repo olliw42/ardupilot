@@ -12,16 +12,16 @@ extern const AP_HAL::HAL& hal;
 
 
 // singleton instance
-BP_UavcanTunnelManager* BP_UavcanTunnelManager::_instance;
+BP_UavcanTunnelManager* BP_UavcanTunnelManager::_singleton;
 
 
 // Constructor
 BP_UavcanTunnelManager::BP_UavcanTunnelManager()
 {
-    if (_instance != nullptr) {
+    if (_singleton != nullptr) {
         AP_HAL::panic("BP_UavcanTunnelManager must be singleton");
     }
-    _instance = this;
+    _singleton = this;
 
     _num_channels = 0;
     
@@ -50,6 +50,7 @@ AP_HAL::UARTDriver* BP_UavcanTunnelManager::register_uart(uint8_t channel_id)
             
             _channel[i].channel_id = channel_id;
             _channel[i].last_received_ms = AP_HAL::millis();
+            _channel[i].available_last = 0;
 
             _channel[i].backend = uart;
 
