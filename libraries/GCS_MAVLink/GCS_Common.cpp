@@ -3077,7 +3077,7 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
 //OW
 #if HAL_WITH_UAVCAN
         CHECK_PAYLOAD_SIZE(ESC_TELEMETRY_1_TO_4);
-        BP_UavcanEscStatusManager *escstatusmanager = BP_UavcanEscStatusManager::instance();
+        BP_UavcanEscStatusManager *escstatusmanager = BP_UavcanEscStatusManager::get_singleton();
         if (escstatusmanager) {
             escstatusmanager->send_esc_telemetry_mavlink(uint8_t(chan));
         }

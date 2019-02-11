@@ -476,7 +476,7 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
 
     // write directly to BP_UavcanEscStatusManager class
     // write directly to DataFlash
-    BP_UavcanEscStatusManager* escstatusmgr = BP_UavcanEscStatusManager::instance();
+    BP_UavcanEscStatusManager* escstatusmgr = BP_UavcanEscStatusManager::get_singleton();
     if (escstatusmgr) {
         //the class supports up to 12 ESCs, but that's tested in the function, no need to do it here
         escstatusmgr->write_to_escindex(msg.esc_index, msg.error_count, msg.voltage, msg.current, msg.temperature,

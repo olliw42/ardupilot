@@ -12,16 +12,17 @@ extern const AP_HAL::HAL& hal;
 
 
 // singleton instance
-BP_UavcanEscStatusManager* BP_UavcanEscStatusManager::_instance;
+BP_UavcanEscStatusManager* BP_UavcanEscStatusManager::_singleton;
 
 
 // Constructor
 BP_UavcanEscStatusManager::BP_UavcanEscStatusManager()
 {
-    if (_instance != nullptr) {
+    if (_singleton != nullptr) {
         AP_HAL::panic("BP_UavcanEscStatusManager must be singleton");
+        gcs().send_text(MAV_SEVERITY_EMERGENCY,"%s must be singleton", __FUNCTION__);
     }
-    _instance = this;
+    _singleton = this;
 }
 
 

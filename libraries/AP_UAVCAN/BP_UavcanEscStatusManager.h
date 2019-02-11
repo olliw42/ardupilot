@@ -20,7 +20,7 @@ public:
     BP_UavcanEscStatusManager& operator=(const BP_UavcanEscStatusManager&) = delete;
 
     // get singleton instance
-    static BP_UavcanEscStatusManager* instance(void) { return _instance; }
+    static BP_UavcanEscStatusManager* get_singleton(void) { return _singleton; }
 
     // send ESC telemetry messages over MAVLink
     void send_esc_telemetry_mavlink(uint8_t mav_chan);
@@ -34,7 +34,7 @@ public:
             int32_t rpm, uint8_t power_rating_pct);
 
 private:
-    static BP_UavcanEscStatusManager* _instance;
+    static BP_UavcanEscStatusManager* _singleton;
 
     struct escstatus_data { //this is as received from uavcan.equipment.esc.Status
         uint32_t error_count;
