@@ -19,7 +19,6 @@ BP_UavcanEscStatusManager* BP_UavcanEscStatusManager::_singleton;
 BP_UavcanEscStatusManager::BP_UavcanEscStatusManager()
 {
     if (_singleton != nullptr) {
-        AP_HAL::panic("BP_UavcanEscStatusManager must be singleton");
         gcs().send_text(MAV_SEVERITY_EMERGENCY,"%s must be singleton", __FUNCTION__);
     }
     _singleton = this;
