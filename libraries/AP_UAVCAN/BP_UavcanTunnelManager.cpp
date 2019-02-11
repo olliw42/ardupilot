@@ -50,7 +50,8 @@ AP_HAL::UARTDriver* BP_UavcanTunnelManager::register_uart(uint8_t channel_id)
             if (uart == nullptr) return nullptr; //something went wrong
             
             _channel[i].channel_id = channel_id;
-            _channel[i].last_received_ms = AP_HAL::millis();
+            _channel[i].available_last = 0;
+            _channel[i].last_send_ms = AP_HAL::millis();
 
             _channel[i].backend = uart;
 
@@ -104,7 +105,8 @@ void BP_UavcanTunnelManager::update_fast(void)
         uint32_t now_ms = AP_HAL::millis();
 
         if (is_to_send(i)) {
-            _channel[i].last_received_ms = now_ms;
+            //there is still one frame in the pipeline, so postpone
+            _channel[i].last_send_ms = now_ms;
             continue;
         }
 
@@ -121,23 +123,34 @@ void BP_UavcanTunnelManager::update_fast(void)
 
         if (!available) {
             //nothing received
-            _channel[i].last_received_ms = now_ms; //clear it, so that the timeout starts with a first received char after a blank period
+            _channel[i].last_send_ms = now_ms; //clear it, so that the timeout starts with a first received char after a blank period
         } else {
-            if ((available >= UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX) ||
-                ((now_ms - _channel[i].last_received_ms) >= TUNNELMANAGER_RXTIMEOUT_MS)) {
+            if (available >= UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX) {
+                //plenty of data, so send out
+                _frame.protocol = 254;
+                _frame.channel_id = _channel[i].channel_id;
+                _channel[i].backend->read_from_tx(_frame.buffer, UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX);
+                _frame.buffer_len = UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX;
+                send_to_CAN(i, &_frame);
 
-                if (available > UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX) available = UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX; //limit to 59 chars max
-
+                available -= UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX;
+                _channel[i].last_send_ms = now_ms;
+            }else
+            if ((available <= _channel[i].available_last) || ((now_ms - _channel[i].last_send_ms) >= TUNNELMANAGER_RXTIMEOUT_MS)) {
+                //no new data since last received, or timeout, so send out
                 _frame.protocol = 254;
                 _frame.channel_id = _channel[i].channel_id;
                 _channel[i].backend->read_from_tx(_frame.buffer, available);
                 _frame.buffer_len = available;
-
-                _channel[i].last_received_ms = now_ms;
-
                 send_to_CAN(i, &_frame);
+
+                available = 0;
+                _channel[i].last_send_ms = now_ms;
             }
         }
+
+        _channel[i].available_last = available;
+
     }
 }
 
