@@ -61,7 +61,7 @@ private:
         uint8_t channel_id;
         BP_Tunnel_Backend* backend;
         uint16_t available_last;
-        uint32_t last_received_ms;
+        uint32_t last_send_ms;
     } _channel[TUNNELMANAGER_NUM_CHANNELS];
     
 
