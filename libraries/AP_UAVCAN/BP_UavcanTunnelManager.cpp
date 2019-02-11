@@ -150,22 +150,6 @@ void BP_UavcanTunnelManager::update_fast(void)
 
         _channel[i].available_last = available;
 
-/* old
-        if ((available >= UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX) ||
-                 ((now_ms - _channel[i].last_received_ms) >= TUNNELMANAGER_RXTIMEOUT_MS)) {
-
-            if (available > UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX) available = UAVCAN_TUNNELBROADCAST_TUNNELOUT_MAX; //limit to 59 chars max
-
-            _frame.protocol = 254;
-            _frame.channel_id = _channel[i].channel_id;
-            _channel[i].backend->read_from_tx(_frame.buffer, available);
-            _frame.buffer_len = available;
-
-            _channel[i].last_received_ms = now_ms;
-
-            send_to_CAN(i, &_frame);
-        }
-*/
     }
 }
 
