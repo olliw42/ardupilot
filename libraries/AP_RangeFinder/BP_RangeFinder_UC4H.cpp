@@ -28,17 +28,17 @@ extern const AP_HAL::HAL& hal;
 #define debug_rf_uavcan(level, fmt, args...) do { if ((level) <= AP_BoardConfig_CAN::get_can_debug()) { printf(fmt, ##args); }} while (0)
 
 
-BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, uint8_t instance) :
-    AP_RangeFinder_Backend(_state)
+BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, uint8_t instance) :
+    AP_RangeFinder_Backend(_state, _params)
 {
     _instance = instance;
 
-    _initialized = false;
     _registered = false;
+    _initialized = false;
     _send_banner = false;
-
     _new_distance_received = false;
-    _last_reading_ms = 0;
+
+    state.last_reading_ms = 0;
 
     _my_sem = hal.util->new_semaphore();
 }
@@ -60,7 +60,7 @@ bool BP_RangeFinder_UC4H::init()
         // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
         // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
         //uint32_t id = _calc_id(-6, -1, 5);
-        uint32_t id = _calc_id(state.orientation.get(), state.address.get());
+        uint32_t id = _calc_id(params.orientation.get(), params.address.get());
 
         if (id == UINT32_MAX) {
             continue;
@@ -101,9 +101,9 @@ void BP_RangeFinder_UC4H::update(void)
 
         if (_range_flag != UC4HDISTANCE_RANGE_INVALID) {
             state.distance_cm = (uint16_t)(_range * 100.0f);
-            _last_reading_ms = now_ms;
+            state.last_reading_ms = now_ms;
             update_status();
-        } else if ((now_ms - _last_reading_ms) > 200) {
+        } else if ((now_ms - state.last_reading_ms) > 200) {
             set_status(RangeFinder::RangeFinder_NoData);
         }
 
@@ -166,7 +166,7 @@ void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_
              break;
          case UC4HDISTANCE_RANGE_TOOFAR:
              //_range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
-             _range = (state.max_distance_cm + 50) * 0.01f; //make it larger so that AP_RangeFinder_Backend's update_status() triggers
+             _range = (max_distance_cm() + 50) * 0.01f; //make it larger so that AP_RangeFinder_Backend's update_status() triggers
              break;
          default:
              //skip the data
