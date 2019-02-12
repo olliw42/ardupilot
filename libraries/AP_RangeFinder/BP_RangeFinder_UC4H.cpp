@@ -28,11 +28,9 @@ extern const AP_HAL::HAL& hal;
 #define debug_rf_uavcan(level, fmt, args...) do { if ((level) <= AP_BoardConfig_CAN::get_can_debug()) { printf(fmt, ##args); }} while (0)
 
 
-BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, uint8_t instance) :
+BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params) :
     AP_RangeFinder_Backend(_state, _params)
 {
-    _instance = instance;
-
     _registered = false;
     _initialized = false;
     _send_banner = false;
@@ -112,8 +110,9 @@ void BP_RangeFinder_UC4H::update(void)
 }
 
 
-void BP_RangeFinder_UC4H::send_banner(void)
+void BP_RangeFinder_UC4H::send_banner(uint8_t instance)
 {
+    _instance = instance;
     _send_banner = true;
 }
 

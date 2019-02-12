@@ -18,7 +18,7 @@ TODO's:
 class BP_RangeFinder_UC4H : public AP_RangeFinder_Backend {
 
 public:
-    BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, uint8_t instance);
+    BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params);
 
     //the other RangeFinders use a static detect() function
     // we don't, since we can then access ap_uavcan easier
@@ -27,7 +27,7 @@ public:
     void update(void) override;
 
     // this reports the registered compasses to the ground station
-    void send_banner(void) override;
+    void send_banner(uint8_t instance) override;
 
     // callback for UAVCAN message
     void handle_uc4hdistance_msg(

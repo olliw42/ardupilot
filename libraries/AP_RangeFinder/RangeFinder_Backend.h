@@ -17,6 +17,9 @@
 #include <AP_Common/AP_Common.h>
 #include <AP_HAL/AP_HAL.h>
 #include "RangeFinder.h"
+//OW
+#include <GCS_MAVLink/GCS.h>
+//OWEND
 
 class AP_RangeFinder_Backend
 {
@@ -60,7 +63,7 @@ public:
 
 //OW
     // this reports the registered compasses to the ground station
-    virtual void send_banner(void) {};
+    virtual void send_banner(uint8_t instance) { gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: detected type %u", instance+1, params.type.get()); };
 
     // callback for UAVCAN message
     virtual void handle_uc4hdistance_msg(
