@@ -48,14 +48,16 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
 
 	// @Group: 1_
 	// @Path: AP_RangeFinder_Params.cpp
-    AP_SUBGROUPINFO_FLAGS(params[0], "1_", 25, RangeFinder, AP_RangeFinder_Params, AP_PARAM_FLAG_IGNORE_ENABLE),
+//OW
+//    AP_SUBGROUPINFO_FLAGS(params[0], "1_", 25, RangeFinder, AP_RangeFinder_Params, AP_PARAM_FLAG_IGNORE_ENABLE),
 
     // @Group: 1_
     // @Path: AP_RangeFinder_Wasp.cpp
-    AP_SUBGROUPVARPTR(drivers[0], "1_",  57, RangeFinder, backend_var_info[0]),
+//    AP_SUBGROUPVARPTR(drivers[0], "1_",  57, RangeFinder, backend_var_info[0]),
 
     AP_SUBGROUPINFO_FLAGS(params[0], "_", 25, RangeFinder, AP_RangeFinder_Params, AP_PARAM_FLAG_IGNORE_ENABLE),
     AP_SUBGROUPVARPTR(drivers[0], "_",  57, RangeFinder, backend_var_info[0]),
+//OWEND
 
 #if RANGEFINDER_MAX_INSTANCES > 1
     // @Group: 2_
