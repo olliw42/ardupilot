@@ -18,7 +18,7 @@
 #include "AP_RangeFinder_PulsedLightLRF.h"
 #include "AP_RangeFinder_MaxsonarI2CXL.h"
 #include "AP_RangeFinder_MaxsonarSerialLV.h"
-//OW XX #include "AP_RangeFinder_PX4_PWM.h"
+#include "AP_RangeFinder_PX4_PWM.h"
 #include "AP_RangeFinder_BBB_PRU.h"
 #include "AP_RangeFinder_LightWareI2C.h"
 #include "AP_RangeFinder_LightWareSerial.h"
@@ -412,11 +412,11 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
         }
         break;
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
-/*//OW XX    case RangeFinder_TYPE_PX4_PWM:
+    case RangeFinder_TYPE_PX4_PWM:
         if (AP_RangeFinder_PX4_PWM::detect()) {
             drivers[instance] = new AP_RangeFinder_PX4_PWM(state[instance], params[instance], estimated_terrain_height);
         }
-        break; */
+        break;
 #endif
 #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BBBMINI
     case RangeFinder_TYPE_BBB_PRU:
