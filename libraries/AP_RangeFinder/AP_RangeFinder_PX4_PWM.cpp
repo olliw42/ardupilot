@@ -191,6 +191,7 @@ void AP_RangeFinder_PX4_PWM::update(void)
         state.distance_cm = sum_cm / count;
 
         // update range_valid state based on distance measured
+        state.last_reading_ms = AP_HAL::millis();
         update_status();
     }
 }
