@@ -43,9 +43,8 @@ extern "C" {
    constructor is not called until detect() returns true, so we
    already know that we should setup the rangefinder
 */
-AP_RangeFinder_PX4_PWM::AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_state, AP_Int16 &powersave_range, float &_estimated_terrain_height) :
+AP_RangeFinder_PX4_PWM::AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, float &_estimated_terrain_height) :
     AP_RangeFinder_Backend(_state, _params),
-    _powersave_range(powersave_range),
     estimated_terrain_height(_estimated_terrain_height)
 {
     _fd = open(PWMIN0_DEVICE_PATH, O_RDONLY);
@@ -106,7 +105,7 @@ void AP_RangeFinder_PX4_PWM::update(void)
     struct pwm_input_s pwm;
     float sum_cm = 0;
     uint16_t count = 0;
-    const float scaling = state.scaling;
+    const float scaling = params.scaling;
     uint32_t now = AP_HAL::millis();
 
     while (::read(_fd, &pwm, sizeof(pwm)) == sizeof(pwm)) {
@@ -117,7 +116,7 @@ void AP_RangeFinder_PX4_PWM::update(void)
         _last_pulse_time_ms = now;
 
         // setup for scaling in meters per millisecond
-        float _distance_cm = pwm.pulse_width * 0.1f * scaling + state.offset;
+        float _distance_cm = pwm.pulse_width * 0.1f * scaling + params.offset;
 
         float distance_delta_cm = fabsf(_distance_cm - _last_sample_distance_cm);
         _last_sample_distance_cm = _distance_cm;
@@ -140,8 +139,8 @@ void AP_RangeFinder_PX4_PWM::update(void)
 
     // if we haven't received a pulse for 1 second then we may need to
     // reset the timer
-    int8_t stop_pin = state.stop_pin;
-    uint16_t settle_time_ms = (uint16_t)state.settle_time_ms;
+    int8_t stop_pin = params.stop_pin;
+    uint16_t settle_time_ms = (uint16_t)params.settle_time_ms;
 
     if (stop_pin != -1 && out_of_range()) {
         // we are above the power saving range. Disable the sensor
@@ -192,6 +191,7 @@ void AP_RangeFinder_PX4_PWM::update(void)
         state.distance_cm = sum_cm / count;
 
         // update range_valid state based on distance measured
+        state.last_reading_ms = AP_HAL::millis();
         update_status();
     }
 }
