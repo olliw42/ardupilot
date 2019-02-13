@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.6-rc2"
-#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u 007"
+#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u rf10-3"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -46,7 +46,7 @@ features:
    comment: Copter/Sub use an extra parameter RNGFND_GAIN, rangefinder_gain, which is for all rangefinders
 
 
-changed files: GAIN
+changed files:
 
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
     AP_Baro.cpp: 2x
@@ -57,7 +57,16 @@ RangeFinder stuff:
     RangeFinder.cpp: 3x
     RangeFinder.h: 2x
     PR#8816 integrated, with two bugs corrected: all RangeFinder files affected
-
+    params moved to backend:
+        params.pin                      AP_RangeFinder_analog.cpp
+        params.ratiometric              AP_RangeFinder_analog.cpp
+        params.function                 AP_RangeFinder_analog.cpp
+        params.powersave_range          AP_RangeFinder_PX4_PWM.h
+        params.stop_pin                 AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
+        params.settle_time_ms           AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
+        params.scaling                  AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
+        params.offset                   AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
+        are used by ONLY AP_RangeFinder_analog.cpp and/or AP_RangeFinder_PX4_PWM.h
 
 MAG stuff:
     AP_Compass.cpp: 2x

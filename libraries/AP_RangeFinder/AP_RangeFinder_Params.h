@@ -14,14 +14,16 @@ public:
     AP_RangeFinder_Params &operator=(const AP_RangeFinder_Params&) = delete;
 
     AP_Int8  type;
-    AP_Int8  pin;
-    AP_Int8  ratiometric;
-    AP_Int16 powersave_range;
-    AP_Int8  stop_pin;
-    AP_Int16 settle_time_ms;
-    AP_Float scaling;
-    AP_Float offset;
-    AP_Int8  function;
+//OW
+//    AP_Int8  pin;
+//    AP_Int8  ratiometric;
+//    AP_Int16 powersave_range;
+//    AP_Int8  stop_pin;
+//    AP_Int16 settle_time_ms;
+//    AP_Float scaling;
+//    AP_Float offset;
+//    AP_Int8  function;
+//OWEND
     AP_Int16 min_distance_cm;
     AP_Int16 max_distance_cm;
     AP_Int8  ground_clearance_cm;
