@@ -20,7 +20,9 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Description: Analog pin that rangefinder is connected to. Set to 11 on PX4 for the analog 'airspeed' port. Set to 15 on the Pixhawk for the analog 'airspeed' port.
     // @Values: -1:Not Used, 11:PX4-airspeed port, 15:Pixhawk-airspeed port
     // @User: Standard
-//OW    AP_GROUPINFO("PIN",     2, AP_RangeFinder_Params, pin, -1),
+//OW
+//    AP_GROUPINFO("PIN",     2, AP_RangeFinder_Params, pin, -1),
+//OWEND
 
     // @Param: SCALING
     // @DisplayName: Rangefinder scaling
@@ -28,7 +30,9 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Units: m/V
     // @Increment: 0.001
     // @User: Standard
-    AP_GROUPINFO("SCALING", 3, AP_RangeFinder_Params, scaling, 3.0f),
+//OW
+//    AP_GROUPINFO("SCALING", 3, AP_RangeFinder_Params, scaling, 3.0f),
+//OWEND
 
     // @Param: OFFSET
     // @DisplayName: rangefinder offset
@@ -36,14 +40,18 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Units: V
     // @Increment: 0.001
     // @User: Standard
-    AP_GROUPINFO("OFFSET",  4, AP_RangeFinder_Params, offset, 0.0f),
+//OW
+//    AP_GROUPINFO("OFFSET",  4, AP_RangeFinder_Params, offset, 0.0f),
+//OWEND
 
     // @Param: FUNCTION
     // @DisplayName: Rangefinder function
     // @Description: Control over what function is used to calculate distance. For a linear function, the distance is (voltage-offset)*scaling. For a inverted function the distance is (offset-voltage)*scaling. For a hyperbolic function the distance is scaling/(voltage-offset). The functions return the distance in meters.
     // @Values: 0:Linear,1:Inverted,2:Hyperbolic
     // @User: Standard
-//OW    AP_GROUPINFO("FUNCTION", 5, AP_RangeFinder_Params, function, 0),
+//OW
+//     AP_GROUPINFO("FUNCTION", 5, AP_RangeFinder_Params, function, 0),
+//OWEND
 
     // @Param: MIN_CM
     // @DisplayName: Rangefinder minimum distance
@@ -66,7 +74,9 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Description: Digital pin that enables/disables rangefinder measurement for an analog rangefinder. A value of -1 means no pin. If this is set, then the pin is set to 1 to enable the rangefinder and set to 0 to disable it. This can be used to ensure that multiple sonar rangefinders don't interfere with each other.
     // @Values: -1:Not Used,50:Pixhawk AUXOUT1,51:Pixhawk AUXOUT2,52:Pixhawk AUXOUT3,53:Pixhawk AUXOUT4,54:Pixhawk AUXOUT5,55:Pixhawk AUXOUT6,111:PX4 FMU Relay1,112:PX4 FMU Relay2,113:PX4IO Relay1,114:PX4IO Relay2,115:PX4IO ACC1,116:PX4IO ACC2
     // @User: Standard
-    AP_GROUPINFO("STOP_PIN", 8, AP_RangeFinder_Params, stop_pin, -1),
+//OW
+//    AP_GROUPINFO("STOP_PIN", 8, AP_RangeFinder_Params, stop_pin, -1),
+//OWEND
 
     // @Param: SETTLE
     // @DisplayName: Rangefinder settle time
@@ -74,14 +84,18 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Units: ms
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("SETTLE", 9, AP_RangeFinder_Params, settle_time_ms, 0),
+//OW
+//    AP_GROUPINFO("SETTLE", 9, AP_RangeFinder_Params, settle_time_ms, 0),
+//OWEND
 
     // @Param: RMETRIC
     // @DisplayName: Ratiometric
     // @Description: This parameter sets whether an analog rangefinder is ratiometric. Most analog rangefinders are ratiometric, meaning that their output voltage is influenced by the supply voltage. Some analog rangefinders (such as the SF/02) have their own internal voltage regulators so they are not ratiometric.
     // @Values: 0:No,1:Yes
     // @User: Standard
-//OW    AP_GROUPINFO("RMETRIC", 10, AP_RangeFinder_Params, ratiometric, 1),
+//OW
+//    AP_GROUPINFO("RMETRIC", 10, AP_RangeFinder_Params, ratiometric, 1),
+//OWEND
 
     // @Param: PWRRNG
     // @DisplayName: Powersave range
@@ -89,7 +103,9 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Units: m
     // @Range: 0 32767
     // @User: Standard
-//OW    AP_GROUPINFO("PWRRNG", 11, AP_RangeFinder_Params, powersave_range, 0),
+//OW
+//    AP_GROUPINFO("PWRRNG", 11, AP_RangeFinder_Params, powersave_range, 0),
+//OWEND
 
     // @Param: GNDCLEAR
     // @DisplayName: Distance (in cm) from the range finder to the ground

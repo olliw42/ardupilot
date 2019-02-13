@@ -36,7 +36,12 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
-    AP_Int16 powersave_range;
+    //use this different notation to avoid name overlap
+    AP_Int16 pPowersave_range;
+    AP_Int8  pStop_pin;
+    AP_Int16 pSettle_time_ms;
+    AP_Float pScaling;
+    AP_Float pOffset;
 //OWEND
 
 protected:
@@ -59,7 +64,7 @@ private:
     bool out_of_range(void) const {
 //OW
 //        return params.powersave_range > 0 && estimated_terrain_height > params.powersave_range;
-        return powersave_range > 0 && estimated_terrain_height > powersave_range;
+        return pPowersave_range > 0 && estimated_terrain_height > pPowersave_range;
 //OWEND
     }
 

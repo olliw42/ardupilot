@@ -20,8 +20,13 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
-    AP_Int8 pPin; //use this different notation to avoid name overlap
+    //use this different notation to avoid name overlap
+    AP_Int8 pPin;
     AP_Int8 pRatiometric;
+    AP_Int8  pStop_pin;
+    AP_Int16 pSettle_time_ms;
+    AP_Float pScaling;
+    AP_Float pOffset;
     AP_Int8 pFunction;
 //OWEND
 
