@@ -174,6 +174,11 @@ RangeFinder::RangeFinder(AP_SerialManager &_serial_manager, enum Rotation orient
 
 void RangeFinder::convert_params(void)
 {
+//OW
+// my modifications to the parameters probably broke the param conversion code, so just don't convert
+    return;
+//OWEND
+/*
     if (params[0].type.configured_in_storage()) {
         // _params[0]._type will always be configured in storage after conversion is done the first time
         return;
@@ -291,6 +296,7 @@ void RangeFinder::convert_params(void)
 
     // force _params[0]._type into storage to flag that conversion has been done
     params[0].type.save(true);
+*/
 }
 
 /*

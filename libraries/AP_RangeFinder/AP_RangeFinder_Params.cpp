@@ -20,7 +20,7 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Description: Analog pin that rangefinder is connected to. Set to 11 on PX4 for the analog 'airspeed' port. Set to 15 on the Pixhawk for the analog 'airspeed' port.
     // @Values: -1:Not Used, 11:PX4-airspeed port, 15:Pixhawk-airspeed port
     // @User: Standard
-    AP_GROUPINFO("PIN",     2, AP_RangeFinder_Params, pin, -1),
+//OW    AP_GROUPINFO("PIN",     2, AP_RangeFinder_Params, pin, -1),
 
     // @Param: SCALING
     // @DisplayName: Rangefinder scaling
@@ -43,7 +43,7 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Description: Control over what function is used to calculate distance. For a linear function, the distance is (voltage-offset)*scaling. For a inverted function the distance is (offset-voltage)*scaling. For a hyperbolic function the distance is scaling/(voltage-offset). The functions return the distance in meters.
     // @Values: 0:Linear,1:Inverted,2:Hyperbolic
     // @User: Standard
-    AP_GROUPINFO("FUNCTION", 5, AP_RangeFinder_Params, function, 0),
+//OW    AP_GROUPINFO("FUNCTION", 5, AP_RangeFinder_Params, function, 0),
 
     // @Param: MIN_CM
     // @DisplayName: Rangefinder minimum distance
@@ -81,7 +81,7 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Description: This parameter sets whether an analog rangefinder is ratiometric. Most analog rangefinders are ratiometric, meaning that their output voltage is influenced by the supply voltage. Some analog rangefinders (such as the SF/02) have their own internal voltage regulators so they are not ratiometric.
     // @Values: 0:No,1:Yes
     // @User: Standard
-    AP_GROUPINFO("RMETRIC", 10, AP_RangeFinder_Params, ratiometric, 1),
+//OW    AP_GROUPINFO("RMETRIC", 10, AP_RangeFinder_Params, ratiometric, 1),
 
     // @Param: PWRRNG
     // @DisplayName: Powersave range

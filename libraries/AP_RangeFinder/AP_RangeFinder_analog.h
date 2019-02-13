@@ -2,7 +2,9 @@
 
 #include "RangeFinder.h"
 #include "RangeFinder_Backend.h"
-#include "AP_RangeFinder_Params.h"
+//OW
+//#include "AP_RangeFinder_Params.h"
+//OWEND
 
 class AP_RangeFinder_analog : public AP_RangeFinder_Backend
 {
@@ -15,6 +17,15 @@ public:
 
     // update state
     void update(void) override;
+
+//OW
+    static const struct AP_Param::GroupInfo var_info[];
+
+private:
+    AP_Int8 pPin; //use this different notation to avoid name overlap
+    AP_Int8 pRatiometric;
+    AP_Int8 pFunction;
+//OWEND
 
 protected:
 

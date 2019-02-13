@@ -46,6 +46,21 @@ features:
    comment: Copter/Sub use an extra parameter RNGFND_GAIN, rangefinder_gain, which is for all rangefinders
 
 
+params.pin                      AP_RangeFinder_analog.cpp
+params.ratiometric              AP_RangeFinder_analog.cpp
+params.function                 AP_RangeFinder_analog.cpp
+
+params.powersave_range          AP_RangeFinder_PX4_PWM.h
+
+params.stop_pin                 AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
+params.settle_time_ms           AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
+params.scaling                  AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
+params.offset                   AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
+
+
+are used by ONLY AP_RangeFinder_analog.cpp and/or AP_RangeFinder_PX4_PWM.h
+
+
 changed files: GAIN
 
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
