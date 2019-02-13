@@ -38,6 +38,20 @@ extern "C" {
     int pwm_input_main(int, char **);
 };
 
+//OW
+const AP_Param::GroupInfo AP_RangeFinder_PX4_PWM::var_info[] = {
+    // @Param: PWRRNG
+    // @DisplayName: Powersave range
+    // @Description: This parameter sets the estimated terrain distance in meters above which the sensor will be put into a power saving mode (if available). A value of zero means power saving is not enabled
+    // @Units: m
+    // @Range: 0 32767
+    // @User: Standard
+    AP_GROUPINFO("PWRRNG", 1, AP_RangeFinder_PX4_PWM, powersave_range, 0),
+
+    AP_GROUPEND
+};
+//OWEND
+
 /* 
    The constructor also initialises the rangefinder. Note that this
    constructor is not called until detect() returns true, so we
@@ -47,6 +61,12 @@ AP_RangeFinder_PX4_PWM::AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_
     AP_RangeFinder_Backend(_state, _params),
     estimated_terrain_height(_estimated_terrain_height)
 {
+//OW
+    AP_Param::setup_object_defaults(this, var_info);
+
+    // register PX4_PWM specific parameters, should maybe come at the end if one follows WASP, but why not here, the user wants to see them
+    state.var_info = var_info;
+//OWEND
     _fd = open(PWMIN0_DEVICE_PATH, O_RDONLY);
     if (_fd == -1) {
         hal.console->printf("Unable to open PX4 PWM rangefinder\n");

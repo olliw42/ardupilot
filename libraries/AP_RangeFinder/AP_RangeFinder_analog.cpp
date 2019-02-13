@@ -21,8 +21,8 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Common/AP_Common.h>
 #include <AP_Math/AP_Math.h>
-//OW#include "RangeFinder.h"
-//OW#include "AP_RangeFinder_Params.h"
+#include "RangeFinder.h"
+#include "AP_RangeFinder_Params.h"
 #include "AP_RangeFinder_analog.h"
 
 extern const AP_HAL::HAL& hal;
@@ -64,6 +64,9 @@ AP_RangeFinder_analog::AP_RangeFinder_analog(RangeFinder::RangeFinder_State &_st
 {
 //OW
     AP_Param::setup_object_defaults(this, var_info);
+
+    // register analog backend specific parameters, do this before source is checked
+    state.var_info = var_info;
 //OWEND
     source = (pPin < 0) ? nullptr : hal.analogin->channel(pPin); //OW //OWEND //since pin might be -1 now, see comment below, catch this possibility
     if (source == nullptr) {
@@ -74,11 +77,6 @@ AP_RangeFinder_analog::AP_RangeFinder_analog(RangeFinder::RangeFinder_State &_st
     source->set_stop_pin((uint8_t)_params.stop_pin);
     source->set_settle_time((uint16_t)_params.settle_time_ms);
     set_status(RangeFinder::RangeFinder_NoData);
-
-//OW
-    // register Analog specific parameters
-    state.var_info = var_info;
-//OWEND
 }
 
 /* 
@@ -89,7 +87,7 @@ AP_RangeFinder_analog::AP_RangeFinder_analog(RangeFinder::RangeFinder_State &_st
 bool AP_RangeFinder_analog::detect(AP_RangeFinder_Params &_params)
 {
 //OW
-// having moved pin to the backend, it isn't available anymore in this static function, so just ignore this and always return with true. This is not a big practical issue
+    // having moved pin to the backend, it isn't available anymore here, so just ignore it and always return with true. This is not a big practical issue.
     return true;
 
 //    if (_params.pin != -1) {

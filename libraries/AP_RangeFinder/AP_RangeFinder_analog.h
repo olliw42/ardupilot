@@ -2,9 +2,7 @@
 
 #include "RangeFinder.h"
 #include "RangeFinder_Backend.h"
-//OW
-//#include "AP_RangeFinder_Params.h"
-//OWEND
+#include "AP_RangeFinder_Params.h"
 
 class AP_RangeFinder_analog : public AP_RangeFinder_Backend
 {

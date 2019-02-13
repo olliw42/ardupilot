@@ -32,6 +32,13 @@ public:
     // update state
     void update(void);
 
+//OW
+    static const struct AP_Param::GroupInfo var_info[];
+
+private:
+    AP_Int16 powersave_range;
+//OWEND
+
 protected:
 
     MAV_DISTANCE_SENSOR _get_mav_distance_sensor_type() const override {
@@ -50,7 +57,10 @@ private:
 
     // return true if we are beyond the power saving range
     bool out_of_range(void) const {
-        return params.powersave_range > 0 && estimated_terrain_height > params.powersave_range;
+//OW
+//        return params.powersave_range > 0 && estimated_terrain_height > params.powersave_range;
+        return powersave_range > 0 && estimated_terrain_height > powersave_range;
+//OWEND
     }
 
 };
