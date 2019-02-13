@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.6-rc2"
-#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u rf10-3"
+#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u 008"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -44,6 +44,7 @@ features:
 20190212:
  - support 10 range finders, PR#8816 integrated, with two bugs corrected
    comment: Copter/Sub use an extra parameter RNGFND_GAIN, rangefinder_gain, which is for all rangefinders
+   7 params moved to analog/PX4_PWM backend
 
 
 changed files:
