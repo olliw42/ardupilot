@@ -491,7 +491,7 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
         BP_RangeFinder_UC4H* rf = new BP_RangeFinder_UC4H(state[instance],  params[instance]);
 
         if (rf && !rf->init()) {
-            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder UC4H %u: init failed", instance);
+            gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H init failed", instance);
     //XX            delete drivers[instance];
     //XX            drivers[instance] = nullptr;
         }
