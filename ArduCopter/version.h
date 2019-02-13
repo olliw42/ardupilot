@@ -43,9 +43,10 @@ features:
  - rename to _singleton, get_singleton merged
 20190212:
  - support 10 range finders, PR#8816 integrated, with two bugs corrected
+   comment: Copter/Sub use an extra parameter RNGFND_GAIN, rangefinder_gain, which is for all rangefinders
 
 
-changed files:
+changed files: GAIN
 
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
     AP_Baro.cpp: 2x
