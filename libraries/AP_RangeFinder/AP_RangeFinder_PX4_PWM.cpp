@@ -43,9 +43,8 @@ extern "C" {
    constructor is not called until detect() returns true, so we
    already know that we should setup the rangefinder
 */
-AP_RangeFinder_PX4_PWM::AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_state, AP_Int16 &powersave_range, float &_estimated_terrain_height) :
+AP_RangeFinder_PX4_PWM::AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, float &_estimated_terrain_height) :
     AP_RangeFinder_Backend(_state, _params),
-    _powersave_range(powersave_range),
     estimated_terrain_height(_estimated_terrain_height)
 {
     _fd = open(PWMIN0_DEVICE_PATH, O_RDONLY);
