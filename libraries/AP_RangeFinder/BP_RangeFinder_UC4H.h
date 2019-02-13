@@ -18,7 +18,7 @@ TODO's:
 class BP_RangeFinder_UC4H : public AP_RangeFinder_Backend {
 
 public:
-    BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, uint8_t instance);
+    BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params);
 
     //the other RangeFinders use a static detect() function
     // we don't, since we can then access ap_uavcan easier
@@ -27,7 +27,7 @@ public:
     void update(void) override;
 
     // this reports the registered compasses to the ground station
-    void send_banner(void) override;
+    void send_banner(uint8_t instance) override;
 
     // callback for UAVCAN message
     void handle_uc4hdistance_msg(
@@ -68,7 +68,6 @@ private:
     float _range; //in Meters
 
     bool _new_distance_received;
-    uint32_t _last_reading_ms;
 
     //note, the BattMonitor class has no such semaphore, the GPS, Baro, and Compass have, why?
     // because the latter are supposed to support multiple nodes? but there is no such systematics in AP_UAVCAN

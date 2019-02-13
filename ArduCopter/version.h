@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.6-rc2"
-#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u 005"
+#define THISFIRMWARE "BetaCopter V3.6.6-rc2 v018u rf10"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -41,9 +41,12 @@ features:
 20190211:
  - new tunnel stuff merged
  - rename to _singleton, get_singleton merged
+20190212:
+ - support 10 range finders, PR#8816 integrated, with two bugs corrected
+   comment: Copter/Sub use an extra parameter RNGFND_GAIN, rangefinder_gain, which is for all rangefinders
 
 
-changed files:
+changed files: GAIN
 
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
     AP_Baro.cpp: 2x
@@ -53,6 +56,7 @@ RangeFinder stuff:
     RangeFinder_Backend.h: 1x
     RangeFinder.cpp: 3x
     RangeFinder.h: 2x
+    PR#8816 integrated, with two bugs corrected: all RangeFinder files affected
 
 
 MAG stuff:
