@@ -19,9 +19,10 @@
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
 #include <AP_SerialManager/AP_SerialManager.h>
+#include "AP_RangeFinder_Params.h"
 
 // Maximum number of range finder instances available on this platform
-#define RANGEFINDER_MAX_INSTANCES 2
+#define RANGEFINDER_MAX_INSTANCES 10
 #define RANGEFINDER_GROUND_CLEARANCE_CM_DEFAULT 10
 #define RANGEFINDER_PREARM_ALT_MAX_CM           200
 #define RANGEFINDER_PREARM_REQUIRED_CHANGE_CM   50
@@ -63,6 +64,10 @@ public:
         RangeFinder_TYPE_BenewakeTF02 = 19,
         RangeFinder_TYPE_BenewakeTFmini = 20,
         RangeFinder_TYPE_PLI2CV3HP = 21,
+        RangeFinder_TYPE_PWM = 22,
+//OW
+        RangeFinder_TYPE_UC4H = 83,
+//OWEND
     };
 
     enum RangeFinder_Function {
@@ -90,26 +95,12 @@ public:
         uint16_t               pre_arm_distance_min;    // min distance captured during pre-arm checks
         uint16_t               pre_arm_distance_max;    // max distance captured during pre-arm checks
 
-        AP_Int8  type;
-        AP_Int8  pin;
-        AP_Int8  ratiometric;
-        AP_Int8  stop_pin;
-        AP_Int16 settle_time_ms;
-        AP_Float scaling;
-        AP_Float offset;
-        AP_Int8  function;
-        AP_Int16 min_distance_cm;
-        AP_Int16 max_distance_cm;
-        AP_Int8  ground_clearance_cm;
-        AP_Int8  address;
-        AP_Vector3f pos_offset; // position offset in body frame
-        AP_Int8  orientation;
+        uint32_t               last_reading_ms;       // system time of last successful update from sensor
+
         const struct AP_Param::GroupInfo *var_info;
     };
 
     static const struct AP_Param::GroupInfo *backend_var_info[RANGEFINDER_MAX_INSTANCES];
-    
-    AP_Int16 _powersave_range;
 
     // parameters for each instance
     static const struct AP_Param::GroupInfo var_info[];
@@ -149,6 +140,7 @@ public:
     bool has_data_orient(enum Rotation orientation) const;
     uint8_t range_valid_count_orient(enum Rotation orientation) const;
     const Vector3f &get_pos_offset_orient(enum Rotation orientation) const;
+    uint32_t last_reading_ms(enum Rotation orientation) const;
 
     /*
       set an externally estimated terrain height. Used to enable power
@@ -167,16 +159,25 @@ public:
 
     static RangeFinder *get_singleton(void) { return _singleton; }
 
+//OW
+   // this reports the registered compasses to the ground station
+   void send_banner(void);
+//OWEND
+
+protected:
+    AP_RangeFinder_Params params[RANGEFINDER_MAX_INSTANCES];
 
 private:
     static RangeFinder *_singleton;
 
     RangeFinder_State state[RANGEFINDER_MAX_INSTANCES];
     AP_RangeFinder_Backend *drivers[RANGEFINDER_MAX_INSTANCES];
-    uint8_t num_instances:3;
+    uint8_t num_instances;
     float estimated_terrain_height;
     AP_SerialManager &serial_manager;
     Vector3f pos_offset_zero;   // allows returning position offsets of zero for invalid requests
+
+    void convert_params(void);
 
     void detect_instance(uint8_t instance, uint8_t& serial_instance);
     void update_instance(uint8_t instance);  

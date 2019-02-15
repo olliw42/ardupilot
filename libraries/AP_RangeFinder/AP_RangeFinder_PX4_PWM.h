@@ -21,7 +21,7 @@ class AP_RangeFinder_PX4_PWM : public AP_RangeFinder_Backend
 {
 public:
     // constructor
-    AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_state, AP_Int16 &powersave_range, float &_estimated_terrain_height);
+    AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, float &_estimated_terrain_height);
 
     // destructor
     ~AP_RangeFinder_PX4_PWM(void);
@@ -31,6 +31,18 @@ public:
 
     // update state
     void update(void);
+
+//OW
+    static const struct AP_Param::GroupInfo var_info[];
+
+private:
+    //use this different notation to avoid name overlap
+    AP_Int16 pPowersave_range;
+    AP_Int8  pStop_pin;
+    AP_Int16 pSettle_time_ms;
+    AP_Float pScaling;
+    AP_Float pOffset;
+//OWEND
 
 protected:
 
@@ -46,12 +58,14 @@ private:
     uint32_t _good_sample_count;
     float _last_sample_distance_cm;
 
-    AP_Int16 &_powersave_range;
     float &estimated_terrain_height;
 
     // return true if we are beyond the power saving range
     bool out_of_range(void) const {
-        return _powersave_range > 0 && estimated_terrain_height > _powersave_range;
+//OW
+//        return params.powersave_range > 0 && estimated_terrain_height > params.powersave_range;
+        return pPowersave_range > 0 && estimated_terrain_height > pPowersave_range;
+//OWEND
     }
 
 };

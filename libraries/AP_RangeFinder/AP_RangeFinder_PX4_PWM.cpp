@@ -38,16 +38,66 @@ extern "C" {
     int pwm_input_main(int, char **);
 };
 
+//OW
+const AP_Param::GroupInfo AP_RangeFinder_PX4_PWM::var_info[] = {
+    // @Param: SCALING
+    // @DisplayName: Rangefinder scaling
+    // @Description: Scaling factor between rangefinder reading and distance. For the linear and inverted functions this is in meters per volt. For the hyperbolic function the units are meterVolts.
+    // @Units: m/V
+    // @Increment: 0.001
+    // @User: Standard
+    AP_GROUPINFO("SCALING", 3, AP_RangeFinder_PX4_PWM, pScaling, 3.0f),
+
+    // @Param: OFFSET
+    // @DisplayName: rangefinder offset
+    // @Description: Offset in volts for zero distance for analog rangefinders. Offset added to distance in centimeters for PWM and I2C Lidars
+    // @Units: V
+    // @Increment: 0.001
+    // @User: Standard
+    AP_GROUPINFO("OFFSET",  4, AP_RangeFinder_PX4_PWM, pOffset, 0.0f),
+
+    // @Param: STOP_PIN
+    // @DisplayName: Rangefinder stop pin
+    // @Description: Digital pin that enables/disables rangefinder measurement for an analog rangefinder. A value of -1 means no pin. If this is set, then the pin is set to 1 to enable the rangefinder and set to 0 to disable it. This can be used to ensure that multiple sonar rangefinders don't interfere with each other.
+    // @Values: -1:Not Used,50:Pixhawk AUXOUT1,51:Pixhawk AUXOUT2,52:Pixhawk AUXOUT3,53:Pixhawk AUXOUT4,54:Pixhawk AUXOUT5,55:Pixhawk AUXOUT6,111:PX4 FMU Relay1,112:PX4 FMU Relay2,113:PX4IO Relay1,114:PX4IO Relay2,115:PX4IO ACC1,116:PX4IO ACC2
+    // @User: Standard
+    AP_GROUPINFO("STOP_PIN", 8, AP_RangeFinder_PX4_PWM, pStop_pin, -1),
+
+    // @Param: SETTLE
+    // @DisplayName: Rangefinder settle time
+    // @Description: The time in milliseconds that the rangefinder reading takes to settle. This is only used when a STOP_PIN is specified. It determines how long we have to wait for the rangefinder to give a reading after we set the STOP_PIN high. For a sonar rangefinder with a range of around 7m this would need to be around 50 milliseconds to allow for the sonar pulse to travel to the target and back again.
+    // @Units: ms
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("SETTLE", 9, AP_RangeFinder_PX4_PWM, pSettle_time_ms, 0),
+
+    // @Param: PWRRNG
+    // @DisplayName: Powersave range
+    // @Description: This parameter sets the estimated terrain distance in meters above which the sensor will be put into a power saving mode (if available). A value of zero means power saving is not enabled
+    // @Units: m
+    // @Range: 0 32767
+    // @User: Standard
+    AP_GROUPINFO("PWRRNG", 11, AP_RangeFinder_PX4_PWM, pPowersave_range, 0),
+
+    AP_GROUPEND
+};
+//OWEND
+
 /* 
    The constructor also initialises the rangefinder. Note that this
    constructor is not called until detect() returns true, so we
    already know that we should setup the rangefinder
 */
-AP_RangeFinder_PX4_PWM::AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_state, AP_Int16 &powersave_range, float &_estimated_terrain_height) :
-	AP_RangeFinder_Backend(_state),
-    _powersave_range(powersave_range),
+AP_RangeFinder_PX4_PWM::AP_RangeFinder_PX4_PWM(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, float &_estimated_terrain_height) :
+    AP_RangeFinder_Backend(_state, _params),
     estimated_terrain_height(_estimated_terrain_height)
 {
+//OW
+    AP_Param::setup_object_defaults(this, var_info);
+
+    // register PX4_PWM specific parameters, should maybe come at the end if one follows WASP, but why not here, the user wants to see them
+    state.var_info = var_info;
+//OWEND
     _fd = open(PWMIN0_DEVICE_PATH, O_RDONLY);
     if (_fd == -1) {
         hal.console->printf("Unable to open PX4 PWM rangefinder\n");
@@ -106,7 +156,7 @@ void AP_RangeFinder_PX4_PWM::update(void)
     struct pwm_input_s pwm;
     float sum_cm = 0;
     uint16_t count = 0;
-    const float scaling = state.scaling;
+    const float scaling = pScaling; //OW //OWEND
     uint32_t now = AP_HAL::millis();
 
     while (::read(_fd, &pwm, sizeof(pwm)) == sizeof(pwm)) {
@@ -117,7 +167,7 @@ void AP_RangeFinder_PX4_PWM::update(void)
         _last_pulse_time_ms = now;
 
         // setup for scaling in meters per millisecond
-        float _distance_cm = pwm.pulse_width * 0.1f * scaling + state.offset;
+        float _distance_cm = pwm.pulse_width * 0.1f * scaling + pOffset; //OW //OWEND
 
         float distance_delta_cm = fabsf(_distance_cm - _last_sample_distance_cm);
         _last_sample_distance_cm = _distance_cm;
@@ -140,8 +190,8 @@ void AP_RangeFinder_PX4_PWM::update(void)
 
     // if we haven't received a pulse for 1 second then we may need to
     // reset the timer
-    int8_t stop_pin = state.stop_pin;
-    uint16_t settle_time_ms = (uint16_t)state.settle_time_ms;
+    int8_t stop_pin = pStop_pin; //OW //OWEND
+    uint16_t settle_time_ms = (uint16_t)pSettle_time_ms; //OW //OWEND
 
     if (stop_pin != -1 && out_of_range()) {
         // we are above the power saving range. Disable the sensor
@@ -192,6 +242,7 @@ void AP_RangeFinder_PX4_PWM::update(void)
         state.distance_cm = sum_cm / count;
 
         // update range_valid state based on distance measured
+        state.last_reading_ms = AP_HAL::millis();
         update_status();
     }
 }

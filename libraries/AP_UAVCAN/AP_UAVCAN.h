@@ -19,6 +19,13 @@
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
+//OW
+#include <AP_RangeFinder/RangeFinder_Backend.h>
+#include "bp_dsdl_generated/olliw/uc4h/Notify.hpp"
+#include <uavcan/tunnel/Broadcast.hpp> //#include "newtunnel/Broadcast.hpp" are identical, thus deleted
+#include "BP_UavcanTunnelManager.h"
+#include "BP_UavcanEscStatusManager.h"
+//OWEND
 
 #ifndef UAVCAN_NODE_POOL_SIZE
 #define UAVCAN_NODE_POOL_SIZE 8192
@@ -37,6 +44,11 @@
 #define AP_UAVCAN_MAX_MAG_NODES 4
 #define AP_UAVCAN_MAX_BARO_NODES 4
 #define AP_UAVCAN_MAX_BI_NUMBER 4
+//OW
+#define AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER 4
+#define AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER 4 //we may want up to 10!
+#define AP_UAVCAN_ESCSTATUS_MAX_NUMBER 8
+//OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
 #define AP_UAVCAN_SW_VERS_MINOR 0
@@ -279,6 +291,191 @@ public:
     {
         _parent_can_mgr = parent_can_mgr;
     }
+
+//OW
+// --- uc4h.GenericBatteryInfo ---
+    // incoming message, by device id
+public:
+    struct Uc4hGenericBatteryInfo_Data {
+        float voltage; //float16
+        float current; //float16
+        float charge_consumed_mAh; //float16
+        float energy_consumed_Wh; //float16
+        float cell_voltages[12]; //float16[<=12] cell_voltages
+        uint8_t status_flags;
+        //auxiliary meta data
+        uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
+        uint8_t cell_voltages_num; //this counts the number of received cell voltages
+    };
+
+    uint8_t uc4hgenericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
+    void uc4hgenericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener);
+    Uc4hGenericBatteryInfo_Data* uc4hgenericbatteryinfo_getptrto_data(uint8_t id);
+    void uc4hgenericbatteryinfo_update_i(uint8_t i);
+
+private:
+    struct {
+        uint16_t id[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t id_taken[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
+        uint16_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+        AP_BattMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+        Uc4hGenericBatteryInfo_Data data[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
+    } _uc4hgenericbatteryinfo;
+
+// --- uc4h.Distance ---
+// incoming message, by orientation id
+    //we id it by the orientation and sub_id: pitch + (yaw << 8) + (sub_id << 16) => uint32_t
+    public:
+        struct Uc4hDistance_Data {
+            int8_t fixed_axis_pitch; // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
+            int8_t fixed_axis_yaw;   // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
+            uint8_t sensor_sub_id;   // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
+            uint8_t range_flag;      // uint3 range_flag
+            float range;             // float16 range                 # Meters
+            float range_min;         // float16 range_min             # Meters. Can be NAN if unknown.
+            float range_max;         // float16 range_max             # Meters. Can be NAN if unknown.
+            float vertical_field_of_view;   // float16 vertical_field_of_view       # Radians. Can be NAN if unknown.
+            float horizontal_field_of_view; // float16 horizontal_field_of_view     # Radians. Can be NAN if unknown.
+            //auxiliary meta data
+            bool sensor_properties_available;
+            uint8_t node_id;
+        };
+
+        uint8_t uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint32_t id, uint8_t* node_id);
+        void uc4hdistance_remove_listener(AP_RangeFinder_Backend* rem_listener);
+        Uc4hDistance_Data* uc4hdistance_getptrto_data(uint8_t* data_i, uint32_t id);
+        void uc4hdistance_update_i(uint8_t data_i);
+
+    private:
+        struct {
+            uint32_t id[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
+            uint8_t id_taken[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
+            uint8_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
+            AP_RangeFinder_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
+            Uc4hDistance_Data data[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
+        } _uc4hdistance;
+
+// --- EscStatus ---
+    // incoming message, by device id
+    // some of the handling is done by the BP_UavcanEscStatusManager class!
+    // we write directly to this class, and write directly to the DataFlash, so just the BattMonitor=84 stuff to keep here
+    // since EscStatus can come from different nodes and different esc_index, we allow just one BattMonitor listener
+public:
+    struct EscStatus_Data {
+        uint32_t error_count;
+        float voltage;
+        float current;
+        float temperature;
+        int32_t rpm;
+        uint8_t power_rating_pct;
+        //auxiliary meta data
+        uint8_t i; //this avoids needing a 2nd loop in update_i(), must be set by getptrto_data()
+    };
+
+    uint8_t escstatus_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id);
+    EscStatus_Data* escstatus_getptrto_data(uint8_t id);
+    void escstatus_update_i(uint8_t i);
+
+private:
+    struct {
+        uint16_t id[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+        AP_BattMonitor_Backend* listener; //there is only one listener for all EscStatus messages
+        EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
+    } _escstatus;
+
+// --- uc4h.Notify ---
+    // outgoing message
+public:
+    bool uc4hnotify_out_sem_take();
+    void uc4hnotify_out_sem_give();
+    void uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len);
+
+private:
+    struct {
+        uavcan::olliw::uc4h::Notify msg;
+        uavcan::TransferPriority priority;
+        bool to_send;
+        AP_HAL::Semaphore* sem;
+    } _uc4hnotify_out;
+
+    // --- outgoing message handler ---
+    void uc4hnotify_out_do_cyclic(void);
+
+// --- tunnel.Broadcast ---
+    // incoming message, by channel_id
+    // the handling of the channel_id is done by the BP_UavcanTunnelManager class!
+    // we write directly to this class, so nothing to keep here
+
+// --- tunnel.Broadcast ---
+    // outgoing message
+    // the handling is simple since most is done in the BP_UavcanTunnelManager class! we just fetch a ptr to data
+public:
+    bool tunnelbroadcast_out_sem_take();
+    void tunnelbroadcast_out_sem_give();
+    bool tunnelbroadcast_is_to_send(uint8_t tunnel_index);
+    void tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uint8_t channel_id, uint8_t* buffer, uint8_t buffer_len, uint8_t priority);
+
+private:
+    struct {
+        uavcan::tunnel::Broadcast msg[TUNNELMANAGER_NUM_CHANNELS];
+        uavcan::TransferPriority priority[TUNNELMANAGER_NUM_CHANNELS];
+        bool to_send[TUNNELMANAGER_NUM_CHANNELS];
+        AP_HAL::Semaphore* sem;
+    } _tunnelbroadcast_out;
+
+    // --- outgoing message handler ---
+    void tunnelbroadcast_out_do_cyclic(void);
+//OWEND
 };
 
 #endif /* AP_UAVCAN_H_ */
+
+
+
+
+/*
+about priorities:
+
+uc_transfer.cpp:
+const TransferPriority TransferPriority::Default((1U << BitLen) / 2);
+const TransferPriority TransferPriority::MiddleLower((1U << BitLen) / 2 + (1U << BitLen) / 4);
+const TransferPriority TransferPriority::OneHigherThanLowest(NumericallyMax - 1);
+const TransferPriority TransferPriority::OneLowerThanHighest(NumericallyMin + 1);
+const TransferPriority TransferPriority::Lowest(NumericallyMax);
+
+transfer.hpp:
+static const uint8_t BitLen = 5U;
+static const uint8_t NumericallyMax = (1U << BitLen) - 1;
+static const uint8_t NumericallyMin = 0;
+
+me:
+const uavcan::TransferPriority TwoLowerThanHighest(uavcan::TransferPriority::NumericallyMin + 2);
+const uavcan::TransferPriority OneHigherThanDefault((1U << uavcan::TransferPriority::BitLen) / 2 - 1);
+
+=>
+
+OneLowerThanHighest     = 1
+Default                 = 16
+MiddleLower             = 24
+OneHigherThanLowest     = 30
+Lowest                  = 31
+
+TwoLowerThanHighest     = 2
+OneHigherThanDefault    = 15
+
+usage:
+act_out_array[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);   = 1
+esc_raw[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);         = 1
+rgb_led[_uavcan_i]->setPriority(uavcan::TransferPriority::OneHigherThanLowest);         = 30
+
+my "old" usage:
+_uc4hnotify.priority = uavcan::TransferPriority::MiddleLower;                           = 24
+_tunnelbroadcast_out.priority[tunnel_index] = uavcan::TransferPriority::MiddleLower;    = 24
+
+notifications can be low, but tunnels should be higher, so set
+
+_tunnelbroadcast_out.priority[tunnel_index] = uavcan::TransferPriority::OneHigherThanDefault;  = 15
+
+
+*/
+
