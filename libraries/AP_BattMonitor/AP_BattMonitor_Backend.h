@@ -52,9 +52,6 @@ public:
     // callback for UAVCAN messages
     virtual void handle_bi_msg(float voltage, float current,
             float temperature) {}
-//OW
-    virtual void handle_escstatus_msg(uint16_t esc_index, float voltage, float current) {}
-//OWEND
 
 protected:
     AP_BattMonitor                      &_mon;      // reference to front-end

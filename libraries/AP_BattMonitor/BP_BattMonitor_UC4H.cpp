@@ -38,11 +38,10 @@ void BP_BattMonitor_UC4H::init()
         
         switch (_type) {
             case UC4H_UC4HGENERICBATTERYINFO:
-                _own_id = (uint32_t)_params._serial_number.get() << 24;
+                _own_id = (((uint32_t)_params._serial_number.get() & 0x000000FF) << 16);
                 break;
             case UC4H_ESCSTATUS:
-                if (ap_uavcan->escstatus_register_listener(this, _params._serial_number)) {
-                }
+                _own_id = 0; //it should capture all esc status messages
                 //_params._low_voltage = 0.0f; is this good or bad idea?
                 break;
         }
@@ -97,9 +96,8 @@ void BP_BattMonitor_UC4H::read()
 void BP_BattMonitor_UC4H::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltage, float current, float charge, float energy,
                                                             uint16_t cells_num, float* cells)
 {
-    uint32_t id = (ext_id & 0xFF000000);
+    uint32_t id = (ext_id & 0x00FFFFFF);
     if (id != _own_id) return; //not for us
-
 
     _state.voltage = voltage;
     _state.current_amps = current;
@@ -142,8 +140,13 @@ void BP_BattMonitor_UC4H::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, flo
     }
 }
 
-void BP_BattMonitor_UC4H::handle_escstatus_msg(uint16_t esc_index, float voltage, float current)
+void BP_BattMonitor_UC4H::handle_escstatus_msg(uint32_t ext_id, uint16_t esc_index, float voltage, float current)
 {
+    uint32_t id = (ext_id & 0x00FFFFFF);
+    if (id != _own_id) return; //not for us
+
+    if (esc_index >= 8) return; //to prevent _escstatus[] array overflow
+
     _escstatus[esc_index].voltage = voltage;
     _escstatus[esc_index].current = current;
 

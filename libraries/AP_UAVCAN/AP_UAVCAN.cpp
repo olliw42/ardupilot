@@ -411,6 +411,9 @@ static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<u
         ap_uavcan->uc4hgenericbatteryinfo_update_i(data->i);
     }*/
 
+    uint32_t id = (((uint32_t)msg.battery_id & 0x000000FF) << 16);
+
+    uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24 ) + id;
 
     //don't bother with higher cell voltage fields, can be whatever they want, any follow up code should check cells num
     uint8_t cell_voltages_num = msg.cell_voltages.size();
@@ -421,8 +424,6 @@ static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<u
         cell_voltages[i] = msg.cell_voltages[i];
     }
     if (!cell_voltages_healthy) cell_voltages_num = 0; //something is wrong, so report no cells
-
-    uint32_t ext_id = (uint32_t)msg.battery_id << 24;
 
     AP_BattMonitor* battmon = AP_BattMonitor::get_singleton();
     //AP_BattMonitor &battery = AP::battery();
@@ -515,6 +516,7 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
     }
 
     // do stuff for BattMonitor type 84
+/*
     uint8_t id = msg.esc_index; //by device id
 
     AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data(id); //i is in data->i
@@ -527,6 +529,19 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
         data->power_rating_pct = msg.power_rating_pct;
 
         ap_uavcan->escstatus_update_i(data->i);
+    }
+*/
+
+    if (msg.esc_index >= 8) return; //is not absolutely needed, since BP_BattMonitor_UC4H protects itself, but avoids the following call, so keep it
+
+    uint32_t id = 0; //the esc status has an esc_index, but they all must go to the same BattMonitor
+
+    uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24 ) + id;
+
+    AP_BattMonitor* battmon = AP_BattMonitor::get_singleton();
+    //AP_BattMonitor &battery = AP::battery();
+    if (battmon) {
+        battmon->handle_escstatus_msg(ext_id, msg.esc_index, msg.voltage, msg.current);
     }
 }
 
@@ -642,10 +657,10 @@ AP_UAVCAN::AP_UAVCAN() :
     }
 
     // --- EscStatus ---
-    _escstatus.listener = nullptr;
+/*    _escstatus.listener = nullptr;
     for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
         _escstatus.id[i] = UINT8_MAX;
-    }
+    } */
 
     // --- uc4h.Notify ---
     _uc4hnotify_out.to_send = false;
@@ -1917,7 +1932,7 @@ void AP_UAVCAN::uc4hdistance_update_i(uint8_t i)
 
 //--- EscStatus ---
 // incoming message, there is just one listener
-
+/*
 uint8_t AP_UAVCAN::escstatus_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id)
 {
     //find first free place in listeners list
@@ -1970,6 +1985,7 @@ void AP_UAVCAN::escstatus_update_i(uint8_t i)
         _escstatus.listener->handle_escstatus_msg( id, _escstatus.data[i].voltage, _escstatus.data[i].current );
     }
 }
+*/
 
 //--- uc4h.Notify ---
 // outgoing message

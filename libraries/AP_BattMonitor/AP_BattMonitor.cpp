@@ -125,12 +125,16 @@ AP_BattMonitor::init()
                 _num_instances++;
 #endif
                 }break;
-            case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_EscStatus:
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_EscStatus:{
 #if HAL_WITH_UAVCAN
-                drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_ESCSTATUS);
+//                drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_ESCSTATUS);
+//                _num_instances++;
+                BP_BattMonitor_UC4H* battmon = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_ESCSTATUS);
+                _uavcan_handler_escstatus.add(battmon);
+                drivers[instance] = battmon;
                 _num_instances++;
 #endif
-                break;
+                }break;
 //OWEND
             case AP_BattMonitor_Params::BattMonitor_TYPE_NONE:
             default:
@@ -525,4 +529,10 @@ void AP_BattMonitor::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float vo
     );
 }
 
+void AP_BattMonitor::handle_escstatus_msg(uint32_t ext_id, uint16_t esc_index, float voltageX, float current)
+{
+    FOREACH_UAVCAN_HANDLER(_uavcan_handler_escstatus,
+            handle_escstatus_msg(ext_id, esc_index, voltageX, current);
+    );
+}
 //OWEND

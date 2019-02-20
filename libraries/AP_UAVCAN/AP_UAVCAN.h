@@ -362,6 +362,7 @@ private:
     // some of the handling is done by the BP_UavcanEscStatusManager class!
     // we write directly to this class, and write directly to the DataFlash, so just the BattMonitor=84 stuff to keep here
     // since EscStatus can come from different nodes and different esc_index, we allow just one BattMonitor listener
+/*
 public:
     struct EscStatus_Data {
         uint32_t error_count;
@@ -384,6 +385,7 @@ private:
         AP_BattMonitor_Backend* listener; //there is only one listener for all EscStatus messages
         EscStatus_Data data[AP_UAVCAN_ESCSTATUS_MAX_NUMBER];
     } _escstatus;
+*/
 
 // --- uc4h.Notify ---
     // outgoing message
