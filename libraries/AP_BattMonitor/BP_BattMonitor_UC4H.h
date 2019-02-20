@@ -27,7 +27,7 @@ public:
         return true;
     }
 
-    void handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy, uint16_t cells_num, float* cells) override;
+    void handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltage, float current, float charge, float energy, uint16_t cells_num, float* cells);
     void handle_escstatus_msg(uint16_t esc_index, float voltage, float current) override;
 
     //see AP_BattMonitorSMBus_Maxell as example for cell handling
@@ -50,4 +50,7 @@ protected:
     };
     struct escstatus_data _escstatus[8];
     uint16_t _escstatus_maxindex;
+
+private:
+    uint32_t _own_id;
 };

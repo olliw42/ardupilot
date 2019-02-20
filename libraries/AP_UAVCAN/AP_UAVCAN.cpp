@@ -47,6 +47,8 @@
 #include "bp_dsdl_generated/olliw/uc4h/GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
 #include "bp_dsdl_generated/olliw/uc4h/Distance.hpp"
+#include <AP_BattMonitor/AP_BattMonitor.h>
+
 //OWEND
 
 extern const AP_HAL::HAL& hal;
@@ -382,7 +384,7 @@ static uavcan::Publisher<uavcan::equipment::indication::LightsCommand>* rgb_led[
 // incoming message, by id
 
 static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg, uint8_t mgr)
-{
+{/*
     AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
     if (ap_uavcan == nullptr) {
         return;
@@ -407,6 +409,32 @@ static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<u
         if (!cell_voltages_healthy) data->cell_voltages_num = 0; //something is wrong, so report no cells
 
         ap_uavcan->uc4hgenericbatteryinfo_update_i(data->i);
+    }*/
+
+
+    //don't bother with higher cell voltage fields, can be whatever they want, any follow up code should check cells num
+    uint8_t cell_voltages_num = msg.cell_voltages.size();
+    float cell_voltages[12] = {};
+    bool cell_voltages_healthy = true;
+    for (uint16_t i = 0; i < cell_voltages_num; i++) {
+        if (uavcan::isNaN(msg.cell_voltages[i]) || is_equal(msg.cell_voltages[i], 0.0f)) { cell_voltages_healthy = false; }
+        cell_voltages[i] = msg.cell_voltages[i];
+    }
+    if (!cell_voltages_healthy) cell_voltages_num = 0; //something is wrong, so report no cells
+
+    uint32_t ext_id = (uint32_t)msg.battery_id << 24;
+
+    AP_BattMonitor* battmon = AP_BattMonitor::get_singleton();
+    //AP_BattMonitor &battery = AP::battery();
+    if (battmon) {
+        battmon->handle_uc4hgenericbatteryinfo_msg(
+                ext_id,
+                msg.voltage,
+                msg.current,
+                msg.charge_consumed_mAh,
+                msg.energy_consumed_Wh,
+                cell_voltages_num,
+                cell_voltages);
     }
 }
 
@@ -594,14 +622,14 @@ AP_UAVCAN::AP_UAVCAN() :
 
 //OW
     // --- uc4h.GenericBatteryInfo ---
-    for (uint8_t i = 0; i < AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER; i++) {
+/*    for (uint8_t i = 0; i < AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER; i++) {
         _uc4hgenericbatteryinfo.id[i] = UINT8_MAX;
         _uc4hgenericbatteryinfo.id_taken[i] = 0;
     }
     for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
         _uc4hgenericbatteryinfo.listener_to_id[li] = UINT8_MAX;
         _uc4hgenericbatteryinfo.listeners[li] = nullptr;
-    }
+    }*/
 
     // --- uc4h.Distance ---
     for (uint8_t i = 0; i < AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER; i++) {
@@ -1693,7 +1721,7 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
 
 //--- uc4h.GenericBatteryInfo ---
 // incoming message, by device id
-
+/*
 uint8_t AP_UAVCAN::uc4hgenericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id)
 {
     uint8_t sel_place = UINT8_MAX, ret = 0;
@@ -1784,7 +1812,7 @@ void AP_UAVCAN::uc4hgenericbatteryinfo_update_i(uint8_t i)
                 _uc4hgenericbatteryinfo.data[i].cell_voltages);
     }
 }
-
+*/
 
 //--- uc4h.Distance ---
 // incoming message, by orientation id

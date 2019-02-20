@@ -295,6 +295,7 @@ public:
 //OW
 // --- uc4h.GenericBatteryInfo ---
     // incoming message, by device id
+/*
 public:
     struct Uc4hGenericBatteryInfo_Data {
         float voltage; //float16
@@ -321,6 +322,7 @@ private:
         AP_BattMonitor_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
         Uc4hGenericBatteryInfo_Data data[AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER];
     } _uc4hgenericbatteryinfo;
+*/
 
 // --- uc4h.Distance ---
 // incoming message, by orientation id

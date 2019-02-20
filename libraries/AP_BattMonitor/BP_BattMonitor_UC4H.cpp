@@ -20,6 +20,8 @@ BP_BattMonitor_UC4H::BP_BattMonitor_UC4H(AP_BattMonitor &mon, AP_BattMonitor::Ba
 {
     _state.healthy = false;
     _has_cell_voltages = false;
+
+    _own_id = UINT32_MAX;
 }
 
 void BP_BattMonitor_UC4H::init()
@@ -36,8 +38,7 @@ void BP_BattMonitor_UC4H::init()
         
         switch (_type) {
             case UC4H_UC4HGENERICBATTERYINFO:
-                if (ap_uavcan->uc4hgenericbatteryinfo_register_listener(this, _params._serial_number)) {
-                }
+                _own_id = (uint32_t)_params._serial_number.get() << 24;
                 break;
             case UC4H_ESCSTATUS:
                 if (ap_uavcan->escstatus_register_listener(this, _params._serial_number)) {
@@ -93,9 +94,13 @@ void BP_BattMonitor_UC4H::read()
 }
 
 
-void BP_BattMonitor_UC4H::handle_uc4hgenericbatteryinfo_msg(float voltage, float current, float charge, float energy,
+void BP_BattMonitor_UC4H::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltage, float current, float charge, float energy,
                                                             uint16_t cells_num, float* cells)
 {
+    uint32_t id = (ext_id & 0xFF000000);
+    if (id != _own_id) return; //not for us
+
+
     _state.voltage = voltage;
     _state.current_amps = current;
 //    _state.current_total_mah = charge;

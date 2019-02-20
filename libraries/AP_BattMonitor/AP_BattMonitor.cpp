@@ -115,12 +115,16 @@ AP_BattMonitor::init()
 #endif
                 break;
 //OW
-            case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_Uc4hGenericBatteryInfo:
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_Uc4hGenericBatteryInfo:{
 #if HAL_WITH_UAVCAN
-                drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_UC4HGENERICBATTERYINFO);
+//                drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_UC4HGENERICBATTERYINFO);
+//                _num_instances++;
+                BP_BattMonitor_UC4H* battmon = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_UC4HGENERICBATTERYINFO);
+                _uavcan_handler_uc4hgenericbatteryinfo.add(battmon);
+                drivers[instance] = battmon;
                 _num_instances++;
 #endif
-                break;
+                }break;
             case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_EscStatus:
 #if HAL_WITH_UAVCAN
                 drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_ESCSTATUS);
@@ -511,3 +515,14 @@ AP_BattMonitor &battery()
 }
 
 };
+
+//OW
+// voltageX, cellsX to avoid shadowing of members of 'this'
+void AP_BattMonitor::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltageX, float current, float charge, float energy, uint16_t cells_num, float* cellsX)
+{
+    FOREACH_UAVCAN_HANDLER(_uavcan_handler_uc4hgenericbatteryinfo,
+            handle_uc4hgenericbatteryinfo_msg(ext_id, voltageX, current, charge, energy, cells_num, cellsX);
+    );
+}
+
+//OWEND

@@ -10,6 +10,9 @@
 //OW
 //#define AP_BATT_MONITOR_MAX_INSTANCES       2
 #define AP_BATT_MONITOR_MAX_INSTANCES       3
+
+class BP_BattMonitor_UC4H; //forward declaration
+#include <AP_UAVCAN/BP_UavcanHandler.h>
 //OWEND
 
 // first monitor is always the primary monitor
@@ -168,6 +171,15 @@ public:
     float get_resistance(uint8_t instance) const { return state[instance].resistance; }
 
     static const struct AP_Param::GroupInfo var_info[];
+
+//OW
+    static AP_BattMonitor* get_singleton(void) { return _singleton; }
+
+    void handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltage, float current, float charge, float energy, uint16_t cells_num, float* cells);
+
+private:
+    BP_Uavcan_Handler<BP_BattMonitor_UC4H> _uavcan_handler_uc4hgenericbatteryinfo;
+//OWEND
 
 protected:
 
