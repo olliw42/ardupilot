@@ -10,9 +10,6 @@
 //OW
 //#define AP_BATT_MONITOR_MAX_INSTANCES       2
 #define AP_BATT_MONITOR_MAX_INSTANCES       3
-
-class BP_BattMonitor_UC4H; //forward declaration
-#include <AP_UAVCAN/BP_UavcanHandler.h>
 //OWEND
 
 // first monitor is always the primary monitor
@@ -32,6 +29,10 @@ class AP_BattMonitor_SMBus;
 class AP_BattMonitor_SMBus_Solo;
 class AP_BattMonitor_SMBus_Maxell;
 class AP_BattMonitor_UAVCAN;
+//OW
+class BP_BattMonitor_UC4H; //forward declaration
+#include <AP_UAVCAN/BP_UavcanHandler.h>
+//OWEND
 
 class AP_BattMonitor
 {

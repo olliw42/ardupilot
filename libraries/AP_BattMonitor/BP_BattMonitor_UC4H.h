@@ -1,10 +1,17 @@
+//******************************************************
+//OW
+// (c) olliw, www.olliw.eu, GPL3
+//******************************************************
+// BattMonitor backend to handle uc4.GenericBatteryInfo and EscStatus UAVCAN messages
+
 #pragma once
 
-#include <AP_UAVCAN/AP_UAVCAN.h>
-#include "AP_BattMonitor.h"
 #include "AP_BattMonitor_Backend.h"
 
-#define AP_BATTMONITOR_UAVCAN_TIMEOUT_MICROS         5000000 // sensor becomes unhealthy if no successful readings for 5 seconds
+#define BP_BATTMONITOR_UC4H_TIMEOUT_MICROS         5000000 // sensor becomes unhealthy if no successful readings for 5 seconds
+
+#define BP_BATTMONITOR_UC4H_MAX_ESC  8
+
 
 class BP_BattMonitor_UC4H : public AP_BattMonitor_Backend
 {
@@ -23,20 +30,18 @@ public:
 
     void init() override;
 
-    bool has_current() const override {
-        return true;
-    }
-
-    void handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltage, float current, float charge, float energy, uint16_t cells_num, float* cells);
-    void handle_escstatus_msg(uint32_t ext_id, uint16_t esc_index, float voltage, float current);
+    bool has_current() const override { return true; }
 
     //see AP_BattMonitorSMBus_Maxell as example for cell handling
     bool has_cell_voltages() const override { return _has_cell_voltages; }
 
-protected:
+    void handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltage, float current, float charge, float energy, uint16_t cells_num, float* cells);
+    void handle_escstatus_msg(uint32_t ext_id, uint16_t esc_index, float voltage, float current);
+
+private:
     BattMonitor_UC4H_Type _type;
 
-    bool _has_cell_voltages; //backends flag this as true once they have received a valid cell voltage report
+    bool _has_cell_voltages; //backend flags this as true once they have received a valid cell voltage report
 
     struct escstatus_data { //this is as received from uavcan.equipment.esc.Status
         float voltage;
@@ -48,9 +53,8 @@ protected:
         bool healthy;
         bool detected;
     };
-    struct escstatus_data _escstatus[8];
+    struct escstatus_data _escstatus[BP_BATTMONITOR_UC4H_MAX_ESC];
     uint16_t _escstatus_maxindex;
 
-private:
     uint32_t _own_id;
 };

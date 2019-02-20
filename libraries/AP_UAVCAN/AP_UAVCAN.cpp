@@ -44,10 +44,10 @@
 //    they're mainly because I can't add/commit and thus can't checkout to e.g. master
 //the workaround is to "somehow" get the .hpp file generated, without affecting the uavcan submodule in any way,
 //and to place the new .hpp into the AP_UAVCAN library folder
+#include <AP_BattMonitor/AP_BattMonitor.h>
 #include "bp_dsdl_generated/olliw/uc4h/GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
 #include "bp_dsdl_generated/olliw/uc4h/Distance.hpp"
-#include <AP_BattMonitor/AP_BattMonitor.h>
 
 //OWEND
 
@@ -384,33 +384,7 @@ static uavcan::Publisher<uavcan::equipment::indication::LightsCommand>* rgb_led[
 // incoming message, by id
 
 static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg, uint8_t mgr)
-{/*
-    AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
-    if (ap_uavcan == nullptr) {
-        return;
-    }
-
-    uint8_t id = msg.battery_id; //by device id
-
-    AP_UAVCAN::Uc4hGenericBatteryInfo_Data* data = ap_uavcan->uc4hgenericbatteryinfo_getptrto_data(id); //i is in data->i
-    if (data != nullptr) {
-        data->voltage = msg.voltage;
-        data->current = msg.current;
-        data->charge_consumed_mAh = msg.charge_consumed_mAh;
-        data->energy_consumed_Wh = msg.energy_consumed_Wh;
-        data->status_flags = msg.status_flags;
-        data->cell_voltages_num = msg.cell_voltages.size();
-        //don't bother with higher cell voltage fields, can be whatever they want, any follow up code should check cells num
-        bool cell_voltages_healthy = true;
-        for (uint16_t i = 0; i < data->cell_voltages_num; i++) {
-            if (uavcan::isNaN(msg.cell_voltages[i]) || is_equal(msg.cell_voltages[i], 0.0f)) { cell_voltages_healthy = false; }
-            data->cell_voltages[i] = msg.cell_voltages[i];
-        }
-        if (!cell_voltages_healthy) data->cell_voltages_num = 0; //something is wrong, so report no cells
-
-        ap_uavcan->uc4hgenericbatteryinfo_update_i(data->i);
-    }*/
-
+{
     uint32_t id = (((uint32_t)msg.battery_id & 0x000000FF) << 16);
 
     uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24 ) + id;
@@ -425,17 +399,11 @@ static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<u
     }
     if (!cell_voltages_healthy) cell_voltages_num = 0; //something is wrong, so report no cells
 
-    AP_BattMonitor* battmon = AP_BattMonitor::get_singleton();
-    //AP_BattMonitor &battery = AP::battery();
+    AP_BattMonitor* battmon = AP_BattMonitor::get_singleton(); //AP_BattMonitor &battery = AP::battery();
     if (battmon) {
-        battmon->handle_uc4hgenericbatteryinfo_msg(
-                ext_id,
-                msg.voltage,
-                msg.current,
-                msg.charge_consumed_mAh,
-                msg.energy_consumed_Wh,
-                cell_voltages_num,
-                cell_voltages);
+        battmon->handle_uc4hgenericbatteryinfo_msg(ext_id,
+                msg.voltage, msg.current, msg.charge_consumed_mAh, msg.energy_consumed_Wh,
+                cell_voltages_num, cell_voltages);
     }
 }
 
@@ -516,30 +484,13 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
     }
 
     // do stuff for BattMonitor type 84
-/*
-    uint8_t id = msg.esc_index; //by device id
-
-    AP_UAVCAN::EscStatus_Data *data = ap_uavcan->escstatus_getptrto_data(id); //i is in data->i
-    if (data != nullptr) {
-        data->error_count = msg.error_count;
-        data->voltage = msg.voltage;
-        data->current = msg.current;
-        data->temperature = msg.temperature;
-        data->rpm = msg.rpm;
-        data->power_rating_pct = msg.power_rating_pct;
-
-        ap_uavcan->escstatus_update_i(data->i);
-    }
-*/
-
     if (msg.esc_index >= 8) return; //is not absolutely needed, since BP_BattMonitor_UC4H protects itself, but avoids the following call, so keep it
 
     uint32_t id = 0; //the esc status has an esc_index, but they all must go to the same BattMonitor
 
     uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24 ) + id;
 
-    AP_BattMonitor* battmon = AP_BattMonitor::get_singleton();
-    //AP_BattMonitor &battery = AP::battery();
+    AP_BattMonitor* battmon = AP_BattMonitor::get_singleton(); //AP_BattMonitor &battery = AP::battery();
     if (battmon) {
         battmon->handle_escstatus_msg(ext_id, msg.esc_index, msg.voltage, msg.current);
     }
@@ -637,14 +588,7 @@ AP_UAVCAN::AP_UAVCAN() :
 
 //OW
     // --- uc4h.GenericBatteryInfo ---
-/*    for (uint8_t i = 0; i < AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER; i++) {
-        _uc4hgenericbatteryinfo.id[i] = UINT8_MAX;
-        _uc4hgenericbatteryinfo.id_taken[i] = 0;
-    }
-    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-        _uc4hgenericbatteryinfo.listener_to_id[li] = UINT8_MAX;
-        _uc4hgenericbatteryinfo.listeners[li] = nullptr;
-    }*/
+    // uses singleton
 
     // --- uc4h.Distance ---
     for (uint8_t i = 0; i < AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER; i++) {
@@ -657,10 +601,7 @@ AP_UAVCAN::AP_UAVCAN() :
     }
 
     // --- EscStatus ---
-/*    _escstatus.listener = nullptr;
-    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
-        _escstatus.id[i] = UINT8_MAX;
-    } */
+    // uses singleton
 
     // --- uc4h.Notify ---
     _uc4hnotify_out.to_send = false;
@@ -1736,98 +1677,8 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
 
 //--- uc4h.GenericBatteryInfo ---
 // incoming message, by device id
-/*
-uint8_t AP_UAVCAN::uc4hgenericbatteryinfo_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id)
-{
-    uint8_t sel_place = UINT8_MAX, ret = 0;
+// uses singleton
 
-    //find first free place in listeners list
-    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-        if (_uc4hgenericbatteryinfo.listeners[li] == nullptr) {
-            sel_place = li;
-            break;
-        }
-    }
-
-    //no free place, abort
-    if (sel_place == UINT8_MAX) {
-        return ret;
-    }
-
-    //insert listener
-    for (uint8_t i = 0; i < AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER; i++) {
-        if (_uc4hgenericbatteryinfo.id[i] != id) {
-            continue;
-        }
-        _uc4hgenericbatteryinfo.listeners[sel_place] = new_listener;
-        _uc4hgenericbatteryinfo.listener_to_id[sel_place] = i;
-        _uc4hgenericbatteryinfo.id_taken[i]++;
-        ret = i + 1;
-        debug_uavcan(2, "reg_UC4HGENERICBATTERYINFO place:%d, chan: %d\n\r", sel_place, i);
-        break;
-    }
-
-    return ret;
-}
-
-//is not used, since remove_BM_bi_listener() is also not used, AP_BattMonitor_UAVCAN doesn't have a destructor defined
-void AP_UAVCAN::uc4hgenericbatteryinfo_remove_listener(AP_BattMonitor_Backend* rem_listener)
-{
-    // Check for all listeners and compare pointers
-    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-        if (_uc4hgenericbatteryinfo.listeners[li] != rem_listener) {
-            continue;
-        }
-        _uc4hgenericbatteryinfo.listeners[li] = nullptr;
-
-        // Also decrement usage counter and reset listening node
-        if (_uc4hgenericbatteryinfo.id_taken[_uc4hgenericbatteryinfo.listener_to_id[li]] > 0) {
-            _uc4hgenericbatteryinfo.id_taken[_uc4hgenericbatteryinfo.listener_to_id[li]]--;
-        }
-        _uc4hgenericbatteryinfo.listener_to_id[li] = UINT8_MAX;
-    }
-}
-
-AP_UAVCAN::Uc4hGenericBatteryInfo_Data* AP_UAVCAN::uc4hgenericbatteryinfo_getptrto_data(uint8_t id)
-{
-    // check if id is already in list, and if it is, take it
-    for (uint8_t i = 0; i < AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER; i++) {
-        if (_uc4hgenericbatteryinfo.id[i] == id) {
-            _uc4hgenericbatteryinfo.data[i].i = i; //this avoids needing a 2nd loop in update_i()
-            return &_uc4hgenericbatteryinfo.data[i];
-        }
-    }
-
-    // if id is not yet in list, find the first free spot, and take that
-    for (uint8_t i = 0; i < AP_UAVCAN_UC4HGENERICBATTERYINFO_MAX_NUMBER; i++) {
-        if (_uc4hgenericbatteryinfo.id[i] != UINT8_MAX) {
-            continue;
-        }
-        _uc4hgenericbatteryinfo.id[i] = id;
-        _uc4hgenericbatteryinfo.data[i].i = i; //this avoids needing a 2nd loop in update_i()
-        return &_uc4hgenericbatteryinfo.data[i];
-    }
-
-    return nullptr;
-}
-
-void AP_UAVCAN::uc4hgenericbatteryinfo_update_i(uint8_t i)
-{
-    for (uint8_t li = 0; li < AP_UAVCAN_MAX_LISTENERS; li++) {
-        if (_uc4hgenericbatteryinfo.listener_to_id[li] != i) {
-            continue;
-        }
-
-        _uc4hgenericbatteryinfo.listeners[li]->handle_uc4hgenericbatteryinfo_msg(
-                _uc4hgenericbatteryinfo.data[i].voltage,
-                _uc4hgenericbatteryinfo.data[i].current,
-                _uc4hgenericbatteryinfo.data[i].charge_consumed_mAh,
-                _uc4hgenericbatteryinfo.data[i].energy_consumed_Wh,
-                _uc4hgenericbatteryinfo.data[i].cell_voltages_num,
-                _uc4hgenericbatteryinfo.data[i].cell_voltages);
-    }
-}
-*/
 
 //--- uc4h.Distance ---
 // incoming message, by orientation id
@@ -1932,60 +1783,8 @@ void AP_UAVCAN::uc4hdistance_update_i(uint8_t i)
 
 //--- EscStatus ---
 // incoming message, there is just one listener
-/*
-uint8_t AP_UAVCAN::escstatus_register_listener(AP_BattMonitor_Backend* new_listener, uint8_t id)
-{
-    //find first free place in listeners list
-    // we have just one listener
-    //no free place, abort
-    if (_escstatus.listener != nullptr) return 0;
+// uses singleton
 
-    //insert listener
-    // we have just one listener
-    _escstatus.listener = new_listener;
-    debug_uavcan(2, "reg_ESCSTATUS place:%d, chan: %d\n\r", 0, 0);
-
-    return 1;
-}
-
-AP_UAVCAN::EscStatus_Data* AP_UAVCAN::escstatus_getptrto_data(uint8_t id)
-{
-    // I think the esc_index are continuous, by how ArduPilot works
-    // so we could instead just directly jump with id into the data list, return &_escstatus.data[id], with id<8 overflow protection of course
-
-    // check if id is already in list, and if it is take it
-    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
-        if (_escstatus.id[i] == id) {
-            _escstatus.data[i].i = i; //this avoids needing a 2nd loop in update_i()
-            return &_escstatus.data[i];
-        }
-    }
-
-    // if id is not yet in list, find the first free spot, and take that
-    for (uint8_t i = 0; i < AP_UAVCAN_ESCSTATUS_MAX_NUMBER; i++) {
-        if (_escstatus.id[i] != UINT8_MAX) {
-            continue;
-        }
-        _escstatus.id[i] = id;
-        _escstatus.data[i].i = i; //this avoids needing a 2nd loop in update_i()
-        return &_escstatus.data[i];
-    }
-
-    return nullptr;
-}
-
-void AP_UAVCAN::escstatus_update_i(uint8_t i)
-{
-    // technically, it could happen that the esc_index is not continuous, and one would need a better handling
-    // however, I think, ArduPilot implicitly enforces continuous esc_index, so should be no problem
-    uint8_t id = _escstatus.id[i];
-    if (id >= 8) return;
-
-    if (_escstatus.listener != nullptr) {
-        _escstatus.listener->handle_escstatus_msg( id, _escstatus.data[i].voltage, _escstatus.data[i].current );
-    }
-}
-*/
 
 //--- uc4h.Notify ---
 // outgoing message

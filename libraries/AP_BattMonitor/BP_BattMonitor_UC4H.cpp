@@ -1,14 +1,17 @@
+//******************************************************
+//OW
+// (c) olliw, www.olliw.eu, GPL3
+//******************************************************
+
 #include <AP_HAL/AP_HAL.h>
 
 #if HAL_WITH_UAVCAN
 
 #include <AP_Common/AP_Common.h>
-#include <AP_Math/AP_Math.h>
-#include "AP_BattMonitor.h"
+#include <AP_BoardConfig/AP_BoardConfig_CAN.h>
+#include <AP_UAVCAN/AP_UAVCAN.h>
 #include "BP_BattMonitor_UC4H.h"
 
-#include <AP_BoardConfig/AP_BoardConfig.h>
-#include <AP_BoardConfig/AP_BoardConfig_CAN.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -54,7 +57,7 @@ void BP_BattMonitor_UC4H::read()
     uint32_t now_us = AP_HAL::micros();
 
     // timeout after 5 seconds
-    if ((now_us - _state.last_time_micros) > AP_BATTMONITOR_UAVCAN_TIMEOUT_MICROS) {
+    if ((now_us - _state.last_time_micros) > BP_BATTMONITOR_UC4H_TIMEOUT_MICROS) {
         _state.healthy = false;
     }
 
@@ -66,7 +69,7 @@ void BP_BattMonitor_UC4H::read()
         uint8_t num_escs = 0;
         bool all_healthy = true;
 
-        for (uint16_t i=0; i<8; i++) {
+        for (uint16_t i=0; i<BP_BATTMONITOR_UC4H_MAX_ESC; i++) {
             if (!_escstatus[i].detected) continue;
             num_escs++;
             voltage += _escstatus[i].voltage;
@@ -116,7 +119,7 @@ void BP_BattMonitor_UC4H::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, flo
         float dt = now_us - _state.last_time_micros;
 
         // update total current drawn since startup
-        if (_state.last_time_micros != 0 && dt < 2000000) {
+        if ((_state.last_time_micros != 0) && (dt < 2000000)) {
             // .0002778 is 1/3600 (conversion to hours)
             float mah = (float) ((double) _state.current_amps * (double) dt * (double) 0.0000002778f);
             _state.consumed_mah += mah;
@@ -142,10 +145,11 @@ void BP_BattMonitor_UC4H::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, flo
 
 void BP_BattMonitor_UC4H::handle_escstatus_msg(uint32_t ext_id, uint16_t esc_index, float voltage, float current)
 {
-    uint32_t id = (ext_id & 0x00FFFFFF);
-    if (id != _own_id) return; //not for us
+//    uint32_t id = (ext_id & 0x00FFFFFF);
+//    if (id != _own_id) return;
+//we catch them all!
 
-    if (esc_index >= 8) return; //to prevent _escstatus[] array overflow
+    if (esc_index >= BP_BATTMONITOR_UC4H_MAX_ESC) return; //to prevent _escstatus[] array overflow
 
     _escstatus[esc_index].voltage = voltage;
     _escstatus[esc_index].current = current;
@@ -153,7 +157,7 @@ void BP_BattMonitor_UC4H::handle_escstatus_msg(uint32_t ext_id, uint16_t esc_ind
     uint32_t now_us = AP_HAL::micros();
     uint32_t dt = now_us - _escstatus[esc_index].time_micros;
 
-    if (_escstatus[esc_index].time_micros != 0 && dt < 2000000) {
+    if ((_escstatus[esc_index].time_micros != 0) && (dt < 2000000)) {
         float mah = (float) ((double) current * (double) dt * (double) 0.0000002778f);
         _escstatus[esc_index].consumed_charge_mah += mah;
         _escstatus[esc_index].consumed_energy_wh  += 0.001f * mah * voltage;
@@ -163,7 +167,7 @@ void BP_BattMonitor_UC4H::handle_escstatus_msg(uint32_t ext_id, uint16_t esc_ind
 
     _escstatus[esc_index].detected = true; //this is used to figure out how many escs are there
 
-    if( esc_index >= _escstatus_maxindex ) _escstatus_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
+    if (esc_index >= _escstatus_maxindex) _escstatus_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
 }
 
 #endif
