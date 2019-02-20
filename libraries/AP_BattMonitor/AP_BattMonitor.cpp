@@ -5,6 +5,9 @@
 #include "AP_BattMonitor_BLHeliESC.h"
 #if HAL_WITH_UAVCAN
 #include "AP_BattMonitor_UAVCAN.h"
+//OW
+#include "BP_BattMonitor_UC4H.h"
+//OWEND
 #endif
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 #include <DataFlash/DataFlash.h>
@@ -112,15 +115,15 @@ AP_BattMonitor::init()
 #endif
                 break;
 //OW
-            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_Uc4hGenericBatteryInfo:
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_Uc4hGenericBatteryInfo:
 #if HAL_WITH_UAVCAN
-                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], AP_BattMonitor_UAVCAN::UAVCAN_UC4HGENERICBATTERY_INFO, _params[instance]);
+                drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_UC4HGENERICBATTERYINFO);
                 _num_instances++;
 #endif
                 break;
-            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_EscStatus:
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_EscStatus:
 #if HAL_WITH_UAVCAN
-                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], AP_BattMonitor_UAVCAN::UAVCAN_ESCSTATUS, _params[instance]);
+                drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_ESCSTATUS);
                 _num_instances++;
 #endif
                 break;

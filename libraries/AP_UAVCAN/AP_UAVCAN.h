@@ -22,7 +22,7 @@
 //OW
 #include <AP_RangeFinder/RangeFinder_Backend.h>
 #include "bp_dsdl_generated/olliw/uc4h/Notify.hpp"
-#include <uavcan/tunnel/Broadcast.hpp> //#include "newtunnel/Broadcast.hpp" are identical, thus deleted
+#include <uavcan/tunnel/Broadcast.hpp>
 #include "BP_UavcanTunnelManager.h"
 #include "BP_UavcanEscStatusManager.h"
 //OWEND
