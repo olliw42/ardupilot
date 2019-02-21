@@ -21,6 +21,9 @@
 #include "AP_Proximity_RangeFinder.h"
 #include "AP_Proximity_MAV.h"
 #include "AP_Proximity_SITL.h"
+//OW
+#include "BP_Proximity_UC4H.h"
+//OWEND
 
 extern const AP_HAL::HAL &hal;
 
@@ -325,6 +328,16 @@ void AP_Proximity::detect_instance(uint8_t instance)
         return;
     }
 #endif
+//OW
+#if HAL_WITH_UAVCAN
+    if (type == RangeFinder_TYPE_UC4H) {
+        BP_Proximity_UC4H* proxi = new BP_Proximity_UC4H(*this, state[instance]);
+        _uavcan_handler.add(proxi);
+        state[instance].instance = instance;
+        drivers[instance] = proxi;
+    }
+#endif
+//OWEND
 }
 
 // get distance in meters in a particular direction in degrees (0 is forward, clockwise)
@@ -459,3 +472,12 @@ bool AP_Proximity::sensor_failed() const
 }
 
 AP_Proximity *AP_Proximity::_singleton;
+
+//OW
+void AP_Proximity::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range)
+{
+    FOREACH_UAVCAN_HANDLER(_uavcan_handler,
+            handle_uc4hdistance_msg(ext_id, fixed_axis_pitch, fixed_axis_yaw, sensor_sub_id, range_flag, range);
+    );
+}
+//OWEND

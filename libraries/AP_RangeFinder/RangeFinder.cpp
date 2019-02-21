@@ -677,6 +677,8 @@ MAV_DISTANCE_SENSOR RangeFinder::get_mav_distance_sensor_type_orient(enum Rotati
     return backend->get_mav_distance_sensor_type();
 }
 
+RangeFinder *RangeFinder::_singleton;
+
 //OW
 void RangeFinder::send_banner(void)
 {
@@ -694,5 +696,3 @@ void RangeFinder::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pit
     );
 }
 //OWEND
-
-RangeFinder *RangeFinder::_singleton;

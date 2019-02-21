@@ -28,6 +28,10 @@
 #define PROXIMITY_SENSOR_ID_START 10
 
 class AP_Proximity_Backend;
+//OW
+class BP_Proximity_UC4H; //forward declaration
+#include <AP_UAVCAN/BP_UavcanHandler.h>
+//OWEND
 
 class AP_Proximity
 {
@@ -49,6 +53,9 @@ public:
         Proximity_Type_RPLidarA2 = 5,
         Proximity_Type_TRTOWEREVO = 6,
         Proximity_Type_SITL    = 10,
+//OW
+        Proximity_Type_UC4H    = 83,
+//OWEND
     };
 
     enum Proximity_Status {
@@ -140,6 +147,14 @@ public:
     bool sensor_present() const;
     bool sensor_enabled() const;
     bool sensor_failed() const;
+
+//OW
+    // callback for UAVCAN message
+    void handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range);
+
+private:
+    BP_Uavcan_Handler<BP_Proximity_UC4H,PROXIMITY_MAX_INSTANCES> _uavcan_handler;
+//OWEND
 
 private:
     static AP_Proximity *_singleton;
