@@ -330,7 +330,7 @@ void AP_Proximity::detect_instance(uint8_t instance)
 #endif
 //OW
 #if HAL_WITH_UAVCAN
-    if (type == RangeFinder_TYPE_UC4H) {
+    if (type == Proximity_Type_UC4H) {
         BP_Proximity_UC4H* proxi = new BP_Proximity_UC4H(*this, state[instance]);
         _uavcan_handler.add(proxi);
         state[instance].instance = instance;
