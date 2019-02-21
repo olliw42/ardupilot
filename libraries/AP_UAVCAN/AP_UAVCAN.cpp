@@ -486,13 +486,13 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
     // do stuff for BattMonitor type 84
     if (msg.esc_index >= 8) return; //is not absolutely needed, since BP_BattMonitor_UC4H protects itself, but avoids the following call, so keep it
 
-    uint32_t id = 0; //the esc status has an esc_index, but they all must go to the same BattMonitor
+    uint32_t id = (((uint32_t)msg.esc_index & 0x000000FF) << 16);
 
     uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24 ) + id;
 
     AP_BattMonitor* battmon = AP_BattMonitor::get_singleton(); //AP_BattMonitor &battery = AP::battery();
     if (battmon) {
-        battmon->handle_escstatus_msg(ext_id, msg.esc_index, msg.voltage, msg.current);
+        battmon->handle_escstatus_msg(ext_id, msg.voltage, msg.current);
     }
 }
 

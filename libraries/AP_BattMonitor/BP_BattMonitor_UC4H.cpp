@@ -143,11 +143,12 @@ void BP_BattMonitor_UC4H::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, flo
     }
 }
 
-void BP_BattMonitor_UC4H::handle_escstatus_msg(uint32_t ext_id, uint16_t esc_index, float voltage, float current)
+void BP_BattMonitor_UC4H::handle_escstatus_msg(uint32_t ext_id, float voltage, float current)
 {
 //    uint32_t id = (ext_id & 0x00FFFFFF);
 //    if (id != _own_id) return;
 //we catch them all!
+    uint8_t esc_index = ((ext_id & 0x00FF0000) >> 16);
 
     if (esc_index >= BP_BATTMONITOR_UC4H_MAX_ESC) return; //to prevent _escstatus[] array overflow
 

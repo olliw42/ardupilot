@@ -177,7 +177,7 @@ public:
     static AP_BattMonitor* get_singleton(void) { return _singleton; }
 
     void handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltage, float current, float charge, float energy, uint16_t cells_num, float* cells);
-    void handle_escstatus_msg(uint32_t ext_id, uint16_t esc_index, float voltage, float current);
+    void handle_escstatus_msg(uint32_t ext_id, float voltage, float current);
 
 private:
     BP_Uavcan_Handler<BP_BattMonitor_UC4H,AP_BATT_MONITOR_MAX_INSTANCES> _uavcan_handler_uc4hgenericbatteryinfo;
