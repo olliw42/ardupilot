@@ -39,7 +39,6 @@ BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state,
     state.last_reading_ms = 0;
 
     _my_sem = hal.util->new_semaphore();
-
 }
 
 
@@ -127,38 +126,29 @@ void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_
         _node_id = (uint8_t)((ext_id & 0xFF000000) >> 24);
     }
 
-//    if (_my_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    _range_flag = range_flag;
 
-         //this indicates that valid data has arrived
-         // this only can happen if AP_RangeFinder_UC4H::init() was successful, so no need for an additional flag
-//         _initialized = true;
+    switch( range_flag ){
+    case UC4HDISTANCE_RANGE_INVALID:
+        //skip the data
+        break;
+    case UC4HDISTANCE_RANGE_VALID:
+        _range = range;
+        break;
+    case UC4HDISTANCE_RANGE_TOOCLOSE:
+        _range = 0.02f; //use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
+        break;
+    case UC4HDISTANCE_RANGE_TOOFAR:
+        //_range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
+        _range = (max_distance_cm() + 50) * 0.01f; //make it larger so that AP_RangeFinder_Backend's update_status() triggers
+        break;
+    default:
+        //skip the data
+        _range_flag = UC4HDISTANCE_RANGE_INVALID; //set this so we can handle it alike
+        break;
+    }
 
-         _range_flag = range_flag;
-
-         switch( range_flag ){
-         case UC4HDISTANCE_RANGE_INVALID:
-             //skip the data
-             break;
-         case UC4HDISTANCE_RANGE_VALID:
-             _range = range;
-             break;
-         case UC4HDISTANCE_RANGE_TOOCLOSE:
-             _range = 0.02f; //use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
-             break;
-         case UC4HDISTANCE_RANGE_TOOFAR:
-             //_range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
-             _range = (max_distance_cm() + 50) * 0.01f; //make it larger so that AP_RangeFinder_Backend's update_status() triggers
-             break;
-         default:
-             //skip the data
-             _range_flag = UC4HDISTANCE_RANGE_INVALID; //set this so we can handle it alike
-             break;
-         }
-
-         _new_distance_received = true; //we set this even if the data was bad, bad data is handled by update()
-
-//         _my_sem->give();
-//    }
+    _new_distance_received = true; //we set this even if the data was bad, bad data is handled by update()
 }
 
 
@@ -167,36 +157,20 @@ uint32_t BP_RangeFinder_UC4H::_calc_id(int8_t pitch, int8_t yaw, uint8_t sub_id)
     return ((uint32_t)pitch & 0x000000FF) + ( ((uint32_t)yaw & 0x000000FF) << 8 ) + ( ((uint32_t)sub_id & 0x000000FF) << 16 );
 }
 
-// @Values: 0:Forward, 1:Forward-Right, 2:Right, 3:Back-Right, 4:Back, 5:Back-Left, 6:Left, 7:Forward-Left, 24:Up, 25:Down
+// 0:Forward, 1:Forward-Right, 2:Right, 3:Back-Right, 4:Back, 5:Back-Left, 6:Left, 7:Forward-Left, 24:Up, 25:Down
 uint32_t BP_RangeFinder_UC4H::_calc_id(uint8_t orient, uint8_t sub_id)
 {
 int8_t pitch, yaw; //the angles are in integer, and 15° steps, i.e. 90° = 6, 180° = 12, -90° = -6
 
     switch( orient ){
-    case ROTATION_NONE: //Forward
-        pitch = 0; yaw = 0;
-        break;
-    case ROTATION_YAW_45: //Forward-Right
-        pitch = 0; yaw = 3;
-        break;
-    case ROTATION_YAW_90: //Right
-        pitch = 0; yaw = 6;
-        break;
-    case ROTATION_YAW_135: //Back-Right
-        pitch = 0; yaw = 9;
-        break;
-    case ROTATION_YAW_180: //Back
-        pitch = 0; yaw = 12;
-        break;
-    case ROTATION_YAW_225: //Back-Left
-        pitch = 0; yaw = -9;
-        break;
-    case ROTATION_YAW_270: //Left
-        pitch = 0; yaw = -6;
-        break;
-    case ROTATION_YAW_315: //Forward-Left
-        pitch = 0; yaw = -3;
-        break;
+    case ROTATION_NONE:     pitch = 0; yaw = 0; break; //Forward
+    case ROTATION_YAW_45:   pitch = 0; yaw = 3; break; //Forward-Right
+    case ROTATION_YAW_90:   pitch = 0; yaw = 6; break; //Right
+    case ROTATION_YAW_135:  pitch = 0; yaw = 9; break; //Back-Right
+    case ROTATION_YAW_180:  pitch = 0; yaw = 12; break; //Back
+    case ROTATION_YAW_225:  pitch = 0; yaw = -9; break; //Back-Left
+    case ROTATION_YAW_270:  pitch = 0; yaw = -6; break; //Left
+    case ROTATION_YAW_315:  pitch = 0; yaw = -3; break; //Forward-Left
 //    case ROTATION_ROLL_180:                     pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_180_YAW_45:              pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_180_YAW_90:              pitch = 0; yaw = 0; break;
@@ -213,12 +187,8 @@ int8_t pitch, yaw; //the angles are in integer, and 15° steps, i.e. 90° = 6, 180
 //    case ROTATION_ROLL_270_YAW_45:              pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_270_YAW_90:              pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_270_YAW_135:             pitch = 0; yaw = 0; break;
-    case ROTATION_PITCH_90: //Up
-        pitch = 6;    yaw = 0;
-        break;
-    case ROTATION_PITCH_270: //Down
-        pitch = -6; yaw = 0;
-        break;
+    case ROTATION_PITCH_90:     pitch = 6; yaw = 0; break; //Up
+    case ROTATION_PITCH_270:    pitch = -6; yaw = 0; break; //Down
 //    case ROTATION_PITCH_180_YAW_90:             pitch = 0; yaw = 0; break;
 //    case ROTATION_PITCH_180_YAW_270:            pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_90_PITCH_90:             pitch = 0; yaw = 0; break;
