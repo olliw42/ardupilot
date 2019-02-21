@@ -20,11 +20,9 @@
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
 //OW
-#include <AP_RangeFinder/RangeFinder_Backend.h>
 #include "bp_dsdl_generated/olliw/uc4h/Notify.hpp"
 #include <uavcan/tunnel/Broadcast.hpp>
 #include "BP_UavcanTunnelManager.h"
-#include "BP_UavcanEscStatusManager.h"
 //OWEND
 
 #ifndef UAVCAN_NODE_POOL_SIZE
@@ -44,9 +42,6 @@
 #define AP_UAVCAN_MAX_MAG_NODES 4
 #define AP_UAVCAN_MAX_BARO_NODES 4
 #define AP_UAVCAN_MAX_BI_NUMBER 4
-//OW
-#define AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER 4 //we may want up to 10!
-//OWEND
 
 #define AP_UAVCAN_SW_VERS_MAJOR 1
 #define AP_UAVCAN_SW_VERS_MINOR 0
@@ -298,35 +293,7 @@ public:
 // --- uc4h.Distance ---
 // incoming message, by orientation id
     //we id it by the orientation and sub_id: pitch + (yaw << 8) + (sub_id << 16) => uint32_t
-    public:
-        struct Uc4hDistance_Data {
-            int8_t fixed_axis_pitch; // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
-            int8_t fixed_axis_yaw;   // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
-            uint8_t sensor_sub_id;   // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
-            uint8_t range_flag;      // uint3 range_flag
-            float range;             // float16 range                 # Meters
-            float range_min;         // float16 range_min             # Meters. Can be NAN if unknown.
-            float range_max;         // float16 range_max             # Meters. Can be NAN if unknown.
-            float vertical_field_of_view;   // float16 vertical_field_of_view       # Radians. Can be NAN if unknown.
-            float horizontal_field_of_view; // float16 horizontal_field_of_view     # Radians. Can be NAN if unknown.
-            //auxiliary meta data
-            bool sensor_properties_available;
-            uint8_t node_id;
-        };
-
-        uint8_t uc4hdistance_register_listener(AP_RangeFinder_Backend* new_listener, uint32_t id, uint8_t* node_id);
-        void uc4hdistance_remove_listener(AP_RangeFinder_Backend* rem_listener);
-        Uc4hDistance_Data* uc4hdistance_getptrto_data(uint8_t* data_i, uint32_t id);
-        void uc4hdistance_update_i(uint8_t data_i);
-
-    private:
-        struct {
-            uint32_t id[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
-            uint8_t id_taken[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
-            uint8_t listener_to_id[AP_UAVCAN_MAX_LISTENERS];
-            AP_RangeFinder_Backend* listeners[AP_UAVCAN_MAX_LISTENERS];
-            Uc4hDistance_Data data[AP_UAVCAN_UC4HDISTANCE_MAX_NUMBER];
-        } _uc4hdistance;
+    // uses singleton
 
 // --- EscStatus ---
     // incoming message, by device id

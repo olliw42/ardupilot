@@ -28,6 +28,10 @@
 #define RANGEFINDER_PREARM_REQUIRED_CHANGE_CM   50
 
 class AP_RangeFinder_Backend;
+//OW
+class BP_RangeFinder_UC4H; //forward declaration
+#include <AP_UAVCAN/BP_UavcanHandler.h>
+//OWEND
 
 class RangeFinder
 {
@@ -162,6 +166,12 @@ public:
 //OW
    // this reports the registered compasses to the ground station
    void send_banner(void);
+
+   // callback for UAVCAN message
+   void handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range);
+
+private:
+    BP_Uavcan_Handler<BP_RangeFinder_UC4H,RANGEFINDER_MAX_INSTANCES> _uavcan_handler;
 //OWEND
 
 protected:

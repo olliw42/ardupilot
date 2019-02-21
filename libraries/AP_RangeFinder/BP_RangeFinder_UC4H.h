@@ -30,11 +30,8 @@ public:
     void send_banner(uint8_t instance) override;
 
     // callback for UAVCAN message
-    void handle_uc4hdistance_msg(
-            int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id,
-            uint8_t range_flag, float range,
-            bool sensor_properties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view
-            ) override;
+    void handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range);
+//            bool sensor_properties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view
 
 protected:
 
@@ -50,9 +47,8 @@ private:
     uint8_t _instance;
 
     bool _initialized;
-    bool _registered;
     uint8_t _node_id;
-    uint32_t _id; // UC4H orientation id field
+    uint32_t _our_id;
     bool _send_banner;
 
     void _do_send_banner(void);

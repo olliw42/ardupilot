@@ -31,7 +31,7 @@ extern const AP_HAL::HAL& hal;
 BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params) :
     AP_RangeFinder_Backend(_state, _params)
 {
-    _registered = false;
+    _our_id = UINT32_MAX;
     _initialized = false;
     _send_banner = false;
     _new_distance_received = false;
@@ -39,43 +39,18 @@ BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state,
     state.last_reading_ms = 0;
 
     _my_sem = hal.util->new_semaphore();
+
 }
 
 
 bool BP_RangeFinder_UC4H::init()
 {
-    if (AP_BoardConfig_CAN::get_can_num_ifaces() == 0) {
+    _our_id = _calc_id(params.orientation.get(), params.address.get());
+
+    if (_our_id == UINT32_MAX) {
         return false;
     }
-
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-        AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(i);
-        if (ap_uavcan == nullptr) {
-            continue;
-        }
-
-        // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
-        // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
-        // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
-        //uint32_t id = _calc_id(-6, -1, 5);
-        uint32_t id = _calc_id(params.orientation.get(), params.address.get());
-
-        if (id == UINT32_MAX) {
-            continue;
-        }
-
-        uint8_t node_id;
-        if (ap_uavcan->uc4hdistance_register_listener(this, id, &node_id)) {
-           debug_rf_uavcan(2, "UAVCAN RangeFinder Uc4hDistance registered id: %d\n\r", id);
-           //_initialized = true; //don't set this here, wait for data to have arrived
-           _registered = true;
-           _node_id = node_id;
-           _id = id;
-           return true;
-        }
-    }
-
-    return false;
+    return true;
 }
 
 
@@ -119,37 +94,44 @@ void BP_RangeFinder_UC4H::send_banner(uint8_t instance)
 
 void BP_RangeFinder_UC4H::_do_send_banner(void)
 {
-    if (_send_banner && _registered) {
+    if (_send_banner) {
         _send_banner = false;
 
         if (!_initialized) {
             gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u notdet", _instance+1,
                     _node_id,
-                    _calc_pitch_from_id(_id) * 15,
-                    _calc_yaw_from_id(_id) * 15,
-                    _calc_subid_from_id(_id)
+                    _calc_pitch_from_id(_our_id) * 15,
+                    _calc_yaw_from_id(_our_id) * 15,
+                    _calc_subid_from_id(_our_id)
                     );
         } else {
             gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u", _instance+1,
-                    _node_id,
-                    _calc_pitch_from_id(_id) * 15,
-                    _calc_yaw_from_id(_id) * 15,
-                    _calc_subid_from_id(_id)
+                    _node_id, //BUG: _node id is not yet known!!!
+                    _calc_pitch_from_id(_our_id) * 15,
+                    _calc_yaw_from_id(_our_id) * 15,
+                    _calc_subid_from_id(_our_id)
                     );
         }
     }
 }
 
 
-void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id,
-        uint8_t range_flag, float range,
-        bool sensor_properties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view)
+void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range)
 {
-    if (_my_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    if ((_our_id == UINT32_MAX) || ((ext_id & 0x00FFFFFF) != _our_id)) {
+        return;
+    }
+
+    if (!_initialized) {
+        _initialized = true;
+        _node_id = (uint8_t)((ext_id & 0xFF000000) >> 24);
+    }
+
+//    if (_my_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
 
          //this indicates that valid data has arrived
          // this only can happen if AP_RangeFinder_UC4H::init() was successful, so no need for an additional flag
-         _initialized = true;
+//         _initialized = true;
 
          _range_flag = range_flag;
 
@@ -175,8 +157,8 @@ void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_
 
          _new_distance_received = true; //we set this even if the data was bad, bad data is handled by update()
 
-         _my_sem->give();
-    }
+//         _my_sem->give();
+//    }
 }
 
 
