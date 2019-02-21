@@ -86,10 +86,10 @@
 #define MODE_THROW_ENABLED      DISABLED
 #define BEACON_ENABLED          DISABLED
 
-#define AC_FENCE                DISABLED
+//XX #define AC_FENCE                DISABLED
 #define AC_RALLY                DISABLED
 #define AC_TERRAIN              DISABLED
-#define AC_AVOID_ENABLED        DISABLED
+//XX #define AC_AVOID_ENABLED        DISABLED
 
 #define TOY_MODE_ENABLED        DISABLED
 #define DEVO_TELEM_ENABLED      DISABLED
