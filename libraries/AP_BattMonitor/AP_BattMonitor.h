@@ -180,8 +180,8 @@ public:
     void handle_escstatus_msg(uint32_t ext_id, uint16_t esc_index, float voltage, float current);
 
 private:
-    BP_Uavcan_Handler<BP_BattMonitor_UC4H> _uavcan_handler_uc4hgenericbatteryinfo;
-    BP_Uavcan_Handler<BP_BattMonitor_UC4H> _uavcan_handler_escstatus;
+    BP_Uavcan_Handler<BP_BattMonitor_UC4H,AP_BATT_MONITOR_MAX_INSTANCES> _uavcan_handler_uc4hgenericbatteryinfo;
+    BP_Uavcan_Handler<BP_BattMonitor_UC4H,1> _uavcan_handler_escstatus; //we allow only one backend of this type
 //OWEND
 
 protected:

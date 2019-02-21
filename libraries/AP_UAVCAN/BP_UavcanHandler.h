@@ -7,15 +7,13 @@
 #pragma once
 
 
-#define BP_UAVCAN_HANDLER_MAX_INSTANCES  16
-
-template <class T>
+template <class T,uint8_t MAX=16>
 class BP_Uavcan_Handler
 {
 public:
     bool add(T* uavcan_backend)
     {
-        if (!uavcan_backend || (_num_uavcan_instances >= BP_UAVCAN_HANDLER_MAX_INSTANCES)) return false;
+        if (!uavcan_backend || (_num_uavcan_instances >= MAX)) return false;
         _uavcan_handler[_num_uavcan_instances++] = uavcan_backend;
         return true;
     };
@@ -26,7 +24,8 @@ public:
 
 private:
     uint8_t _num_uavcan_instances;
-    T* _uavcan_handler[BP_UAVCAN_HANDLER_MAX_INSTANCES];
+    T* _uavcan_handler[MAX];
 };
+
 
 #define FOREACH_UAVCAN_HANDLER(H,x)  for(uint8_t i=0; i<H.num(); i++){ if (H.is_ok(i)) H.call(i)->x; }
