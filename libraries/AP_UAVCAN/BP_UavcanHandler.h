@@ -19,7 +19,9 @@ public:
     };
 
     uint8_t num(void){ return _num_uavcan_instances; }
+
     bool is_ok(uint8_t i){ return ((i < _num_uavcan_instances) && (_uavcan_handler[i] != nullptr)); }
+
     T* call(uint8_t i){ return _uavcan_handler[i]; } //no check for i in range since this MUTS be called only in safe cases !!!
 
 private:
