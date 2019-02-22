@@ -2,7 +2,7 @@
 //OW
 // (c) olliw, www.olliw.eu, GPL3
 //******************************************************
-//
+// Rangefinder backend to handle uc4.Distance UAVCAN messages
 
 #pragma once
 
@@ -13,12 +13,8 @@
 // UC4H
 /*
 TODO's:
-
-- select the rangefinder according to its orientation
 - set the parameters according to the UC4H message info
     such as RNGFND_MAX_CM, RNGFND_MIN_CM, RNGFND_ORIENT
-- work out the proper id-ing
-
 */
 
 class BP_RangeFinder_UC4H : public AP_RangeFinder_Backend {
@@ -37,7 +33,7 @@ public:
 
     // callback for UAVCAN message
     void handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range);
-//            bool sensor_properties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view
+    void handle_uc4hdistance_msg_sensorproperties(uint32_t ext_id, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view);
 
 protected:
 

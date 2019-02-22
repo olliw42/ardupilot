@@ -142,6 +142,12 @@ void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_
 }
 
 
+void BP_RangeFinder_UC4H::handle_uc4hdistance_msg_sensorproperties(uint32_t ext_id, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view)
+{
+
+}
+
+
 uint32_t BP_RangeFinder_UC4H::_calc_id(int8_t pitch, int8_t yaw, uint8_t sub_id)
 {
     return ((uint32_t)pitch & 0x000000FF) + ( ((uint32_t)yaw & 0x000000FF) << 8 ) + ( ((uint32_t)sub_id & 0x000000FF) << 16 );
