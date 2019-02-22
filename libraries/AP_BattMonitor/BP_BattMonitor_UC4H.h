@@ -41,6 +41,8 @@ public:
 private:
     BattMonitor_UC4H_Type _type;
 
+    uint32_t _own_id;
+
     bool _has_cell_voltages; //backend flags this as true once they have received a valid cell voltage report
 
     struct escstatus_data { //this is as received from uavcan.equipment.esc.Status
@@ -55,6 +57,4 @@ private:
     };
     struct escstatus_data _escstatus[BP_BATTMONITOR_UC4H_MAX_ESC];
     uint16_t _escstatus_maxindex;
-
-    uint32_t _own_id;
 };

@@ -21,10 +21,9 @@ BP_BattMonitor_UC4H::BP_BattMonitor_UC4H(AP_BattMonitor &mon, AP_BattMonitor::Ba
     AP_BattMonitor_Backend(mon, mon_state, params),
     _type(type)
 {
+    _own_id = UINT32_MAX;
     _state.healthy = false;
     _has_cell_voltages = false;
-
-    _own_id = UINT32_MAX;
 }
 
 void BP_BattMonitor_UC4H::init()

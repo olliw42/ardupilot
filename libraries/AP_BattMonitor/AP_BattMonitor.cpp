@@ -525,14 +525,14 @@ AP_BattMonitor &battery()
 void AP_BattMonitor::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltageX, float current, float charge, float energy, uint16_t cells_num, float* cellsX)
 {
     FOREACH_UAVCAN_HANDLER(_uavcan_handler_uc4hgenericbatteryinfo,
-            handle_uc4hgenericbatteryinfo_msg(ext_id, voltageX, current, charge, energy, cells_num, cellsX);
+            handle_uc4hgenericbatteryinfo_msg(ext_id, voltageX, current, charge, energy, cells_num, cellsX)
     );
 }
 
 void AP_BattMonitor::handle_escstatus_msg(uint32_t ext_id, float voltageX, float current)
 {
     FOREACH_UAVCAN_HANDLER(_uavcan_handler_escstatus,
-            handle_escstatus_msg(ext_id, voltageX, current);
+            handle_escstatus_msg(ext_id, voltageX, current)
     );
 }
 //OWEND
