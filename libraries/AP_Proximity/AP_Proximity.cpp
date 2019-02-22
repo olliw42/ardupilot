@@ -477,7 +477,14 @@ AP_Proximity *AP_Proximity::_singleton;
 void AP_Proximity::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range)
 {
     FOREACH_UAVCAN_HANDLER(_uavcan_handler,
-            handle_uc4hdistance_msg(ext_id, fixed_axis_pitch, fixed_axis_yaw, sensor_sub_id, range_flag, range);
+            handle_uc4hdistance_msg(ext_id, fixed_axis_pitch, fixed_axis_yaw, sensor_sub_id, range_flag, range)
+    );
+}
+
+void AP_Proximity::handle_uc4hdistance_msg_sensorproperties(uint32_t ext_id, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view)
+{
+    FOREACH_UAVCAN_HANDLER(_uavcan_handler,
+            handle_uc4hdistance_msg_sensorproperties(ext_id, range_min, range_max, vertical_field_of_view, horizontal_field_of_view)
     );
 }
 //OWEND

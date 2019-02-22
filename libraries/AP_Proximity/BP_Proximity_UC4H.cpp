@@ -85,4 +85,10 @@ void BP_Proximity_UC4H::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_ax
     }
 }
 
+
+void BP_Proximity_UC4H::handle_uc4hdistance_msg_sensorproperties(uint32_t ext_id, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view)
+{
+
+}
+
 #endif

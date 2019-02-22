@@ -2,7 +2,7 @@
 //OW
 // (c) olliw, www.olliw.eu, GPL3
 //******************************************************
-// BattMonitor backend to handle uc4.GenericBatteryInfo and EscStatus UAVCAN messages
+// Proximity backend to handle uc4.Distance UAVCAN messages
 
 #pragma once
 
@@ -28,7 +28,7 @@ public:
 
     // callback for UAVCAN messages
     void handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range);
-//    void handle_uc4hdistance_msg_sensorproperties(uint32_t ext_id, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view);
+    void handle_uc4hdistance_msg_sensorproperties(uint32_t ext_id, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view);
 
 private:
     enum uc4hdistance_flags {
