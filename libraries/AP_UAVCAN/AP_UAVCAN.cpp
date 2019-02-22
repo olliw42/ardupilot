@@ -47,8 +47,6 @@
 #include "bp_dsdl_generated/olliw/uc4h/GenericBatteryInfo.hpp"
 #include <uavcan/equipment/esc/Status.hpp>
 #include "bp_dsdl_generated/olliw/uc4h/Distance.hpp"
-#include <AP_BattMonitor/AP_BattMonitor.h>
-#include <AP_RangeFinder/RangeFinder.h>
 #include "BP_UavcanEscStatusManager.h"
 //OWEND
 
@@ -412,36 +410,6 @@ static void uc4hgenericbatteryinfo_cb0(const uavcan::ReceivedDataStructure<uavca
 static void uc4hgenericbatteryinfo_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg){ uc4hgenericbatteryinfo_cb_func(msg, 1); }
 static void (*uc4hgenericbatteryinfo_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg) = { uc4hgenericbatteryinfo_cb0, uc4hgenericbatteryinfo_cb1 };
 
-// --- uc4h.Distance ---
-// incoming message
-
-static void uc4hdistance_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg, uint8_t mgr)
-{
-    AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
-    if (ap_uavcan == nullptr) {
-        return;
-    }
-
-    //uint32_t id = msg.getSrcNodeID().get(); //by node id //msg.battery_id; //by device id
-    // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
-    // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
-    // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
-    uint32_t id =   ((uint32_t)msg.fixed_axis_pitch & 0x000000FF) +
-                   (((uint32_t)msg.fixed_axis_yaw & 0x000000FF) << 8) +
-                   (((uint32_t)msg.sensor_sub_id & 0x000000FF) << 16); //orientation id
-
-    uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24) + id;
-
-    RangeFinder* rangefinder = RangeFinder::get_singleton();
-    if (rangefinder) {
-        rangefinder->handle_uc4hdistance_msg( ext_id, msg.fixed_axis_pitch, msg.fixed_axis_yaw, msg.sensor_sub_id, msg.range_flag, msg.range);
-    }
-}
-
-static void uc4hdistance_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg){ uc4hdistance_cb_func(msg, 0); }
-static void uc4hdistance_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg){ uc4hdistance_cb_func(msg, 1); }
-static void (*uc4hdistance_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg) = { uc4hdistance_cb0, uc4hdistance_cb1 };
-
 //--- EscStatus ---
 // incoming message, by id
 
@@ -488,6 +456,60 @@ static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipm
 static void escstatus_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_cb_func(msg, 0); }
 static void escstatus_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_cb_func(msg, 1); }
 static void (*escstatus_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg) = { escstatus_cb0, escstatus_cb1 };
+
+// --- uc4h.Distance ---
+// incoming message
+
+static void uc4hdistance_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg, uint8_t mgr)
+{
+    AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
+    // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
+    // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
+    uint32_t id =   ((uint32_t)msg.fixed_axis_pitch & 0x000000FF) +
+                   (((uint32_t)msg.fixed_axis_yaw & 0x000000FF) << 8) +
+                   (((uint32_t)msg.sensor_sub_id & 0x000000FF) << 16); //orientation id
+
+    uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24) + id;
+
+    RangeFinder* rangefinder = RangeFinder::get_singleton();
+    if (rangefinder) {
+        rangefinder->handle_uc4hdistance_msg(ext_id,
+                msg.fixed_axis_pitch, msg.fixed_axis_yaw, msg.sensor_sub_id, msg.range_flag, msg.range);
+
+        if (msg.sensor_property.size() > 0) {
+            rangefinder->handle_uc4hdistance_msg_sensorproperties(
+                    ext_id,
+                    msg.sensor_property[0].range_min,
+                    msg.sensor_property[0].range_max,
+                    msg.sensor_property[0].vertical_field_of_view,
+                    msg.sensor_property[0].horizontal_field_of_view);
+        }
+    }
+
+    AP_Proximity* proxi = AP_Proximity::get_singleton();
+    if (proxi) {
+        proxi->handle_uc4hdistance_msg(ext_id,
+                msg.fixed_axis_pitch, msg.fixed_axis_yaw, msg.sensor_sub_id, msg.range_flag, msg.range);
+
+        if (msg.sensor_property.size() > 0) {
+            proxi->handle_uc4hdistance_msg_sensorproperties(
+                    ext_id,
+                    msg.sensor_property[0].range_min,
+                    msg.sensor_property[0].range_max,
+                    msg.sensor_property[0].vertical_field_of_view,
+                    msg.sensor_property[0].horizontal_field_of_view);
+        }
+    }
+}
+
+static void uc4hdistance_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg){ uc4hdistance_cb_func(msg, 0); }
+static void uc4hdistance_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg){ uc4hdistance_cb_func(msg, 1); }
+static void (*uc4hdistance_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg) = { uc4hdistance_cb0, uc4hdistance_cb1 };
 
 // --- tunnel.Broadcast ---
 // incoming message

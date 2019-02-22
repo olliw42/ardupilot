@@ -290,16 +290,16 @@ public:
     // incoming message, by device id
     // uses singleton
 
-// --- uc4h.Distance ---
-// incoming message, by orientation id
-    //we id it by the orientation and sub_id: pitch + (yaw << 8) + (sub_id << 16) => uint32_t
-    // uses singleton
-
 // --- EscStatus ---
     // incoming message, by device id
     // some of the handling is done by the BP_UavcanEscStatusManager class!
     // we write directly to this class, and write directly to the DataFlash, so just the BattMonitor=84 stuff to keep here
     // since EscStatus can come from different nodes and different esc_index, we catch them all hence id = 0
+    // uses singleton
+
+// --- uc4h.Distance ---
+// incoming message, by orientation id
+    //we id it by the orientation and sub_id: pitch + (yaw << 8) + (sub_id << 16) => uint32_t
     // uses singleton
 
 // --- uc4h.Notify ---
