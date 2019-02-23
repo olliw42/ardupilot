@@ -43,7 +43,7 @@ void BP_BattMonitor_UC4H::init()
                 _own_id = (((uint32_t)_params._serial_number.get() & 0x000000FF) << 16);
                 break;
             case UC4H_ESCSTATUS:
-                _own_id = 0; //it should capture all esc status messages
+                _own_id = 0; //it captures all esc status messages, so all id's are accepted and _own_id is irrelevant
                 //_params._low_voltage = 0.0f; is this good or bad idea?
                 break;
         }
