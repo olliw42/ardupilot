@@ -75,19 +75,7 @@ void BP_Proximity_UC4H::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_ax
     if (fixed_axis_pitch == 0) {
         //horizontal sensor
         uint8_t sector = (fixed_axis_yaw >= -1) ? (fixed_axis_yaw + 1) / 3 : (25 + fixed_axis_yaw) / 3; //sector 0...7
-        if (sector >= 8) return; //shit
-/*        uint8_t sector = 0;
-        switch (fixed_axis_yaw) {
-        case -1:  case 0:  case 1:   sector = 0; break;
-        case 2:   case 3:  case 4:   sector = 1; break;
-        case 5:   case 6:  case 7:   sector = 2; break;
-        case 8:   case 9:  case 10:  sector = 3; break;
-        case 11:  case 12:           sector = 4; break;
-        case -11: case -12:          sector = 4; break;
-        case -10: case -9: case -8:  sector = 5; break;
-        case -7:  case -6: case -5:  sector = 6; break;
-        case -4:  case -3: case -2:  sector = 7; break;
-        }*/
+        if (sector >= 8) return; //should never happen, but play it safe
 
         _angle[sector] = sector * 45.0f; //we could be more precise by taking the 15° info into account, but it doesn't matter so ignore
         _distance[sector] = range;
