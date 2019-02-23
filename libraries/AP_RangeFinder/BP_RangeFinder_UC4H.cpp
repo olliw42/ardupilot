@@ -88,14 +88,14 @@ void BP_RangeFinder_UC4H::_do_send_banner(void)
 
         if (!_initialized) {
             gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u notdet", _instance+1,
-                    _node_id,
+                    _node_id, //BUG: _node id is not yet known!!!
                     _calc_pitch_from_id(_our_id) * 15,
                     _calc_yaw_from_id(_our_id) * 15,
                     _calc_subid_from_id(_our_id)
                     );
         } else {
             gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u", _instance+1,
-                    _node_id, //BUG: _node id is not yet known!!!
+                    _node_id,
                     _calc_pitch_from_id(_our_id) * 15,
                     _calc_yaw_from_id(_our_id) * 15,
                     _calc_subid_from_id(_our_id)
