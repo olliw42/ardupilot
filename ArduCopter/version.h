@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.6"
-#define THISFIRMWARE "BetaCopter V3.6.6 v019u bm 01"
+#define THISFIRMWARE "BetaCopter V3.6.6 v019u"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -29,6 +29,7 @@ features:
  - barometer proper gcs sendtext
  - UC4H uavcan EscStatus: simplified DataFlash, BattMonitor type 84, 3 BattMonitors, MAVLink EscStatus
  - UC4H uavcan RangeFinder: type 83
+ - UC4H uavcan Proximity: type 83
 
 20181226:
  - cell voltages for UC4H PowerBrick, AP_UAVCAN, AP_BattMonitor_UAVCAN, AP_BattMonitor_Backend, LogStructure, GCS_Common
@@ -45,6 +46,9 @@ features:
  - support 10 range finders, PR#8816 integrated, with two bugs corrected
    comment: Copter/Sub use an extra parameter RNGFND_GAIN, rangefinder_gain, which is for all rangefinders
    7 params moved to analog/PX4_PWM backend
+20190223:
+ - uc4h Proximity
+ - BP_UavcanHandler, simplify all receiving messages
 
 
 changed files:
