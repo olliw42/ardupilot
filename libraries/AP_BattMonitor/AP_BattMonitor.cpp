@@ -5,6 +5,9 @@
 #include "AP_BattMonitor_BLHeliESC.h"
 #if HAL_WITH_UAVCAN
 #include "AP_BattMonitor_UAVCAN.h"
+//OW
+#include "BP_BattMonitor_UC4H.h"
+//OWEND
 #endif
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 #include <DataFlash/DataFlash.h>
@@ -112,18 +115,26 @@ AP_BattMonitor::init()
 #endif
                 break;
 //OW
-            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_Uc4hGenericBatteryInfo:
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_Uc4hGenericBatteryInfo:{
 #if HAL_WITH_UAVCAN
-                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], AP_BattMonitor_UAVCAN::UAVCAN_UC4HGENERICBATTERY_INFO, _params[instance]);
+//                drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_UC4HGENERICBATTERYINFO);
+//                _num_instances++;
+                BP_BattMonitor_UC4H* battmon = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_UC4HGENERICBATTERYINFO);
+                _uavcan_handler_uc4hgenericbatteryinfo.add(battmon);
+                drivers[instance] = battmon;
                 _num_instances++;
 #endif
-                break;
-            case AP_BattMonitor_Params::BattMonitor_TYPE_UAVCAN_EscStatus:
+                }break;
+            case AP_BattMonitor_Params::BattMonitor_TYPE_UC4H_EscStatus:{
 #if HAL_WITH_UAVCAN
-                drivers[instance] = new AP_BattMonitor_UAVCAN(*this, state[instance], AP_BattMonitor_UAVCAN::UAVCAN_ESCSTATUS, _params[instance]);
+//                drivers[instance] = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_ESCSTATUS);
+//                _num_instances++;
+                BP_BattMonitor_UC4H* battmon = new BP_BattMonitor_UC4H(*this, state[instance], _params[instance], BP_BattMonitor_UC4H::UC4H_ESCSTATUS);
+                _uavcan_handler_escstatus.add(battmon);
+                drivers[instance] = battmon;
                 _num_instances++;
 #endif
-                break;
+                }break;
 //OWEND
             case AP_BattMonitor_Params::BattMonitor_TYPE_NONE:
             default:
@@ -508,3 +519,20 @@ AP_BattMonitor &battery()
 }
 
 };
+
+//OW
+// voltageX, cellsX to avoid shadowing of members of 'this'
+void AP_BattMonitor::handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltageX, float current, float charge, float energy, uint16_t cells_num, float* cellsX)
+{
+    FOREACH_UAVCAN_HANDLER(_uavcan_handler_uc4hgenericbatteryinfo,
+            handle_uc4hgenericbatteryinfo_msg(ext_id, voltageX, current, charge, energy, cells_num, cellsX)
+    );
+}
+
+void AP_BattMonitor::handle_escstatus_msg(uint32_t ext_id, float voltageX, float current)
+{
+    FOREACH_UAVCAN_HANDLER(_uavcan_handler_escstatus,
+            handle_escstatus_msg(ext_id, voltageX, current)
+    );
+}
+//OWEND

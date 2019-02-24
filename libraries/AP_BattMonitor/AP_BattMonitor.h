@@ -29,6 +29,10 @@ class AP_BattMonitor_SMBus;
 class AP_BattMonitor_SMBus_Solo;
 class AP_BattMonitor_SMBus_Maxell;
 class AP_BattMonitor_UAVCAN;
+//OW
+class BP_BattMonitor_UC4H; //forward declaration
+#include <AP_UAVCAN/BP_UavcanHandler.h>
+//OWEND
 
 class AP_BattMonitor
 {
@@ -168,6 +172,17 @@ public:
     float get_resistance(uint8_t instance) const { return state[instance].resistance; }
 
     static const struct AP_Param::GroupInfo var_info[];
+
+//OW
+    static AP_BattMonitor* get_singleton(void) { return _singleton; }
+
+    void handle_uc4hgenericbatteryinfo_msg(uint32_t ext_id, float voltage, float current, float charge, float energy, uint16_t cells_num, float* cells);
+    void handle_escstatus_msg(uint32_t ext_id, float voltage, float current);
+
+private:
+    BP_Uavcan_Handler<BP_BattMonitor_UC4H,AP_BATT_MONITOR_MAX_INSTANCES> _uavcan_handler_uc4hgenericbatteryinfo;
+    BP_Uavcan_Handler<BP_BattMonitor_UC4H,1> _uavcan_handler_escstatus; //we allow only one backend of this type
+//OWEND
 
 protected:
 

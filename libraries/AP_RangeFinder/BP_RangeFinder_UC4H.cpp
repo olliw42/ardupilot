@@ -1,17 +1,7 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+//******************************************************
+//OW
+// (c) olliw, www.olliw.eu, GPL3
+//******************************************************
 
 #include <AP_HAL/AP_HAL.h>
 
@@ -31,7 +21,7 @@ extern const AP_HAL::HAL& hal;
 BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params) :
     AP_RangeFinder_Backend(_state, _params)
 {
-    _registered = false;
+    _our_id = UINT32_MAX;
     _initialized = false;
     _send_banner = false;
     _new_distance_received = false;
@@ -44,38 +34,12 @@ BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state,
 
 bool BP_RangeFinder_UC4H::init()
 {
-    if (AP_BoardConfig_CAN::get_can_num_ifaces() == 0) {
+    _our_id = _calc_id(params.orientation.get(), params.address.get());
+
+    if (_our_id == UINT32_MAX) {
         return false;
     }
-
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_CAN_DRIVERS; i++) {
-        AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(i);
-        if (ap_uavcan == nullptr) {
-            continue;
-        }
-
-        // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
-        // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
-        // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
-        //uint32_t id = _calc_id(-6, -1, 5);
-        uint32_t id = _calc_id(params.orientation.get(), params.address.get());
-
-        if (id == UINT32_MAX) {
-            continue;
-        }
-
-        uint8_t node_id;
-        if (ap_uavcan->uc4hdistance_register_listener(this, id, &node_id)) {
-           debug_rf_uavcan(2, "UAVCAN RangeFinder Uc4hDistance registered id: %d\n\r", id);
-           //_initialized = true; //don't set this here, wait for data to have arrived
-           _registered = true;
-           _node_id = node_id;
-           _id = id;
-           return true;
-        }
-    }
-
-    return false;
+    return true;
 }
 
 
@@ -119,64 +83,68 @@ void BP_RangeFinder_UC4H::send_banner(uint8_t instance)
 
 void BP_RangeFinder_UC4H::_do_send_banner(void)
 {
-    if (_send_banner && _registered) {
+    if (_send_banner) {
         _send_banner = false;
 
         if (!_initialized) {
             gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u notdet", _instance+1,
-                    _node_id,
-                    _calc_pitch_from_id(_id) * 15,
-                    _calc_yaw_from_id(_id) * 15,
-                    _calc_subid_from_id(_id)
+                    _node_id, //BUG: _node id is not yet known!!!
+                    _calc_pitch_from_id(_our_id) * 15,
+                    _calc_yaw_from_id(_our_id) * 15,
+                    _calc_subid_from_id(_our_id)
                     );
         } else {
             gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H %u %i %i %u", _instance+1,
                     _node_id,
-                    _calc_pitch_from_id(_id) * 15,
-                    _calc_yaw_from_id(_id) * 15,
-                    _calc_subid_from_id(_id)
+                    _calc_pitch_from_id(_our_id) * 15,
+                    _calc_yaw_from_id(_our_id) * 15,
+                    _calc_subid_from_id(_our_id)
                     );
         }
     }
 }
 
 
-void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id,
-        uint8_t range_flag, float range,
-        bool sensor_properties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view)
+void BP_RangeFinder_UC4H::handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range)
 {
-    if (_my_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-
-         //this indicates that valid data has arrived
-         // this only can happen if AP_RangeFinder_UC4H::init() was successful, so no need for an additional flag
-         _initialized = true;
-
-         _range_flag = range_flag;
-
-         switch( range_flag ){
-         case UC4HDISTANCE_RANGE_INVALID:
-             //skip the data
-             break;
-         case UC4HDISTANCE_RANGE_VALID:
-             _range = range;
-             break;
-         case UC4HDISTANCE_RANGE_TOOCLOSE:
-             _range = 0.02f; //use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
-             break;
-         case UC4HDISTANCE_RANGE_TOOFAR:
-             //_range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
-             _range = (max_distance_cm() + 50) * 0.01f; //make it larger so that AP_RangeFinder_Backend's update_status() triggers
-             break;
-         default:
-             //skip the data
-             _range_flag = UC4HDISTANCE_RANGE_INVALID; //set this so we can handle it alike
-             break;
-         }
-
-         _new_distance_received = true; //we set this even if the data was bad, bad data is handled by update()
-
-         _my_sem->give();
+    if ((_our_id == UINT32_MAX) || ((ext_id & 0x00FFFFFF) != _our_id)) {
+        return;
     }
+
+    if (!_initialized) {
+        _initialized = true;
+        _node_id = (uint8_t)((ext_id & 0xFF000000) >> 24);
+    }
+
+    _range_flag = range_flag;
+
+    switch( range_flag ){
+    case UC4HDISTANCE_RANGE_INVALID:
+        //skip the data
+        break;
+    case UC4HDISTANCE_RANGE_VALID:
+        _range = range;
+        break;
+    case UC4HDISTANCE_RANGE_TOOCLOSE:
+        _range = 0.02f; //use something very small, so that AP_RangeFinder_Backend's update_status() can do the job
+        break;
+    case UC4HDISTANCE_RANGE_TOOFAR:
+        //_range = 100.00f;  //for the moment use something very large, so that AP_RangeFinder_Backend's update_status() can do the job
+        _range = (max_distance_cm() + 50) * 0.01f; //make it larger so that AP_RangeFinder_Backend's update_status() triggers
+        break;
+    default:
+        //skip the data
+        _range_flag = UC4HDISTANCE_RANGE_INVALID; //set this so we can handle it alike
+        break;
+    }
+
+    _new_distance_received = true; //we set this even if the data was bad, bad data is handled by update()
+}
+
+
+void BP_RangeFinder_UC4H::handle_uc4hdistance_msg_sensorproperties(uint32_t ext_id, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view)
+{
+
 }
 
 
@@ -185,36 +153,20 @@ uint32_t BP_RangeFinder_UC4H::_calc_id(int8_t pitch, int8_t yaw, uint8_t sub_id)
     return ((uint32_t)pitch & 0x000000FF) + ( ((uint32_t)yaw & 0x000000FF) << 8 ) + ( ((uint32_t)sub_id & 0x000000FF) << 16 );
 }
 
-// @Values: 0:Forward, 1:Forward-Right, 2:Right, 3:Back-Right, 4:Back, 5:Back-Left, 6:Left, 7:Forward-Left, 24:Up, 25:Down
+// 0:Forward, 1:Forward-Right, 2:Right, 3:Back-Right, 4:Back, 5:Back-Left, 6:Left, 7:Forward-Left, 24:Up, 25:Down
 uint32_t BP_RangeFinder_UC4H::_calc_id(uint8_t orient, uint8_t sub_id)
 {
 int8_t pitch, yaw; //the angles are in integer, and 15° steps, i.e. 90° = 6, 180° = 12, -90° = -6
 
     switch( orient ){
-    case ROTATION_NONE: //Forward
-        pitch = 0; yaw = 0;
-        break;
-    case ROTATION_YAW_45: //Forward-Right
-        pitch = 0; yaw = 3;
-        break;
-    case ROTATION_YAW_90: //Right
-        pitch = 0; yaw = 6;
-        break;
-    case ROTATION_YAW_135: //Back-Right
-        pitch = 0; yaw = 9;
-        break;
-    case ROTATION_YAW_180: //Back
-        pitch = 0; yaw = 12;
-        break;
-    case ROTATION_YAW_225: //Back-Left
-        pitch = 0; yaw = -9;
-        break;
-    case ROTATION_YAW_270: //Left
-        pitch = 0; yaw = -6;
-        break;
-    case ROTATION_YAW_315: //Forward-Left
-        pitch = 0; yaw = -3;
-        break;
+    case ROTATION_NONE:     pitch = 0; yaw = 0; break; //Forward
+    case ROTATION_YAW_45:   pitch = 0; yaw = 3; break; //Forward-Right
+    case ROTATION_YAW_90:   pitch = 0; yaw = 6; break; //Right
+    case ROTATION_YAW_135:  pitch = 0; yaw = 9; break; //Back-Right
+    case ROTATION_YAW_180:  pitch = 0; yaw = 12; break; //Back
+    case ROTATION_YAW_225:  pitch = 0; yaw = -9; break; //Back-Left
+    case ROTATION_YAW_270:  pitch = 0; yaw = -6; break; //Left
+    case ROTATION_YAW_315:  pitch = 0; yaw = -3; break; //Forward-Left
 //    case ROTATION_ROLL_180:                     pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_180_YAW_45:              pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_180_YAW_90:              pitch = 0; yaw = 0; break;
@@ -231,12 +183,8 @@ int8_t pitch, yaw; //the angles are in integer, and 15° steps, i.e. 90° = 6, 180
 //    case ROTATION_ROLL_270_YAW_45:              pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_270_YAW_90:              pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_270_YAW_135:             pitch = 0; yaw = 0; break;
-    case ROTATION_PITCH_90: //Up
-        pitch = 6;    yaw = 0;
-        break;
-    case ROTATION_PITCH_270: //Down
-        pitch = -6; yaw = 0;
-        break;
+    case ROTATION_PITCH_90:     pitch = 6; yaw = 0; break; //Up
+    case ROTATION_PITCH_270:    pitch = -6; yaw = 0; break; //Down
 //    case ROTATION_PITCH_180_YAW_90:             pitch = 0; yaw = 0; break;
 //    case ROTATION_PITCH_180_YAW_270:            pitch = 0; yaw = 0; break;
 //    case ROTATION_ROLL_90_PITCH_90:             pitch = 0; yaw = 0; break;

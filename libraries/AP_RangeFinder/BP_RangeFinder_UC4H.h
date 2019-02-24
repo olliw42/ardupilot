@@ -1,3 +1,9 @@
+//******************************************************
+//OW
+// (c) olliw, www.olliw.eu, GPL3
+//******************************************************
+// Rangefinder backend to handle uc4.Distance UAVCAN messages
+
 #pragma once
 
 #include <AP_UAVCAN/AP_UAVCAN.h>
@@ -7,12 +13,8 @@
 // UC4H
 /*
 TODO's:
-
-- select the rangefinder according to its orientation
 - set the parameters according to the UC4H message info
     such as RNGFND_MAX_CM, RNGFND_MIN_CM, RNGFND_ORIENT
-- work out the proper id-ing
-
 */
 
 class BP_RangeFinder_UC4H : public AP_RangeFinder_Backend {
@@ -30,29 +32,19 @@ public:
     void send_banner(uint8_t instance) override;
 
     // callback for UAVCAN message
-    void handle_uc4hdistance_msg(
-            int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id,
-            uint8_t range_flag, float range,
-            bool sensor_properties_available, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view
-            ) override;
+    void handle_uc4hdistance_msg(uint32_t ext_id, int8_t fixed_axis_pitch, int8_t fixed_axis_yaw, uint8_t sensor_sub_id, uint8_t range_flag, float range);
+    void handle_uc4hdistance_msg_sensorproperties(uint32_t ext_id, float range_min, float range_max, float vertical_field_of_view, float horizontal_field_of_view);
 
 protected:
 
     virtual MAV_DISTANCE_SENSOR _get_mav_distance_sensor_type() const override { return MAV_DISTANCE_SENSOR_LASER; }
 
 private:
-    uint32_t _calc_id(int8_t pitch, int8_t yaw, uint8_t sub_id);
-    uint32_t _calc_id(uint8_t orientation, uint8_t sub_id);
-    int8_t _calc_pitch_from_id(uint32_t id);
-    int8_t _calc_yaw_from_id(uint32_t id);
-    uint8_t _calc_subid_from_id(uint32_t id);
-
     uint8_t _instance;
 
     bool _initialized;
-    bool _registered;
     uint8_t _node_id;
-    uint32_t _id; // UC4H orientation id field
+    uint32_t _our_id;
     bool _send_banner;
 
     void _do_send_banner(void);
@@ -74,4 +66,10 @@ private:
     // seems to be either a bug, or some inconsistent programming
 
     AP_HAL::Semaphore* _my_sem;
+
+    uint32_t _calc_id(int8_t pitch, int8_t yaw, uint8_t sub_id);
+    uint32_t _calc_id(uint8_t orientation, uint8_t sub_id);
+    int8_t _calc_pitch_from_id(uint32_t id);
+    int8_t _calc_yaw_from_id(uint32_t id);
+    uint8_t _calc_subid_from_id(uint32_t id);
 };

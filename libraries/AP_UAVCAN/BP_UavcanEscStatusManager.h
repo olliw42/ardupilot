@@ -51,7 +51,7 @@ private:
         float temperature_degC;
         uint32_t rx_count;
     };
-    struct escstatus_data _escstatus[12];
+    struct escstatus_data _esc_status[12];
     uint16_t _esc_maxindex;
 };
 

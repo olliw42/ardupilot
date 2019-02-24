@@ -31,29 +31,30 @@ void BP_UavcanEscStatusManager::write_to_escindex(uint16_t esc_index,
 {
     if (esc_index >= 12) return;
 
-    uint64_t tnow64 = AP_HAL::micros64();
-    uint32_t tnow = tnow64; //AP_HAL::micros();
+    uint64_t now64_us = AP_HAL::micros64();
+    uint32_t now_us = now64_us; //AP_HAL::micros();
 
     //calculate the consumed charge in mAh and energy in Wh, for later use by whoever might be interested
-    uint32_t dt = tnow - _escstatus[esc_index].timestamp_us; //this is the time of the previously received msg
-    if (_escstatus[esc_index].timestamp_us != 0 && dt < 2000000) {
+    uint32_t dt = now_us - _esc_status[esc_index].timestamp_us; //this is the time of the previously received msg
+    if ((_esc_status[esc_index].timestamp_us != 0) && (dt < 2000000)) {
         float mah = (float) ((double) current * (double) dt * (double) 0.0000002778f);
-        _escstatus[esc_index].consumed_charge_mah += mah;
-        _escstatus[esc_index].consumed_energy_wh  += 0.001f * mah * voltage;
+        _esc_status[esc_index].consumed_charge_mah += mah;
+        _esc_status[esc_index].consumed_energy_wh  += 0.001f * mah * voltage;
     }
 
     //calculate the temperature in C°, for later use by whoever might be interested
     //TODO: use is_equal(), but check if it does exactly what is the intention here
-    _escstatus[esc_index].temperature_degC = (!uavcan::isNaN(temperature) && (!temperature != 0.0f)) ? temperature - C_TO_KELVIN : 0.0f;
+//??    _esc_status[esc_index].temperature_degC = (!uavcan::isNaN(temperature) && (!temperature != 0.0f)) ? temperature - C_TO_KELVIN : 0.0f;
+    _esc_status[esc_index].temperature_degC = (!uavcan::isNaN(temperature) && !is_equal(temperature,0.0f)) ? temperature - C_TO_KELVIN : 0.0f;
 
-    _escstatus[esc_index].rpm = rpm;
-    _escstatus[esc_index].voltage = voltage;
-    _escstatus[esc_index].current = current;
-    _escstatus[esc_index].temperature = temperature;
+    _esc_status[esc_index].rpm = rpm;
+    _esc_status[esc_index].voltage = voltage;
+    _esc_status[esc_index].current = current;
+    _esc_status[esc_index].temperature = temperature;
 
-    _escstatus[esc_index].timestamp_us = tnow;
-    _escstatus[esc_index].timestamp64_us = tnow64;
-    _escstatus[esc_index].rx_count++;
+    _esc_status[esc_index].timestamp_us = now_us;
+    _esc_status[esc_index].timestamp64_us = now64_us;
+    _esc_status[esc_index].rx_count++;
 
     if (esc_index >= _esc_maxindex) _esc_maxindex = esc_index + 1; //this is the number of motors, assuming that esc_index is continuous
 }
@@ -67,12 +68,12 @@ void BP_UavcanEscStatusManager::log_to_dataflash(uint16_t esc_index)
     if (df && df->logging_enabled()) {
         struct log_Esc pkt = {
             LOG_PACKET_HEADER_INIT((uint8_t)(LOG_ESC1_MSG + esc_index)),
-            time_us     : _escstatus[esc_index].timestamp64_us,
-            rpm         : (int32_t)(_escstatus[esc_index].rpm  * 100), //see comment in LogStructure.h !!!
-            voltage     : (uint16_t)(_escstatus[esc_index].voltage * 100.0f + 0.5f),
-            current     : (uint16_t)(_escstatus[esc_index].current * 100.0f + 0.5f),
-            temperature : (int16_t)(_escstatus[esc_index].temperature_degC * 100.0f + 0.5f),
-            current_tot : (uint16_t)(_escstatus[esc_index].consumed_charge_mah + 0.5f)
+            time_us     : _esc_status[esc_index].timestamp64_us,
+            rpm         : (int32_t)(_esc_status[esc_index].rpm * 100), //see comment in LogStructure.h !!!
+            voltage     : (uint16_t)(_esc_status[esc_index].voltage * 100.0f + 0.5f),
+            current     : (uint16_t)(_esc_status[esc_index].current * 100.0f + 0.5f),
+            temperature : (int16_t)(_esc_status[esc_index].temperature_degC * 100.0f + 0.5f),
+            current_tot : (uint16_t)(_esc_status[esc_index].consumed_charge_mah + 0.5f)
         };
         df->WriteBlock(&pkt, sizeof(pkt));
     }
@@ -99,21 +100,21 @@ void BP_UavcanEscStatusManager::send_esc_telemetry_mavlink(uint8_t mav_chan)
     uint16_t count[4] {};
     uint8_t temperature[4] {};
 
-    uint32_t tnow = AP_HAL::micros();
+    uint32_t now_us = AP_HAL::micros();
 
     if (_esc_maxindex >= 12) _esc_maxindex = 12;
 
     for (uint8_t i=0; i<_esc_maxindex; i++) {
         uint8_t idx = i % 4;
 
-        if (_escstatus[i].timestamp_us && ((tnow - _escstatus[i].timestamp_us) < 1000000)) {
-            voltage[idx]      = (uint16_t)(_escstatus[i].voltage*100.0f + 0.5f);
-            current[idx]      = (uint16_t)(_escstatus[i].current*100.0f + 0.5f);
-            totalcurrent[idx] = _escstatus[i].consumed_charge_mah;
-            rpm[idx]          = _escstatus[i].rpm;
-            count[idx]        = _escstatus[i].rx_count;
+        if (_esc_status[i].timestamp_us && ((now_us - _esc_status[i].timestamp_us) < 1000000)) {
+            voltage[idx]      = (uint16_t)(_esc_status[i].voltage*100.0f + 0.5f);
+            current[idx]      = (uint16_t)(_esc_status[i].current*100.0f + 0.5f);
+            totalcurrent[idx] = _esc_status[i].consumed_charge_mah;
+            rpm[idx]          = _esc_status[i].rpm;
+            count[idx]        = _esc_status[i].rx_count;
 
-            float temp_degC = _escstatus[i].temperature_degC;
+            float temp_degC = _esc_status[i].temperature_degC;
             if (temp_degC < 0.0f) temp_degC = 0.0f;
             temperature[idx]  = (int8_t)(temp_degC + 0.5f);
 
