@@ -35,6 +35,21 @@
 
 #include <uavcan/equipment/power/BatteryInfo.hpp>
 
+//OW
+// 1. place the .dsdl datatype file in \modules\uavcan\dsdl\uavcan
+// 2. delete folder \modules\uavcan\libuavcan\include\dsdl_generated to invoke the dsdl_compiler
+//sadly, only the subfolder \modules\uavcan\dsdl\uavcan is scanned by the build system
+//so vendor-specific messages are not possible, we thus must fake our messages into the standard dataset
+// 3. doing this causes all sorts of issues with git, which I couldn't work out,
+//    they're mainly because I can't add/commit and thus can't checkout to e.g. master
+//the workaround is to "somehow" get the .hpp file generated, without affecting the uavcan submodule in any way,
+//and to place the new .hpp into the AP_UAVCAN library folder
+#include "bp_dsdl_generated/olliw/uc4h/GenericBatteryInfo.hpp"
+#include <uavcan/equipment/esc/Status.hpp>
+#include "bp_dsdl_generated/olliw/uc4h/Distance.hpp"
+#include "BP_UavcanEscStatusManager.h"
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 #define debug_uavcan(level, fmt, args...) do { if ((level) <= AP_BoardConfig_CAN::get_can_debug()) { hal.console->printf(fmt, ##args); }} while (0)
@@ -363,6 +378,176 @@ static uavcan::Publisher<uavcan::equipment::actuator::ArrayCommand>* act_out_arr
 static uavcan::Publisher<uavcan::equipment::esc::RawCommand>* esc_raw[MAX_NUMBER_OF_CAN_DRIVERS];
 static uavcan::Publisher<uavcan::equipment::indication::LightsCommand>* rgb_led[MAX_NUMBER_OF_CAN_DRIVERS];
 
+//OW
+//--- uc4h.GenericBatteryInfo ---
+// incoming message, by id
+
+static void uc4hgenericbatteryinfo_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg, uint8_t mgr)
+{
+    uint32_t id = (((uint32_t)msg.battery_id & 0x000000FF) << 16);
+
+    uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24) + id;
+
+    //don't bother with higher cell voltage fields, can be whatever they want, any follow up code should check cells num
+    uint8_t cell_voltages_num = msg.cell_voltages.size();
+    float cell_voltages[12] = {};
+    bool cell_voltages_healthy = true;
+    for (uint16_t i = 0; i < cell_voltages_num; i++) {
+        if (uavcan::isNaN(msg.cell_voltages[i]) || is_equal(msg.cell_voltages[i], 0.0f)) { cell_voltages_healthy = false; }
+        cell_voltages[i] = msg.cell_voltages[i];
+    }
+    if (!cell_voltages_healthy) cell_voltages_num = 0; //something is wrong, so report no cells
+
+    AP_BattMonitor* battmon = AP_BattMonitor::get_singleton(); //AP_BattMonitor &battery = AP::battery();
+    if (battmon) {
+        battmon->handle_uc4hgenericbatteryinfo_msg(ext_id,
+                msg.voltage, msg.current, msg.charge_consumed_mAh, msg.energy_consumed_Wh,
+                cell_voltages_num, cell_voltages);
+    }
+}
+
+static void uc4hgenericbatteryinfo_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg){ uc4hgenericbatteryinfo_cb_func(msg, 0); }
+static void uc4hgenericbatteryinfo_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg){ uc4hgenericbatteryinfo_cb_func(msg, 1); }
+static void (*uc4hgenericbatteryinfo_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::GenericBatteryInfo>& msg) = { uc4hgenericbatteryinfo_cb0, uc4hgenericbatteryinfo_cb1 };
+
+//--- EscStatus ---
+// incoming message, by id
+
+static void escstatus_cb_func(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg, uint8_t mgr)
+{
+    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    //TODO: use is_equal(), but check if it does exactly what is the intention here
+    if ( (uavcan::isNaN(msg.temperature) || is_equal(msg.temperature, 0.0f)) &&
+         (uavcan::isNaN(msg.voltage) || is_equal(msg.voltage, 0.0f)) &&
+         (uavcan::isNaN(msg.current) || is_equal(msg.current, 0.0f)) &&
+         (msg.rpm == 0) ) { //this is likely an invalid packet, so ignore it
+        return;
+    }
+
+    // write directly to BP_UavcanEscStatusManager class
+    // write directly to DataFlash
+    BP_UavcanEscStatusManager* escstatusmgr = BP_UavcanEscStatusManager::get_singleton();
+    if (escstatusmgr) {
+        //the class supports up to 12 ESCs, but that's tested in the function, no need to do it here
+        escstatusmgr->write_to_escindex(msg.esc_index, msg.error_count, msg.voltage, msg.current, msg.temperature,
+                                        msg.rpm, msg.power_rating_pct);
+
+        //dataflash supports only up to 8 ESCs, but that's tested in the function, no need to do it here
+        escstatusmgr->log_to_dataflash(msg.esc_index);
+    }
+
+    // do stuff for BattMonitor type 84
+    if (msg.esc_index >= 8) return; //is not absolutely needed, since BP_BattMonitor_UC4H protects itself, but avoids the following call, so keep it
+
+    uint32_t id = (((uint32_t)msg.esc_index & 0x000000FF) << 16);
+
+    uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24) + id;
+
+    AP_BattMonitor* battmon = AP_BattMonitor::get_singleton(); //AP_BattMonitor &battery = AP::battery();
+    if (battmon) {
+        battmon->handle_escstatus_msg(ext_id, msg.voltage, msg.current);
+    }
+}
+
+static void escstatus_cb0(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_cb_func(msg, 0); }
+static void escstatus_cb1(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg){ escstatus_cb_func(msg, 1); }
+static void (*escstatus_cb[2])(const uavcan::ReceivedDataStructure<uavcan::equipment::esc::Status>& msg) = { escstatus_cb0, escstatus_cb1 };
+
+// --- uc4h.Distance ---
+// incoming message
+
+static void uc4hdistance_cb_func(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg, uint8_t mgr)
+{
+    AP_UAVCAN* ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    // int4 fixed_axis_pitch         # -PI/2 ... +PI/2 or -6 ... 6
+    // int5 fixed_axis_yaw           # -PI ... +PI or -12 ... 12
+    // uint4 sensor_sub_id           # Allow up to 16 sensors per orientation
+    uint32_t id =   ((uint32_t)msg.fixed_axis_pitch & 0x000000FF) +
+                   (((uint32_t)msg.fixed_axis_yaw & 0x000000FF) << 8) +
+                   (((uint32_t)msg.sensor_sub_id & 0x000000FF) << 16); //orientation id
+
+    uint32_t ext_id = (((uint32_t)msg.getSrcNodeID().get() & 0x000000FF) << 24) + id;
+
+    RangeFinder* rangefinder = RangeFinder::get_singleton();
+    if (rangefinder) {
+        rangefinder->handle_uc4hdistance_msg(ext_id,
+                msg.fixed_axis_pitch, msg.fixed_axis_yaw, msg.sensor_sub_id, msg.range_flag, msg.range);
+
+        if (msg.sensor_property.size() > 0) {
+            rangefinder->handle_uc4hdistance_msg_sensorproperties(
+                    ext_id,
+                    msg.sensor_property[0].range_min,
+                    msg.sensor_property[0].range_max,
+                    msg.sensor_property[0].vertical_field_of_view,
+                    msg.sensor_property[0].horizontal_field_of_view);
+        }
+    }
+
+    AP_Proximity* proxi = AP_Proximity::get_singleton();
+    if (proxi) {
+        proxi->handle_uc4hdistance_msg(ext_id,
+                msg.fixed_axis_pitch, msg.fixed_axis_yaw, msg.sensor_sub_id, msg.range_flag, msg.range);
+
+        if (msg.sensor_property.size() > 0) {
+            proxi->handle_uc4hdistance_msg_sensorproperties(
+                    ext_id,
+                    msg.sensor_property[0].range_min,
+                    msg.sensor_property[0].range_max,
+                    msg.sensor_property[0].vertical_field_of_view,
+                    msg.sensor_property[0].horizontal_field_of_view);
+        }
+    }
+}
+
+static void uc4hdistance_cb0(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg){ uc4hdistance_cb_func(msg, 0); }
+static void uc4hdistance_cb1(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg){ uc4hdistance_cb_func(msg, 1); }
+static void (*uc4hdistance_cb[2])(const uavcan::ReceivedDataStructure<uavcan::olliw::uc4h::Distance>& msg) = { uc4hdistance_cb0, uc4hdistance_cb1 };
+
+// --- tunnel.Broadcast ---
+// incoming message
+
+static void tunnelbroadcast_cb_func(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg, uint8_t mgr)
+{
+    AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(mgr);
+    if (ap_uavcan == nullptr) {
+        return;
+    }
+
+    //different to usual: we do write here directly to the BP_UavcanTunnelManager class
+    BP_UavcanTunnelManager* tunnelmgr = BP_UavcanTunnelManager::get_singleton();
+    if (tunnelmgr) {
+        tunnelmgr->write_to_channel(msg.channel_id, &(msg.buffer[0]), msg.buffer.size());
+    }
+}
+
+static void tunnelbroadcast_cb0(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg){ tunnelbroadcast_cb_func(msg, 0); }
+static void tunnelbroadcast_cb1(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg){ tunnelbroadcast_cb_func(msg, 1); }
+static void (*tunnelbroadcast_cb[2])(const uavcan::ReceivedDataStructure<uavcan::tunnel::Broadcast>& msg) = { tunnelbroadcast_cb0, tunnelbroadcast_cb1 };
+
+// publisher interfaces
+//--- uc4h.Notify ---
+// outgoing message
+static uavcan::Publisher<uavcan::olliw::uc4h::Notify>* uc4hnotify_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
+// --- tunnel.Broadcast ---
+// outgoing message
+static uavcan::Publisher<uavcan::tunnel::Broadcast>* tunnelbroadcast_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
+
+// further stuff for outgoing messages
+const uavcan::TransferPriority TwoLowerThanHighest(uavcan::TransferPriority::NumericallyMin + 2);
+const uavcan::TransferPriority OneHigherThanDefault((1U << uavcan::TransferPriority::BitLen) / 2 - 1);
+//OWEND
+
+
+//--------------   AP_UAVCAN methods  --------------------
+
 AP_UAVCAN::AP_UAVCAN() :
     _node_allocator(
         UAVCAN_NODE_POOL_SIZE, UAVCAN_NODE_POOL_SIZE)
@@ -411,6 +596,26 @@ AP_UAVCAN::AP_UAVCAN() :
 
     SRV_sem = hal.util->new_semaphore();
     _led_out_sem = hal.util->new_semaphore();
+
+//OW
+    // --- uc4h.GenericBatteryInfo ---
+    // uses singleton
+
+    // --- uc4h.Distance ---
+    // uses singleton
+
+    // --- EscStatus ---
+    // uses singleton
+
+    // --- uc4h.Notify ---
+    _uc4hnotify_out.to_send = false;
+    _uc4hnotify_out.sem = hal.util->new_semaphore();
+
+    // --- tunnel.Broadcast in ---
+    // nothing to do
+    // --- tunnel.Broadcast out ---
+    _tunnelbroadcast_out.sem = hal.util->new_semaphore();
+//OWEND
 
     debug_uavcan(2, "AP_UAVCAN constructed\n\r");
 }
@@ -550,6 +755,48 @@ bool AP_UAVCAN::try_init(void)
     rgb_led[_uavcan_i]->setPriority(uavcan::TransferPriority::OneHigherThanLowest);
 
     _led_conf.devices_count = 0;
+
+//OW
+    uavcan::Subscriber<uavcan::olliw::uc4h::GenericBatteryInfo>* uc4hgenericbatteryinfo_sub;
+    uc4hgenericbatteryinfo_sub = new uavcan::Subscriber<uavcan::olliw::uc4h::GenericBatteryInfo>(*node);
+    const int uc4hgenericbatteryinfo_start_res = uc4hgenericbatteryinfo_sub->start(uc4hgenericbatteryinfo_cb[_uavcan_i]);
+    if (uc4hgenericbatteryinfo_start_res < 0) {
+        debug_uavcan(1, "UAVCAN Uc4hGenericBatteryInfo subscriber start problem\n\r");
+        return false;
+    }
+
+    uavcan::Subscriber<uavcan::olliw::uc4h::Distance>* uc4hdistance_sub;
+    uc4hdistance_sub = new uavcan::Subscriber<uavcan::olliw::uc4h::Distance>(*node);
+    const int uc4hdistance_start_res = uc4hdistance_sub->start(uc4hdistance_cb[_uavcan_i]);
+    if (uc4hdistance_start_res < 0) {
+        debug_uavcan(1, "UAVCAN Uc4hDistance subscriber start problem\n\r");
+        return false;
+    }
+
+    uavcan::Subscriber<uavcan::equipment::esc::Status>* escstatus_sub;
+    escstatus_sub = new uavcan::Subscriber<uavcan::equipment::esc::Status>(*node);
+    const int escstatus_start_res = escstatus_sub->start(escstatus_cb[_uavcan_i]);
+    if (escstatus_start_res < 0) {
+        debug_uavcan(1, "UAVCAN EscStatus subscriber start problem\n\r");
+        return false;
+    }
+
+    uavcan::Subscriber<uavcan::tunnel::Broadcast>* tunnelbroadcast_sub;
+    tunnelbroadcast_sub = new uavcan::Subscriber<uavcan::tunnel::Broadcast>(*node);
+    const int tunnelbroadcast_start_res = tunnelbroadcast_sub->start(tunnelbroadcast_cb[_uavcan_i]);
+    if (tunnelbroadcast_start_res < 0) {
+        debug_uavcan(1, "UAVCAN tunnel::Broadcast subscriber start problem\n\r");
+        return false;
+    }
+
+    uc4hnotify_out_array[_uavcan_i] = new uavcan::Publisher<uavcan::olliw::uc4h::Notify>(*node);
+    uc4hnotify_out_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+    uc4hnotify_out_array[_uavcan_i]->setPriority(uavcan::TransferPriority::MiddleLower); //will/can be overwritten later
+
+    tunnelbroadcast_out_array[_uavcan_i] = new uavcan::Publisher<uavcan::tunnel::Broadcast>(*node);
+    tunnelbroadcast_out_array[_uavcan_i]->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+    tunnelbroadcast_out_array[_uavcan_i]->setPriority(OneHigherThanDefault); //will/can be overwritten later
+//OWEND
 
     /*
      * Informing other nodes that we're ready to work.
@@ -719,6 +966,10 @@ void AP_UAVCAN::do_cyclic(void)
         led_out_sem_give();
     }
 
+//OW
+    tunnelbroadcast_out_do_cyclic(); //give it preference
+    uc4hnotify_out_do_cyclic();
+//OWEND
 }
 
 bool AP_UAVCAN::led_out_sem_take()
@@ -1425,4 +1676,147 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t iface)
     return hal.can_mgr[iface]->get_UAVCAN();
 }
 
+//OW
+// my convention: i for AP_UAVCAN_GENERICBATTERYINFO_MAX_NUMBER, li for AP_UAVCAN_MAX_LISTENERS
+
+//--- uc4h.GenericBatteryInfo ---
+// incoming message, by device id
+// uses singleton
+
+
+//--- uc4h.Distance ---
+// incoming message, by orientation id
+// uses singleton
+
+
+//--- EscStatus ---
+// incoming message, there is just one listener
+// uses singleton
+
+
+//--- uc4h.Notify ---
+// outgoing message
+
+bool AP_UAVCAN::uc4hnotify_out_sem_take()
+{
+    bool sem_ret = _uc4hnotify_out.sem->take(10);
+    if (!sem_ret) {
+        debug_uavcan(1, "AP_UAVCAN Uc4h Out semaphore fail\n\r");
+    }
+    return sem_ret;
+}
+
+
+void AP_UAVCAN::uc4hnotify_out_sem_give()
+{
+    _uc4hnotify_out.sem->give();
+}
+
+
+// I don't like the current procedure in this library
+// the msg is copied into two fields, so, double work for nothing, "performance killer"
+void AP_UAVCAN::uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len)
+{
+    if (_uc4hnotify_out.sem->take(1)) {
+
+        _uc4hnotify_out.msg.type = type;
+        _uc4hnotify_out.msg.subtype = subtype;
+        if (payload_len > 64) payload_len = 64; //play it safe
+        _uc4hnotify_out.msg.payload.resize(payload_len);
+        for (uint8_t i = 0; i < payload_len; i++) {
+            _uc4hnotify_out.msg.payload[i] = payload[i];
+        }
+
+        _uc4hnotify_out.priority = uavcan::TransferPriority::MiddleLower;
+
+        _uc4hnotify_out.to_send = true;
+        uc4hnotify_out_sem_give();
+    }
+}
+
+
+void AP_UAVCAN::uc4hnotify_out_do_cyclic(void)
+{
+    if (uc4hnotify_out_array[_uavcan_i] == nullptr) {
+        return;
+    }
+
+    //always send only one message per cycle
+    if (_uc4hnotify_out.to_send && uc4hnotify_out_sem_take()) {
+
+        uc4hnotify_out_array[_uavcan_i]->setPriority(_uc4hnotify_out.priority);
+        uc4hnotify_out_array[_uavcan_i]->broadcast(_uc4hnotify_out.msg);
+
+        _uc4hnotify_out.to_send = false;
+        uc4hnotify_out_sem_give();
+    }
+}
+
+// --- tunnel.Broadcast ---
+// outgoing message
+
+bool AP_UAVCAN::tunnelbroadcast_out_sem_take()
+{
+    bool sem_ret = _tunnelbroadcast_out.sem->take(10);
+    if (!sem_ret) {
+        debug_uavcan(1, "AP_UAVCAN tunnelbroadcast Out semaphore fail\n\r");
+    }
+    return sem_ret;
+}
+
+
+void AP_UAVCAN::tunnelbroadcast_out_sem_give()
+{
+    _tunnelbroadcast_out.sem->give();
+}
+
+
+bool AP_UAVCAN::tunnelbroadcast_is_to_send(uint8_t tunnel_index)
+{
+    return _tunnelbroadcast_out.to_send[tunnel_index];
+}
+
+
+void AP_UAVCAN::tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uint8_t channel_id, uint8_t* buffer, uint8_t buffer_len, uint8_t priority)
+{
+    if (_tunnelbroadcast_out.sem->take(1)) { //why 1 and not 10 here?
+
+        //I for the heck can't figure out how to set the protocol C++ like
+        // this stupid workaround seems to work though
+        memset(&(_tunnelbroadcast_out.msg[tunnel_index].protocol), protocol, 1);
+
+        _tunnelbroadcast_out.msg[tunnel_index].channel_id = channel_id;
+        _tunnelbroadcast_out.msg[tunnel_index].buffer.resize(buffer_len);
+        for (uint8_t i = 0; i < buffer_len; i++) {
+            _tunnelbroadcast_out.msg[tunnel_index].buffer[i] = buffer[i];
+        }
+
+        _tunnelbroadcast_out.priority[tunnel_index] = OneHigherThanDefault;
+
+        _tunnelbroadcast_out.to_send[tunnel_index] = true;
+        tunnelbroadcast_out_sem_give();
+    }
+}
+
+//one frame per cycle is ca 800 Hz x 60 bytes = 48000 bytes/s
+// a CAN frame is 131 bits max => 7633 franmes/s max = ca 61 kbytes/s max
+// => this consumes already 79% of the available bandwidth !!!
+void AP_UAVCAN::tunnelbroadcast_out_do_cyclic(void)
+{
+    if (tunnelbroadcast_out_array[_uavcan_i] == nullptr) {
+        return;
+    }
+
+    for (uint8_t i = 0; i < TUNNELMANAGER_NUM_CHANNELS; i++) {
+        if (_tunnelbroadcast_out.to_send[i] && tunnelbroadcast_out_sem_take()) {
+
+            tunnelbroadcast_out_array[_uavcan_i]->setPriority(_tunnelbroadcast_out.priority[i]);
+            tunnelbroadcast_out_array[_uavcan_i]->broadcast(_tunnelbroadcast_out.msg[i]);
+
+            _tunnelbroadcast_out.to_send[i] = false;
+            tunnelbroadcast_out_sem_give();
+        }
+    }
+}
+//OWEND
 #endif // HAL_WITH_UAVCAN

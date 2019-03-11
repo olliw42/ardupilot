@@ -27,6 +27,11 @@ public:
     size_t write(uint8_t c);
     size_t write(const uint8_t *buffer, size_t size);
 
+//OW
+    bool lock_port(uint32_t key) override;
+    size_t write_locked(const uint8_t *buffer, size_t size, uint32_t key) override;
+//OWEND
+
     void set_device_path(const char *path) {
 	    _devpath = path;
     }
@@ -68,6 +73,10 @@ private:
 
     bool _nonblocking_writes;
     bool _unbuffered_writes;
+
+//OW
+    uint32_t lock_key;
+//OWEND
 
     // we use in-task ring buffers to reduce the system call cost
     // of ::read() and ::write() in the main loop

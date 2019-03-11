@@ -19,6 +19,11 @@
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
+//OW
+#include "bp_dsdl_generated/olliw/uc4h/Notify.hpp"
+#include <uavcan/tunnel/Broadcast.hpp>
+#include "BP_UavcanTunnelManager.h"
+//OWEND
 
 #ifndef UAVCAN_NODE_POOL_SIZE
 #define UAVCAN_NODE_POOL_SIZE 8192
@@ -279,6 +284,117 @@ public:
     {
         _parent_can_mgr = parent_can_mgr;
     }
+
+//OW
+// --- uc4h.GenericBatteryInfo ---
+    // incoming message, by device id
+    // uses singleton
+
+// --- EscStatus ---
+    // incoming message, by device id
+    // some of the handling is done by the BP_UavcanEscStatusManager class!
+    // we write directly to this class, and write directly to the DataFlash, so just the BattMonitor=84 stuff to keep here
+    // since EscStatus can come from different nodes and different esc_index, we catch them all hence id = 0
+    // uses singleton
+
+// --- uc4h.Distance ---
+// incoming message, by orientation id
+    //we id it by the orientation and sub_id: pitch + (yaw << 8) + (sub_id << 16) => uint32_t
+    // uses singleton
+
+// --- uc4h.Notify ---
+    // outgoing message
+public:
+    bool uc4hnotify_out_sem_take();
+    void uc4hnotify_out_sem_give();
+    void uc4hnotify_send(uint8_t type, uint8_t subtype, uint8_t* payload, uint8_t payload_len);
+
+private:
+    struct {
+        uavcan::olliw::uc4h::Notify msg;
+        uavcan::TransferPriority priority;
+        bool to_send;
+        AP_HAL::Semaphore* sem;
+    } _uc4hnotify_out;
+
+    // --- outgoing message handler ---
+    void uc4hnotify_out_do_cyclic(void);
+
+// --- tunnel.Broadcast ---
+    // incoming message, by channel_id
+    // the handling of the channel_id is done by the BP_UavcanTunnelManager class!
+    // we write directly to this class, so nothing to keep here
+
+// --- tunnel.Broadcast ---
+    // outgoing message
+    // the handling is simple since most is done in the BP_UavcanTunnelManager class! we just fetch a ptr to data
+public:
+    bool tunnelbroadcast_out_sem_take();
+    void tunnelbroadcast_out_sem_give();
+    bool tunnelbroadcast_is_to_send(uint8_t tunnel_index);
+    void tunnelbroadcast_send(uint8_t tunnel_index, uint8_t protocol, uint8_t channel_id, uint8_t* buffer, uint8_t buffer_len, uint8_t priority);
+
+private:
+    struct {
+        uavcan::tunnel::Broadcast msg[TUNNELMANAGER_NUM_CHANNELS];
+        uavcan::TransferPriority priority[TUNNELMANAGER_NUM_CHANNELS];
+        bool to_send[TUNNELMANAGER_NUM_CHANNELS];
+        AP_HAL::Semaphore* sem;
+    } _tunnelbroadcast_out;
+
+    // --- outgoing message handler ---
+    void tunnelbroadcast_out_do_cyclic(void);
+//OWEND
 };
 
 #endif /* AP_UAVCAN_H_ */
+
+
+
+
+/*
+about priorities:
+
+uc_transfer.cpp:
+const TransferPriority TransferPriority::Default((1U << BitLen) / 2);
+const TransferPriority TransferPriority::MiddleLower((1U << BitLen) / 2 + (1U << BitLen) / 4);
+const TransferPriority TransferPriority::OneHigherThanLowest(NumericallyMax - 1);
+const TransferPriority TransferPriority::OneLowerThanHighest(NumericallyMin + 1);
+const TransferPriority TransferPriority::Lowest(NumericallyMax);
+
+transfer.hpp:
+static const uint8_t BitLen = 5U;
+static const uint8_t NumericallyMax = (1U << BitLen) - 1;
+static const uint8_t NumericallyMin = 0;
+
+me:
+const uavcan::TransferPriority TwoLowerThanHighest(uavcan::TransferPriority::NumericallyMin + 2);
+const uavcan::TransferPriority OneHigherThanDefault((1U << uavcan::TransferPriority::BitLen) / 2 - 1);
+
+=>
+
+OneLowerThanHighest     = 1
+Default                 = 16
+MiddleLower             = 24
+OneHigherThanLowest     = 30
+Lowest                  = 31
+
+TwoLowerThanHighest     = 2
+OneHigherThanDefault    = 15
+
+usage:
+act_out_array[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);   = 1
+esc_raw[_uavcan_i]->setPriority(uavcan::TransferPriority::OneLowerThanHighest);         = 1
+rgb_led[_uavcan_i]->setPriority(uavcan::TransferPriority::OneHigherThanLowest);         = 30
+
+my "old" usage:
+_uc4hnotify.priority = uavcan::TransferPriority::MiddleLower;                           = 24
+_tunnelbroadcast_out.priority[tunnel_index] = uavcan::TransferPriority::MiddleLower;    = 24
+
+notifications can be low, but tunnels should be higher, so set
+
+_tunnelbroadcast_out.priority[tunnel_index] = uavcan::TransferPriority::OneHigherThanDefault;  = 15
+
+
+*/
+

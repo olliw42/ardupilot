@@ -15,6 +15,7 @@ public:
 
     // constructor
     AP_RangeFinder_Benewake(RangeFinder::RangeFinder_State &_state,
+                            AP_RangeFinder_Params &_params,
                             AP_SerialManager &serial_manager,
                             uint8_t serial_instance,
                             benewake_model_type model);
@@ -23,7 +24,7 @@ public:
     static bool detect(AP_SerialManager &serial_manager, uint8_t serial_instance);
 
     // update state
-    void update(void);
+    void update(void) override;
 
 protected:
 
@@ -39,7 +40,6 @@ private:
 
     AP_HAL::UARTDriver *uart = nullptr;
     benewake_model_type model_type;
-    uint32_t last_reading_ms;
     uint8_t linebuf[10];
     uint8_t linebuf_len;
 };

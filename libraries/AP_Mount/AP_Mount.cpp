@@ -7,6 +7,9 @@
 #include "AP_Mount_Alexmos.h"
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
+//OW
+#include "BP_Mount_STorM32.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Param: _DEFLT_MODE
@@ -390,6 +393,24 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
     AP_GROUPINFO("2_TYPE",           42, AP_Mount, state[1]._type, 0),
 #endif // AP_MOUNT_MAX_INSTANCES > 1
 
+//OW
+    // @Param: STRM_PTSER
+    // @DisplayName: STorM32 PassThru Serial
+    // @Description: STorM32 PassThru Serial
+    // @Values: -1:None, 0:SR0, 1:SR1
+    // @RebootRequired: True
+    // @User: Standard
+    AP_GROUPINFO("_STRM_PTSER",       50, AP_Mount, state[0]._storm32_passthru_serialno, -1),
+
+    // @Param: _STRM_BM
+    // @DisplayName: STorM32 Bitmask
+    // @Description: Bitmask to enable/disable various options
+    // @Values: 0:default
+    // @RebootRequired: True
+    // @User: Standard
+    AP_GROUPINFO("_STRM_BM", 51, AP_Mount, state[0]._storm32_bitmask, 0),
+//OWEND
+
     AP_GROUPEND
 };
 
@@ -462,6 +483,12 @@ void AP_Mount::init(const AP_SerialManager& serial_manager)
         } else if (mount_type == Mount_Type_SToRM32_serial) {
             _backends[instance] = new AP_Mount_SToRM32_serial(*this, state[instance], instance);
             _num_instances++;
+//OW
+        // check for STorM32 mounts using native serial protocol
+        } else if (mount_type == Mount_Type_STorM32_Native) {
+            _backends[instance] = new BP_Mount_STorM32(*this, state[instance], instance);
+            _num_instances++;
+//OWEND
         }
 
         // init new instance

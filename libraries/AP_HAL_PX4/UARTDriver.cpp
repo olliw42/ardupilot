@@ -314,6 +314,9 @@ int16_t PX4UARTDriver::read()
  */
 size_t PX4UARTDriver::write(uint8_t c)
 {
+//OW
+    if (lock_key != 0) { return 0; }
+//OWEND
     if (!_semaphore.take_nonblocking()) {
         return -1;
     }
@@ -349,6 +352,9 @@ size_t PX4UARTDriver::write(uint8_t c)
  */
 size_t PX4UARTDriver::write(const uint8_t *buffer, size_t size)
 {
+//OW
+    if (lock_key != 0) { return 0; }
+//OWEND
     if (!_semaphore.take_nonblocking()) {
         return -1;
     }
@@ -381,6 +387,36 @@ size_t PX4UARTDriver::write(const uint8_t *buffer, size_t size)
     _semaphore.give();
     return ret;
 }
+
+//OW
+size_t PX4UARTDriver::write_locked(const uint8_t *buffer, size_t size, uint32_t key)
+{
+    if (lock_key != 0 && key != lock_key) {
+        return 0;
+    }
+    if (!_semaphore.take_nonblocking()) {
+        return 0;
+    }
+
+    size_t ret = _writebuf.write(buffer, size);
+
+    _semaphore.give();
+
+    return ret;
+}
+
+bool PX4UARTDriver::lock_port(uint32_t key)
+{
+    if (key == 0) { lock_key = 0; return true; }
+
+    if (lock_key && key != lock_key && key != 0) {
+        // someone else is using it
+        return false;
+    }
+    lock_key = key;
+    return true;
+}
+//OWEND
 
 /*
   try writing n bytes, handling an unresponsive port

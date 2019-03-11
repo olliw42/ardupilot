@@ -330,6 +330,11 @@ public:
 
     uint8_t get_filter_range() const { return uint8_t(_filter_range.get()); }
 
+//OW
+    // this reports the registered compasses to the ground station
+    void send_banner(void);
+//OWEND
+
 private:
     static Compass *_singleton;
     /// Register a new compas driver, allocating an instance number

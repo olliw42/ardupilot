@@ -36,8 +36,9 @@ extern const AP_HAL::HAL& hal;
    already know that we should setup the rangefinder
 */
 AP_RangeFinder_MaxsonarI2CXL::AP_RangeFinder_MaxsonarI2CXL(RangeFinder::RangeFinder_State &_state,
+                                                           AP_RangeFinder_Params &_params,
                                                            AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev)
-    : AP_RangeFinder_Backend(_state)
+    : AP_RangeFinder_Backend(_state, _params)
     , _dev(std::move(dev))
 {
 }
@@ -48,6 +49,7 @@ AP_RangeFinder_MaxsonarI2CXL::AP_RangeFinder_MaxsonarI2CXL(RangeFinder::RangeFin
    there.
 */
 AP_RangeFinder_Backend *AP_RangeFinder_MaxsonarI2CXL::detect(RangeFinder::RangeFinder_State &_state,
+																AP_RangeFinder_Params &_params,
                                                              AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev)
 {
     if (!dev) {
@@ -55,7 +57,7 @@ AP_RangeFinder_Backend *AP_RangeFinder_MaxsonarI2CXL::detect(RangeFinder::RangeF
     }
 
     AP_RangeFinder_MaxsonarI2CXL *sensor
-        = new AP_RangeFinder_MaxsonarI2CXL(_state, std::move(dev));
+        = new AP_RangeFinder_MaxsonarI2CXL(_state, _params, std::move(dev));
     if (!sensor) {
         return nullptr;
     }
@@ -137,7 +139,7 @@ void AP_RangeFinder_MaxsonarI2CXL::_timer(void)
         if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
             distance = d;
             new_distance = true;
-            last_update_ms = AP_HAL::millis();
+            state.last_reading_ms = AP_HAL::millis();
             _sem->give();
         }
     }
@@ -153,7 +155,7 @@ void AP_RangeFinder_MaxsonarI2CXL::update(void)
             state.distance_cm = distance;
             new_distance = false;
             update_status();
-        } else if (AP_HAL::millis() - last_update_ms > 300) {
+        } else if (AP_HAL::millis() - state.last_reading_ms > 300) {
             // if no updates for 0.3 seconds set no-data
             set_status(RangeFinder::RangeFinder_NoData);
         }
