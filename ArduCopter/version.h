@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.7"
-#define THISFIRMWARE "BetaCopter V3.6.7 v019u 003"
+#define THISFIRMWARE "BetaCopter V3.6.7 v020u rc3 01"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -49,7 +49,9 @@ features:
 20190223:
  - uc4h Proximity
  - BP_UavcanHandler, simplify all receiving messages
-
+20190311:
+- rebased to Copter3.6.7
+- patch to AP_SerialManager
 
 changed files:
 
