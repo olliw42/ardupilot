@@ -52,6 +52,10 @@ features:
 20190311:
 - rebased to Copter3.6.7
 - patch to AP_SerialManager
+20190314:
+- undo 10 rangefinders, stick with ac3.5.7
+
+
 
 changed files:
 

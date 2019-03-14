@@ -34,9 +34,8 @@ extern const AP_HAL::HAL& hal;
    already know that we should setup the rangefinder
 */
 AP_RangeFinder_TeraRangerI2C::AP_RangeFinder_TeraRangerI2C(RangeFinder::RangeFinder_State &_state,
-                                                           AP_RangeFinder_Params &_params,
                                                            AP_HAL::OwnPtr<AP_HAL::I2CDevice> i2c_dev)
-    : AP_RangeFinder_Backend(_state, _params)
+    : AP_RangeFinder_Backend(_state)
     , dev(std::move(i2c_dev))
 {
 }
@@ -47,14 +46,13 @@ AP_RangeFinder_TeraRangerI2C::AP_RangeFinder_TeraRangerI2C(RangeFinder::RangeFin
    there.
 */
 AP_RangeFinder_Backend *AP_RangeFinder_TeraRangerI2C::detect(RangeFinder::RangeFinder_State &_state,
-																AP_RangeFinder_Params &_params,
                                                              AP_HAL::OwnPtr<AP_HAL::I2CDevice> i2c_dev)
 {
     if (!i2c_dev) {
         return nullptr;
     }
 
-    AP_RangeFinder_TeraRangerI2C *sensor = new AP_RangeFinder_TeraRangerI2C(_state, _params, std::move(i2c_dev));
+    AP_RangeFinder_TeraRangerI2C *sensor = new AP_RangeFinder_TeraRangerI2C(_state, std::move(i2c_dev));
     if (!sensor) {
         return nullptr;
     }
@@ -145,7 +143,7 @@ bool AP_RangeFinder_TeraRangerI2C::process_raw_measure(uint16_t raw_distance, ui
       return false;
   } else if (raw_distance == 0x0000) {
       // Too close
-      output_distance_cm =  params.min_distance_cm;
+      output_distance_cm =  state.min_distance_cm;
       return true;
   } else if (raw_distance == 0x0001) {
       // Unable to measure
@@ -184,7 +182,6 @@ void AP_RangeFinder_TeraRangerI2C::update(void)
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         if (accum.count > 0) {
             state.distance_cm = accum.sum / accum.count;
-			state.last_reading_ms = AP_HAL::millis();
             accum.sum = 0;
             accum.count = 0;
             update_status();

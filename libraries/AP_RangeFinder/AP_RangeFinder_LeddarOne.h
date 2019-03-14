@@ -43,7 +43,6 @@ class AP_RangeFinder_LeddarOne : public AP_RangeFinder_Backend
 public:
     // constructor
     AP_RangeFinder_LeddarOne(RangeFinder::RangeFinder_State &_state,
-                             AP_RangeFinder_Params &_params,
                              AP_SerialManager &serial_manager,
                              uint8_t serial_instance);
 
@@ -51,7 +50,7 @@ public:
     static bool detect(AP_SerialManager &serial_manager, uint8_t serial_instance);
 
     // update state
-    void update(void) override;
+    void update(void);
 
 protected:
 
@@ -70,6 +69,7 @@ private:
     LeddarOne_Status parse_response(uint8_t &number_detections);
 
     AP_HAL::UARTDriver *uart = nullptr;
+    uint32_t last_reading_ms;
     uint32_t last_sending_request_ms;
     uint32_t last_available_ms;
 

@@ -20,7 +20,7 @@ TODO's:
 class BP_RangeFinder_UC4H : public AP_RangeFinder_Backend {
 
 public:
-    BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params);
+    BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state);
 
     //the other RangeFinders use a static detect() function
     // we don't, since we can then access ap_uavcan easier
@@ -46,6 +46,8 @@ private:
     uint8_t _node_id;
     uint32_t _our_id;
     bool _send_banner;
+    uint32_t _last_reading_ms;
+
 
     void _do_send_banner(void);
 
