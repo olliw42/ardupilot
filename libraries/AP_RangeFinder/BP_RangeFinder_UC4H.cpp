@@ -33,7 +33,7 @@ BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state)
 
 bool BP_RangeFinder_UC4H::init()
 {
-    _our_id = _calc_id(params.orientation.get(), params.address.get());
+    _our_id = _calc_id(state.orientation.get(), state.address.get());
 
     if (_our_id == UINT32_MAX) {
         return false;

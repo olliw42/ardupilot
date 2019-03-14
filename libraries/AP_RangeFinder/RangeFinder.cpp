@@ -769,7 +769,7 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
 #if HAL_WITH_UAVCAN
     case RangeFinder_TYPE_UC4H:{
         //drivers[instance] = new BP_RangeFinder_UC4H(*this, state[instance]);
-        BP_RangeFinder_UC4H* rangefinder = new BP_RangeFinder_UC4H(state[instance],  params[instance]);
+        BP_RangeFinder_UC4H* rangefinder = new BP_RangeFinder_UC4H(state[instance]);
 
         if (rangefinder && !rangefinder->init()) {
             gcs().send_text(MAV_SEVERITY_INFO, "RangeFinder %u: UC4H init failed", instance+1);
@@ -949,7 +949,8 @@ RangeFinder *RangeFinder::_singleton;
 void RangeFinder::send_banner(void)
 {
     for (uint8_t i = 0; i < num_instances; i++) {
-        if ((drivers[i] != nullptr) && (params[i].type != RangeFinder_TYPE_NONE)) {
+//        if ((drivers[i] != nullptr) && (params[i].type != RangeFinder_TYPE_NONE)) {
+        if ((drivers[i] != nullptr) && (state[i].type.get() != RangeFinder_TYPE_NONE)) {
             drivers[i]->send_banner(i);
         }
     }
