@@ -425,9 +425,6 @@ const AP_Param::GroupInfo RangeFinder::var_info[] = {
 #endif
 
 #if RANGEFINDER_MAX_INSTANCES > 3
-    // @Group: 4_
-    // @Path: AP_RangeFinder_Params.cpp
-    AP_SUBGROUPINFO(params[3], "4_", 31, RangeFinder, AP_RangeFinder_Params),
 
     // @Param: 4_TYPE
     // @DisplayName: Fourth Rangefinder type
