@@ -24,10 +24,11 @@ features:
  - STorM32 Native @ 83, complete
  - bitmask parameter handling, MNT_STRM_BM
  - passthrough, MNT_STRM_PTSER
- - Solo gimbal mimicry
  - all UC4H stuff added
  - barometer proper gcs sendtext
+ - compass proper gcs sendtext
  - UC4H uavcan EscStatus: simplified DataFlash, BattMonitor type 84, 3 BattMonitors, MAVLink EscStatus
+ - UC4H BattMonitor: multiple cell voltage reporting
  - UC4H uavcan RangeFinder: type 83
  - UC4H uavcan Proximity: type 83
 
