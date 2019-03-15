@@ -26,10 +26,9 @@ extern const AP_HAL::HAL& hal;
    already know that we should setup the rangefinder
 */
 AP_RangeFinder_LightWareSerial::AP_RangeFinder_LightWareSerial(RangeFinder::RangeFinder_State &_state,
-                                                               AP_RangeFinder_Params &_params,
                                                                AP_SerialManager &serial_manager,
                                                                uint8_t serial_instance) :
-    AP_RangeFinder_Backend(_state, _params)
+    AP_RangeFinder_Backend(_state)
 {
     uart = serial_manager.find_serial(AP_SerialManager::SerialProtocol_Rangefinder, serial_instance);
     if (uart != nullptr) {
@@ -77,8 +76,7 @@ bool AP_RangeFinder_LightWareSerial::get_reading(uint16_t &reading_cm)
     uint32_t now = AP_HAL::millis();
     if (last_init_ms == 0 ||
         (now - last_init_ms > 1000 &&
-//OW         now - last_reading_ms > 1000)) {
-             now - state.last_reading_ms > 1000)) {
+         now - last_reading_ms > 1000)) {
         // send enough serial transitions to trigger LW20 into serial
         // mode. It starts in dual I2C/serial mode, and wants to see
         // enough transitions to switch into serial mode.
@@ -102,9 +100,9 @@ void AP_RangeFinder_LightWareSerial::update(void)
 {
     if (get_reading(state.distance_cm)) {
         // update range_valid state based on distance measured
-        state.last_reading_ms = AP_HAL::millis();
+        last_reading_ms = AP_HAL::millis();
         update_status();
-    } else if (AP_HAL::millis() - state.last_reading_ms > 200) {
+    } else if (AP_HAL::millis() - last_reading_ms > 200) {
         set_status(RangeFinder::RangeFinder_NoData);
     }
 }

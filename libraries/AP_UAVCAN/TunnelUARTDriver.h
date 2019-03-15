@@ -13,6 +13,9 @@
 #define TUNNELUARTDRIVER_RXBUF_SIZE_MIN            (512*4)
 #define TUNNELUARTDRIVER_TXBUF_SIZE_MIN            (512*4)
 
+#define TUNNELUARTDRIVER_SEM_TIMEOUT_MS            0  //0 disables using a semaphore!
+
+
 
 class TunnelUARTDriver : public AP_HAL::UARTDriver, public BP_Tunnel_Backend {
 
@@ -50,8 +53,10 @@ private:
     uint32_t _baud;
     bool _baud_changed;
 
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
     AP_HAL::Semaphore *_write_mutex;
     AP_HAL::Semaphore *_read_mutex;
+#endif
 
     ByteBuffer _read_buf{0};
     ByteBuffer _write_buf{0};

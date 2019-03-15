@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.7"
-#define THISFIRMWARE "BetaCopter V3.6.7 v020u rc3 01"
+#define THISFIRMWARE "BetaCopter V3.6.7 v020u rc4 01"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -52,30 +52,16 @@ features:
 20190311:
 - rebased to Copter3.6.7
 - patch to AP_SerialManager
+20190314:
+- undo 10 rangefinders, stick with ac3.5.7
+- disable TERRAIN also for v3,v4
+- TUNNELUARTDRIVER_SEM_TIMEOUT_MS, set to zero
+
 
 changed files:
 
     APM_Config.h: low flash for v2, said to be not used anymore, but obviously still works
     AP_Baro.cpp: 2x
-
-
-RangeFinder stuff:
-    RangeFinder_Backend.h: 1x
-    RangeFinder.cpp: 3x
-    RangeFinder.h: 2x
-    PR#8816 integrated, with two bugs corrected: all RangeFinder files affected
-    params moved to backend:
-        params.pin                      AP_RangeFinder_analog.cpp
-        params.ratiometric              AP_RangeFinder_analog.cpp
-        params.function                 AP_RangeFinder_analog.cpp
-        params.powersave_range          AP_RangeFinder_PX4_PWM.h
-        params.stop_pin                 AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
-        params.settle_time_ms           AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
-        params.scaling                  AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
-        params.offset                   AP_RangeFinder_analog.cpp & AP_RangeFinder_PX4_PWM.h
-        are used by ONLY AP_RangeFinder_analog.cpp and/or AP_RangeFinder_PX4_PWM.h
-
-MAG stuff:
     AP_Compass.cpp: 2x
     AP_Compass.h: 1x
     GCS_Common.cpp: +1x
@@ -92,7 +78,6 @@ STorM32 stuff:
     GCS_Common.cpp: 4x
     GCS.cpp: 1x
     GCS.h: 3x
-
 added files:
     BP_Mount_STorM32.cpp
     BP_Mount_STorM32.h
@@ -104,25 +89,34 @@ added files:
 UC4H stuff:
     ArduCopter.cpp: 1x
     Copter.h: 2x
-    AP_BattMonitor_Backend.h: 1x
     AP_BattMonitor_Params.h: 1x
-    AP_BattMonitor_UAVCAN.cpp: 4x
-    AP_BattMonitor_UAVCAN.h: 3x
-    AP_BattMonitor.cpp: 2x
-    AP_BattMonitor.h: 1x
+    AP_BattMonitor.cpp: 4x
+    AP_BattMonitor.h: 3x
     AP_SerialManager.cpp: +3x
     AP_SerialManager.h: +2x
     AP_Notify.cpp: 2x
+    AP_Proximity.cpp: 3x
+    AP_Proximity.h: 3x
+    RangeFinder_Backend.h: 1x
+    RangeFinder.cpp: 3x
+    RangeFinder.h: 3x
     AP_UAVCAN.cpp: 6x
     AP_UAVCAN.h: 3x
     DataFlash/LogStructure.h: 3x
     GCS_Common.cpp: +2x
 added files:
+    AP_BattMonitor_UC4H.cpp         (AP_BattMonitor/)
+    AP_BattMonitor_UC4H.h           (AP_BattMonitor/)
     Uc4hNotifyDevice.cpp            (AP_Notify/)
     Uc4hNotifyDevice.h              (AP_Notify/)
+    BP_Proximity_UC4H.cpp           (AP_Proximity/)
+    BP_Proximity_UC4H.h             (AP_Proximity/)
+    BP_RangeFinder_UC4H.cpp         (AP_RangeFinder/)
+    BP_RangeFinder_UC4H.h           (AP_RangeFinder/)
     BP_Tunnel_Backend.h             (AP_UAVCAN/)
     BP_UavcanEscStatusManager.cpp   (AP_UAVCAN/)
     BP_UavcanEscStatusManager.h     (AP_UAVCAN/)
+    BP_UavcanHandler.h              (AP_UAVCAN/)
     BP_UavcanTunnelManager.cpp      (AP_UAVCAN/)
     BP_UavcanTunnelManager.h        (AP_UAVCAN/)
     TunnelUARTDriver.cpp            (AP_UAVCAN/)

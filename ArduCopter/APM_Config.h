@@ -95,4 +95,67 @@
 #define DEVO_TELEM_ENABLED      DISABLED
 #define OSD_ENABLED             DISABLED
 #endif
+//also minimize for v3,v4
+
+#define AC_TERRAIN              DISABLED //disabling it reduces RAM usages massively, by ca 25k
+
+/*
+Results of some tests
+for Cube
+v020u-rc4
+compiled for v3, flashed on Cube2, with some .params
+
+1.
+full
+dec: 1181664
+nsh> free
+             total       used       free    largest
+Mem:        197408     192016       5392       5328
+
+5.
+#define AC_TERRAIN              DISABLED
+dec: 1175432
+nsh> free
+             total       used       free    largest
+Mem:        199584     168432      31152      31088
+
+7.
+#define HAL_MINIMIZE_FEATURES       1
+dec: 1118200
+nsh> free
+             total       used       free    largest
+Mem:        203232     165056      38176      38080
+
+8.
+compiled for v2, loaded on Cube2
+dec: 1079128
+nsh> free
+             total       used       free    largest
+Mem:        203232     165008      38224      38112
+
+
+similar for Pixracer
+v020u-rc4
+compiled v4, flashed on Pixracer, with some .params
+with TNL0 PROT,9, others disabled PROT,-1
+2.
+full
+dec: 1149048
+nsh> free
+             total       used       free    largest
+Mem:        194000     177024      16976      16912
+
+3.
+#define AC_TERRAIN              DISABLED
+dec: 1142816
+nsh> free
+             total       used       free    largest
+Mem:        196176     155072      41104      41040
+
+
+=> TERRAIN eats up lots of RAM
+*/
 //OWEND
+
+
+

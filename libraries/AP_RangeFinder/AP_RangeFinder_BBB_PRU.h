@@ -21,13 +21,13 @@ class AP_RangeFinder_BBB_PRU : public AP_RangeFinder_Backend
 {
 public:
     // constructor
-    AP_RangeFinder_BBB_PRU(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params);
+    AP_RangeFinder_BBB_PRU(RangeFinder::RangeFinder_State &_state);
 
     // static detection function
     static bool detect();
 
     // update state
-    void update(void) override;
+    void update(void);
 
 protected:
 

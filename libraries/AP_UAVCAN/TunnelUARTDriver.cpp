@@ -13,8 +13,10 @@ extern const AP_HAL::HAL& hal;
 // Constructor
 TunnelUARTDriver::TunnelUARTDriver()
 {
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
     _write_mutex = hal.util->new_semaphore();
     _read_mutex = hal.util->new_semaphore();
+#endif
 
     _initialised = false;
     _baud = 0;
@@ -71,13 +73,17 @@ size_t TunnelUARTDriver::write(uint8_t c)
         return 0;
     }
 
-    if (!_write_mutex->take(2)) {
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
+    if (!_write_mutex->take(TUNNELUARTDRIVER_SEM_TIMEOUT_MS)) {
         return 0;
     }
+#endif
 
     uint32_t len = _write_buf.write(&c, 1);
 
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
     _write_mutex->give();
+#endif
     return len;
 }
 
@@ -89,13 +95,17 @@ size_t TunnelUARTDriver::write(const uint8_t *buffer, size_t size)
         return 0;
     }
 
-    if (!_write_mutex->take(2)) {
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
+    if (!_write_mutex->take(TUNNELUARTDRIVER_SEM_TIMEOUT_MS)) {
         return 0;
     }
+#endif
 
     uint32_t len = _write_buf.write(buffer, size);
 
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
     _write_mutex->give();
+#endif
     return len;
 }
 
@@ -114,17 +124,23 @@ int16_t TunnelUARTDriver::read()
         return -1;
     }
 
-    if ( !_read_mutex->take(2)) {
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
+    if ( !_read_mutex->take(TUNNELUARTDRIVER_SEM_TIMEOUT_MS)) {
         return -1;
     }
+#endif
 
     uint8_t c;
     if (!_read_buf.read_byte(&c)) {
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
         _read_mutex->give();
+#endif
         return -1;
     }
 
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
     _read_mutex->give();
+#endif
     return c;
 }
 
@@ -146,13 +162,17 @@ void TunnelUARTDriver::write_to_rx(const uint8_t *buffer, size_t size)
         return;
     }
 
-    if (!_read_mutex->take(2)) {
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
+    if (!_read_mutex->take(TUNNELUARTDRIVER_SEM_TIMEOUT_MS)) {
         return;
     }
+#endif
 
     _read_buf.write(buffer, size);
 
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
     _read_mutex->give();
+#endif
 }
 
 
@@ -169,9 +189,11 @@ void TunnelUARTDriver::read_from_tx(uint8_t *buffer, size_t size)
         return;
     }
 
-    if (!_write_mutex->take(2)) {
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
+    if (!_write_mutex->take(TUNNELUARTDRIVER_SEM_TIMEOUT_MS)) {
         return;
     }
+#endif
 
     uint8_t c;
     for (size_t n=0; n<size; n++) {
@@ -179,7 +201,9 @@ void TunnelUARTDriver::read_from_tx(uint8_t *buffer, size_t size)
         if (buffer != nullptr) buffer[n] = c; //this allows to read and discard
     }
 
+#if TUNNELUARTDRIVER_SEM_TIMEOUT_MS
     _write_mutex->give();
+#endif
 }
 
 

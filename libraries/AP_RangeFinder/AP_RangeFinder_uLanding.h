@@ -9,7 +9,6 @@ class AP_RangeFinder_uLanding : public AP_RangeFinder_Backend
 public:
     // constructor
 	AP_RangeFinder_uLanding(RangeFinder::RangeFinder_State &_state,
-                            AP_RangeFinder_Params &_params,
                             AP_SerialManager &serial_manager,
                             uint8_t serial_instance);
 
@@ -17,7 +16,7 @@ public:
     static bool detect(AP_SerialManager &serial_manager, uint8_t serial_instance);
 
     // update state
-    void update(void) override;
+    void update(void);
 
 protected:
 
@@ -35,6 +34,7 @@ private:
     AP_HAL::UARTDriver *uart;
     uint8_t  _linebuf[6];
     uint8_t  _linebuf_len;
+    uint32_t _last_reading_ms;
     bool     _version_known;
     uint8_t  _header;
     uint8_t  _version;

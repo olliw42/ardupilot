@@ -18,15 +18,14 @@ extern const AP_HAL::HAL& hal;
 #define debug_rf_uavcan(level, fmt, args...) do { if ((level) <= AP_BoardConfig_CAN::get_can_debug()) { printf(fmt, ##args); }} while (0)
 
 
-BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params) :
-    AP_RangeFinder_Backend(_state, _params)
+BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state) :
+    AP_RangeFinder_Backend(_state)
 {
     _our_id = UINT32_MAX;
     _initialized = false;
     _send_banner = false;
     _new_distance_received = false;
-
-    state.last_reading_ms = 0;
+    _last_reading_ms = 0;
 
     _my_sem = hal.util->new_semaphore();
 }
@@ -34,7 +33,7 @@ BP_RangeFinder_UC4H::BP_RangeFinder_UC4H(RangeFinder::RangeFinder_State &_state,
 
 bool BP_RangeFinder_UC4H::init()
 {
-    _our_id = _calc_id(params.orientation.get(), params.address.get());
+    _our_id = _calc_id(state.orientation.get(), state.address.get());
 
     if (_our_id == UINT32_MAX) {
         return false;
@@ -63,9 +62,9 @@ void BP_RangeFinder_UC4H::update(void)
 
         if (_range_flag != UC4HDISTANCE_RANGE_INVALID) {
             state.distance_cm = (uint16_t)(_range * 100.0f);
-            state.last_reading_ms = now_ms;
+            _last_reading_ms = now_ms;
             update_status();
-        } else if ((now_ms - state.last_reading_ms) > 200) {
+        } else if ((now_ms - _last_reading_ms) > 200) {
             set_status(RangeFinder::RangeFinder_NoData);
         }
 
