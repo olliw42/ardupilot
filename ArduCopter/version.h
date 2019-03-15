@@ -8,7 +8,7 @@
 
 //OW
 //#define THISFIRMWARE "ArduCopter V3.6.7"
-#define THISFIRMWARE "BetaCopter V3.6.7 v020u rc3 01"
+#define THISFIRMWARE "BetaCopter V3.6.7 v020u rc4 01"
 //OWEND
 
 // the following line is parsed by the autotest scripts
@@ -54,7 +54,8 @@ features:
 - patch to AP_SerialManager
 20190314:
 - undo 10 rangefinders, stick with ac3.5.7
-
+- disable TERRAIN also for v3,v4
+- TUNNELUARTDRIVER_SEM_TIMEOUT_MS, set to zero
 
 
 changed files:
