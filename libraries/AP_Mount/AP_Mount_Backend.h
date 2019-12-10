@@ -81,6 +81,11 @@ public:
     // send a GIMBAL_REPORT message to the GCS
     virtual void send_gimbal_report(const mavlink_channel_t chan) {}
 
+//OW
+    // handle msg - allows to process a msg from a gimbal
+    virtual void handle_msg(const mavlink_message_t &msg) {}
+//OWEND
+
 protected:
 
     // update_targets_from_rc - updates angle targets (i.e. _angle_ef_target_rad) using input from receiver
