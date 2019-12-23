@@ -1,4 +1,4 @@
 #pragma once
 
-#define BETAPILOTVERSION " v040"
+#define BETAPILOTVERSION " v041"
 

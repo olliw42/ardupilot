@@ -1305,10 +1305,8 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
         return;
     }
 //OW
-#if MOUNT == ENABLED
     AP_Mount *mount = AP::mount();
     if (mount != nullptr) mount->handle_msg(msg);
-#endif
 //OWEND
     handleMessage(msg);
 }
