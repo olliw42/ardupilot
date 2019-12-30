@@ -5,7 +5,7 @@
 
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_GPS/AP_GPS.h>
-#include <AP_NOTIFY/AP_NOTIFY.h>
+#include <AP_Notify/AP_Notify.h>
 #include <AP_Mount/STorM32_MAVLink_class.h>
 
 
