@@ -438,7 +438,6 @@ void AP_UAVCAN_DNA_Server::verify_nodes(AP_UAVCAN *ap_uavcan)
         /* Only report if the node was verified, otherwise ignore
         as this could be just Bootloader to Application transition. */
         if (isNodeIDVerified(curr_verifying_node)) {
-            gcs().send_text(MAV_SEVERITY_ERROR, "UC Node %d Down!", curr_verifying_node);
             // remove verification flag for this node
             verified_mask.clear(curr_verifying_node);
         }
@@ -547,7 +546,7 @@ void trampoline_handleNodeInfo(const uavcan::ServiceCallResult<uavcan::protocol:
     uavcan::copy(resp.getResponse().hardware_version.unique_id.begin(),
                  resp.getResponse().hardware_version.unique_id.end(),
                  unique_id);
-    snprintf(name, ARRAY_SIZE(name), "%s", resp.getResponse().name.c_str());
+    strncpy(name, resp.getResponse().name.c_str(), sizeof(name)-1);
     AP::uavcan_dna_server().handleNodeInfo(node_id, unique_id, name);
 }
 
