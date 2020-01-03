@@ -753,6 +753,17 @@ void AP_Mount::handle_msg(const mavlink_message_t &msg)
         }
     }
 }
+
+bool AP_Mount::pre_arm_checks(void)
+{
+    bool res = true;
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            res &= _backends[instance]->pre_arm_checks();
+        }
+    }
+    return res;
+}
 //OWEND
 
 // singleton instance

@@ -143,6 +143,9 @@ public:
     // this is somewhat different to handle_message() in that it catches all messages
     // with significant work it potentially could be combined, but let's play it safe and not introduce side effects
     void handle_msg(const mavlink_message_t &msg);
+
+    // pre arm checks
+    bool pre_arm_checks(void);
 //OWEND
 
 protected:

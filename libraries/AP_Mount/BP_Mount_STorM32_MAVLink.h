@@ -40,10 +40,14 @@ public:
     // handle_msg - allows to process messages received from gimbal
     void handle_msg(const mavlink_message_t &msg) override;
 
+    // pre arm checks
+    bool pre_arm_checks(void) override;
+
 private:
     // internal variables
     bool _initialised;              // true once the driver has been fully initialised
     bool _armed;                    // true once the gimbal has reached normal operation state
+    bool _prearmchecks_ok;          // true when the gimbal stops reporting prearm fail
 
     // internal MAVLink variables
     uint8_t _sysid;                 // system id of gimbal

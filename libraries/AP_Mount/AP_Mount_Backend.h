@@ -84,6 +84,9 @@ public:
 //OW
     // handle msg - allows to process a msg from a gimbal
     virtual void handle_msg(const mavlink_message_t &msg) {}
+
+    // pre arm checks
+    virtual bool pre_arm_checks(void) { return true; }
 //OWEND
 
 protected:

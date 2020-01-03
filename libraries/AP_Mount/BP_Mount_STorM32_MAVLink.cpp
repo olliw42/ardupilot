@@ -23,6 +23,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 {
     _initialised = false;
     _armed = false;
+    _prearmchecks_ok = false; //if we don't find a gimbal, it stays false ! This might not always be the desired behavior
 
     _sysid = 0;
     _compid = 0;
@@ -147,7 +148,10 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
         case MAVLINK_MSG_ID_HEARTBEAT: {
             mavlink_heartbeat_t payload;
             mavlink_msg_heartbeat_decode( &msg, &payload );
-            _armed = is_normal_state(payload.custom_mode);
+            _armed = is_normal_state(payload.custom_mode && 0xFF);
+            if( !(payload.custom_mode & 0x80000000) ){ //we don't follow all changes, but just toggle it to true once
+                _prearmchecks_ok = true;
+            }
             }break;
 
         case MAVLINK_MSG_ID_ATTITUDE: { //30
@@ -226,6 +230,12 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
         // GCS_MAVLINK::send_mount_status();
         //for (uint8_t i=0; i<gcs().num_gcs(); i++) gcs().chan(i)->send_mount_status();
     }
+}
+
+
+bool BP_Mount_STorM32_MAVLink::pre_arm_checks(void)
+{
+    return _prearmchecks_ok;
 }
 
 

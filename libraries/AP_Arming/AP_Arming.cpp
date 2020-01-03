@@ -34,6 +34,9 @@
 #include <AP_Terrain/AP_Terrain.h>
 #include <AP_Scripting/AP_Scripting.h>
 #include <AP_Camera/AP_RunCam.h>
+//OW
+#include <AP_Mount/AP_Mount.h>
+//OWEND
 
 #if HAL_WITH_UAVCAN
   #include <AP_BoardConfig/AP_BoardConfig_CAN.h>
@@ -850,6 +853,28 @@ bool AP_Arming::camera_checks(bool display_failure)
     return true;
 }
 
+//OW
+bool AP_Arming::mount_checks(bool report)
+{
+// one should have defined a ARMING_CHECK_MOUNT in the ArmingChecks enum, and call
+//    if ((checks_to_perform & ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_MOUNT)) {
+// however, a GCS wouldn't support that additional bit well
+// so, we defer the thing completely to the mount class
+// since it's only supported by STorM32, and it always sets it correctly, we can leave it to STorM32
+    AP_Mount *mount = AP::mount();
+    if (mount == nullptr) {
+        return true;
+    }
+
+    if( !mount->pre_arm_checks() ){
+        check_failed(report, "Mount prearm checks failed");
+        return false;
+    }
+
+    return true;
+}
+//OWEND
+
 bool AP_Arming::pre_arm_checks(bool report)
 {
 #if !APM_BUILD_TYPE(APM_BUILD_ArduCopter)
@@ -875,6 +900,9 @@ bool AP_Arming::pre_arm_checks(bool report)
         &  system_checks(report)
         &  can_checks(report)
         &  proximity_checks(report)
+//OW
+        &  mount_checks(report)
+//OWEND
         &  camera_checks(report);
 }
 
