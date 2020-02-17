@@ -61,6 +61,7 @@ public:
     void set_target_sysid(uint8_t sysid);
 
     // control - control the mount
+//OW this is a serious bug!
     virtual void control(int32_t pitch_or_lat, int32_t roll_or_lon, int32_t yaw_or_alt, MAV_MOUNT_MODE mount_mode);
     
     // process MOUNT_CONFIGURE messages received from GCS:
