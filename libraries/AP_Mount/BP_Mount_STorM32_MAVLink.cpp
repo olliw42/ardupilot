@@ -148,7 +148,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
         case MAVLINK_MSG_ID_HEARTBEAT: {
             mavlink_heartbeat_t payload;
             mavlink_msg_heartbeat_decode( &msg, &payload );
-            _armed = is_normal_state(payload.custom_mode && 0xFF);
+            _armed = is_normal_state(payload.custom_mode & 0xFF);
             if( !(payload.custom_mode & 0x80000000) ){ //we don't follow all changes, but just toggle it to true once
                 _prearmchecks_ok = true;
             }
