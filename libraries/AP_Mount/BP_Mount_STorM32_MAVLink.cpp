@@ -8,6 +8,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <RC_Channel/RC_Channel.h>
 #include <GCS_MAVLink/GCS.h>
+#include <AP_GPS/AP_GPS.h>
 #include "BP_Mount_STorM32_MAVLink.h"
 
 extern const AP_HAL::HAL& hal;
@@ -323,13 +324,8 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_bymountmode(void)
 
             // point mount to a GPS point given by the mission planner
         case MAV_MOUNT_MODE_GPS_POINT:
-            if (calc_angle_to_roi_target(_angle_ef_target_rad, true, true)) {
-                set_target = true;
-            }
-            break;
-
-        case MAV_MOUNT_MODE_SYSID_TARGET:
-            if (calc_angle_to_sysid_target(_angle_ef_target_rad, true, true)) {
+            if(AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D) {
+                calc_angle_to_location(_state._roi_target, _angle_ef_target_rad, true, true);
                 set_target = true;
             }
             break;
