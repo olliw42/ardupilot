@@ -1,8 +1,10 @@
-﻿# BetaPilot 4.0 for Copter, BetaPlane
+# BetaPilot 4.0 for Copter, BetaPlane
 
 This is the BetaPilot fork of the ArduPilot project, for Plane.
 
 I use it for developing new features, mainly related to the [STorM32 gimbal controller](http://www.olliw.eu/2013/storm32bgc/) project.
+
+COMMENT: This branch is only tested on the workbench, but not yet flight tested !!!
 
 ## Usage and Release Notes ##
 
@@ -18,7 +20,6 @@ In order to build BetaPilot 4.0, do this:
 - Ensure that all git submodules are there. Run git submodule update --init -- recursive.
 - Copy the file \mavlink_withmostbasicadditions\common.xml to the folder ardupilot\modules\mavlink\message_definitions\v1.0. This will overwrite the file existing there. (This step is crucuial since ArduPilot doesn't support the latest MAVLink standard).
 
-COMMENT: This branch is only tested on the workbench, but not yet flight tested !!!
 
 ## Acknowledgements and License ##
 
