@@ -9,7 +9,7 @@
 //OW
 //#define THISFIRMWARE "ArduCopter V4.0.2"
 #include "../libraries/bp_version.h"
-#define THISFIRMWARE "ArduCopter V4.0.2" BETAPILOTVERSION
+#define THISFIRMWARE "BetaCopter V4.0.2" BETAPILOTVERSION
 //OWEND
 
 // the following line is parsed by the autotest scripts
