@@ -308,8 +308,13 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_bymountmode(void)
 
         // point to the angles given by a mavlink message
         case MAV_MOUNT_MODE_MAVLINK_TARGETING:
+            {
             // do nothing because earth-frame angle targets (i.e. _angle_ef_target_rad) should have already been set by a MOUNT_CONTROL message from GCS
+            // NO!!: clear yaw since if has_pan = false the copter will yaw, so we must not forward it to the gimbal
+            const Vector3f &target = _state._neutral_angles.get();
+            _angle_ef_target_rad.z = radians(target.z);
             set_target = true;
+            }
             break;
 
         // RC radio manual angle control, but with stabilization
