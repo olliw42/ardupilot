@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION " v045rc10"
+#define BETAPILOTVERSION " v045rc28"
 
 /*
 search for //OW to find all changes
@@ -20,4 +20,6 @@ MSG_POSITION_TARGET_GLOBAL_INT
 WPNAV_SPEED
 
 ACCEL_Z CAPACITY TYPE
+
+RC_CHANNELS_OVERRIDE
 */

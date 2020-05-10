@@ -11,7 +11,9 @@
 #include "AP_Mount_Backend.h"
 #include "STorM32_MAVLink_class.h"
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  900000 //300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+
+#define GIMBAL_MANAGER_STATUS_RATE_MS   3000
 
 
 // that's the main class
@@ -58,25 +60,59 @@ private:
 
     // storm32 mount_status in, mount_status out
     struct {
-        float pitch_deg;
         float roll_deg;
+        float pitch_deg;
         float yaw_deg;
         float yaw_deg_absolute;
     } _status;
 
     struct {
-        float pitch_deg;
         float roll_deg;
+        float pitch_deg;
         float yaw_deg;
         enum MAV_MOUNT_MODE mode;
         enum MAV_MOUNT_MODE mode_last;
     } _target;
 
-    void set_target_angles_bymountmode(void);
-    void send_do_mount_control_to_gimbal(float pitch_deg, float roll_deg, float yaw_deg, enum MAV_MOUNT_MODE mode);
+    void set_target_angles(void);
     void send_target_angles_to_gimbal(void);
     bool is_rc_failsafe(void);
+
+    void set_target_angles_v2();
+    void send_target_angles_to_gimbal_v2(void);
+
+    void send_mount_status_to_channels(void);
+    void send_cmd_do_mount_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, enum MAV_MOUNT_MODE mode);
     void send_rc_channels_to_gimbal(void);
+
+    // gimbal protocol v2
+    bool _use_protocolv2;
+    bool _is_gimbalmanager;
+
+    struct {
+        uint16_t capability_flags;
+        float tilt_deg_min, tilt_deg_max, pan_deg_min, pan_deg_max;
+        int32_t flags; //uint16_t, but can happen to be not present, then -1; are copied immediately to gimbal manager flags
+        uint32_t failure_flags;
+    } _gimbal_device;
+
+    struct {
+        uint32_t capability_flags;
+        uint32_t flags;
+        //private
+        bool gimbal_device_info_received; //we cannot serve a GIMBAL_MANAGER_INFORMATION request without having it
+        bool gimbal_device_status_received; //we can us it to block sending a GIMBAL_MANAGER_STATUS message without having it
+        uint16_t active_cmd; //0 = none
+    } _gimbal_manager;
+
+    void update_gimbal_manager_flags(uint32_t flags);
+    void send_gimbal_device_set_attitude_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t flags);
+    void send_autopilot_state_for_gimbal_device_to_gimbal(void);
+    void send_gimbal_manager_status(uint32_t flags);
+    void send_gimbal_manager_information(void);
+
+    // helper
+    void send_to_channels(uint32_t msgid, const char *pkt, bool except_gimbal = false);
 
     // internal task variables
     enum TASKENUM {
@@ -89,6 +125,8 @@ private:
     };
     uint32_t _task_time_last;
     uint16_t _task_counter;
+
+    uint32_t _send_gimbal_manager_status_time_last;
 
     // interface to STorM32_lib
     enum MAV_TUNNEL_PAYLOAD_TYPE_STORM32_ENUM {
