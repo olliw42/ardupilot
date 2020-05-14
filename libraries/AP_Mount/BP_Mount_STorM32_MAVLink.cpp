@@ -18,18 +18,31 @@ extern const AP_HAL::HAL& hal;
 #define FLAG_USENEWGIMBALMESSAGES   0x01
 #define FLAG_ISGIMBALMANAGER        0x02
 
-//missing gimbal protocol v2 flags
+/*
+0: normal old behavior
+   uses MOUNT_CONTROL, MOUNT_CONFIGURE for control, sends out tunnel for STorM32-Link
+1: uses new gimbal messages, but no gimbal manager
+   uses GIMBAL_DEVICE_SET_ATTITUDE for control, sends out AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
+3: uses new gimbal messages, and provides a gimbal manager
+*/
+
+
+// missing gimbal protocol v2 flags
 
 #define GIMBAL_MANAGER_CAP_FLAGS_HAS_ROI_WPNEXT_OFFSET  ((uint32_t)1 << 30)
 #define GIMBAL_MANAGER_CAP_FLAGS_HAS_ROI_SYSID          ((uint32_t)1 << 31)
 
-//GIMBAL_MANAGER_FLAGS_NUDGE=2097152, 2^20
-//GIMBAL_MANAGER_FLAGS_OVERRIDE=4194304, 2^21
-//GIMBAL_MANAGER_FLAGS_NONE=8388608, 2^22
-#define GIMBAL_MANAGER_FLAGS_RC_NUDGE    ((uint32_t)1 << 30)
-#define GIMBAL_MANAGER_FLAGS_RC_OVERRIDE ((uint32_t)1 << 31)
 
+#define GIMBAL_MANAGER_FLAGS_GCS_NUDGE              GIMBAL_MANAGER_FLAGS_NUDGE      //=2097152  2^21
+#define GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE           GIMBAL_MANAGER_FLAGS_OVERRIDE   //=4194304  2^22
+#define GIMBAL_MANAGER_FLAGS_MISSION_NONE           GIMBAL_MANAGER_FLAGS_NONE       //=8388608  2^23
+#define GIMBAL_MANAGER_FLAGS_MISSION_NUDGE          ((uint32_t)1 << 24)
+#define GIMBAL_MANAGER_FLAGS_RC_NUDGE               ((uint32_t)1 << 25)
+#define GIMBAL_MANAGER_FLAGS_RC_OVERRIDE            ((uint32_t)1 << 26)
+#define GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE        ((uint32_t)1 << 27)
+#define GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE     ((uint32_t)1 << 28)
 
+// to make it simple we identify the source, GCS, companion
 
 
 //******************************************************
@@ -50,8 +63,6 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
-
-    _send_gimbal_manager_status_time_last = 0;
 
     _target.mode_last = MAV_MOUNT_MODE_RETRACT;
 
@@ -76,21 +87,21 @@ void BP_Mount_STorM32_MAVLink::init(void)
     // set mode to default value set by user via parameter
     set_mode((enum MAV_MOUNT_MODE)_state._default_mode.get());
 
-    _gimbal_device.flags = -1;
     _gimbal_manager.gimbal_device_info_received = false;
-    _gimbal_manager.gimbal_device_status_received = false;
+    _gimbal_manager.gimbal_device_att_status_received = false;
 
-    _gimbal_manager.capability_flags = 0;
-    // the section related to the gimbal device capabilities are determined from the gimbal device information
     // this are our gimbal manager's capabilities
-//    _gimbal_manager.capability_flags |= GIMBAL_MANAGER_CAP_FLAGS_CAN_POINT_LOCATION_LOCAL;
-//    _gimbal_manager.capability_flags |= GIMBAL_MANAGER_CAP_FLAGS_CAN_POINT_LOCATION_GLOBAL;
-//    _gimbal_manager.capability_flags |= GIMBAL_MANAGER_CAP_FLAGS_HAS_TRACKING_POINT;
-//    _gimbal_manager.capability_flags |= GIMBAL_MANAGER_CAP_FLAGS_SUPPORTS_NUDGING;
-    _gimbal_manager.capability_flags |= GIMBAL_MANAGER_CAP_FLAGS_SUPPORTS_OVERRIDE;
+    // the part related to the gimbal device capabilities has to be determined from GIMBAL_DEVICE_INFORMATION
+    _gimbal_manager.capability_flags =
+            //GIMBAL_MANAGER_CAP_FLAGS_SUPPORTS_NUDGING |
+            GIMBAL_MANAGER_CAP_FLAGS_SUPPORTS_OVERRIDE;
 
-    //gimbal manager flags
-    // either take that of gimbal device at startup, or use pre-configured ones
+    // this are our gimbal manager flags
+    _preconfigured_gimbal_device_flags = 1;
+
+    _gimbal_manager.flags =
+            GIMBAL_MANAGER_FLAGS_ROLL_LOCK |
+            GIMBAL_MANAGER_FLAGS_PITCH_LOCK;
 }
 
 
@@ -106,9 +117,19 @@ void BP_Mount_STorM32_MAVLink::update()
     if (!_is_gimbalmanager) return;
 
     uint32_t now_ms = AP_HAL::millis();
-    if ((now_ms - _send_gimbal_manager_status_time_last) >= GIMBAL_MANAGER_STATUS_RATE_MS) {
-        _send_gimbal_manager_status_time_last = now_ms;
-        if (_gimbal_manager.gimbal_device_status_received) {
+
+    // we request it for indefinite, until received
+    if (!_gimbal_manager.gimbal_device_info_received) {
+        if ((now_ms - _gimbal_manager.gimbal_device_info_request_time_last) >= 567) { //567 ms
+            _gimbal_manager.gimbal_device_info_request_time_last = now_ms;
+            send_request_gimbal_device_information_to_gimbal();
+        }
+    }
+
+    // send gimbal manager status, if allowed
+    if (_gimbal_manager.gimbal_device_att_status_received) {
+        if ((now_ms - _gimbal_manager.status_time_last) >= GIMBAL_MANAGER_STATUS_RATE_MS) {
+            _gimbal_manager.status_time_last = now_ms;
             send_gimbal_manager_status( _gimbal_manager.flags);
         }
     }
@@ -202,70 +223,160 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
     }
 
     //TODO: should we check here msg.sysid if it is for us? sounds good, but could also cause issues, so not for now
-
     //TODO: if we capture a COMMAND_LONG here, what happens with COMMAND_ACK outside of here??
     //comment: we do not bother with sending/handling CMD_ACK momentarily
+    // this is dirty, should go to GCS_MAVLINK, GCS, etc., but we don't want to pollute and infect, hence here in dirty ways
+    if (_is_gimbalmanager) {
+        handle_gimbal_manager_msg(msg); //TODO: we need to send a COMMAND_ACK
+    }
 
-    // this is a bit dirty, should go to GCS_MAVLINK, GCS, but we don't want to pollute, hence here in dirty ways
-    // do we actually get all messages here ????
+    if ((msg.sysid != _sysid) || (msg.compid != _compid)) { //this msg is not from our gimbal
+        return;
+    }
+
+    bool send_mountstatus = false;
+
+    switch (msg.msgid) {
+        case MAVLINK_MSG_ID_HEARTBEAT: {
+            mavlink_heartbeat_t payload;
+            mavlink_msg_heartbeat_decode( &msg, &payload );
+            _armed = is_normal_state(payload.custom_mode & 0xFF);
+            if( !(payload.custom_mode & 0x80000000) ){ //we don't follow all changes, but just toggle it to true once
+                _prearmchecks_ok = true;
+            }
+            }break;
+
+        case MAVLINK_MSG_ID_ATTITUDE: { //30
+            mavlink_attitude_t payload;
+            mavlink_msg_attitude_decode( &msg, &payload );
+            _status.pitch_deg = degrees(payload.pitch);
+            _status.roll_deg = degrees(payload.roll);
+            _status.yaw_deg = degrees(payload.yaw);
+            _status.yaw_deg_absolute = NAN;
+            send_mountstatus = true;
+            }break;
+
+        case MAVLINK_MSG_ID_MOUNT_STATUS: { //158
+            mavlink_mount_status_t payload;
+            mavlink_msg_mount_status_decode( &msg, &payload );
+            _status.pitch_deg = (float)payload.pointing_a * 0.01f;
+            _status.roll_deg = (float)payload.pointing_b * 0.01f;
+            _status.yaw_deg = (float)payload.pointing_c * 0.01f;
+            _status.yaw_deg_absolute = NAN;
+            send_mountstatus = true;
+            }break;
+
+        case MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION: { //283
+            if (!_is_gimbalmanager) break;
+            mavlink_gimbal_device_information_t payload;
+            mavlink_msg_gimbal_device_information_decode( &msg, &payload );
+            _gimbal_device.capability_flags = payload.cap_flags;
+            _gimbal_device.tilt_deg_min = degrees(payload.tilt_min); //hopefully handles also NAN correctly
+            _gimbal_device.tilt_deg_max = degrees(payload.tilt_max);
+            _gimbal_device.pan_deg_min = degrees(payload.pan_min);
+            _gimbal_device.pan_deg_max = degrees(payload.pan_max);
+            // copy gimbal device capability flags into gimbal manager capability flags
+            _gimbal_manager.capability_flags &=~ 0x0000FFFF; //clear
+            _gimbal_manager.capability_flags |= _gimbal_device.capability_flags; //set
+            _gimbal_manager.gimbal_device_info_received = true; //inform gimbal manager
+            }break;
+
+        case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS: { //285
+            if (!_use_protocolv2) break;
+            mavlink_gimbal_device_attitude_status_t payload;
+            mavlink_msg_gimbal_device_attitude_status_decode( &msg, &payload );
+            float roll_rad, pitch_rad, yaw_rad;
+            Quaternion quat(payload.q[0], payload.q[1], payload.q[2], payload.q[3]);
+            quat.to_euler(roll_rad, pitch_rad, yaw_rad);
+            _status.roll_deg = degrees(roll_rad);
+            _status.pitch_deg = degrees(pitch_rad);
+            _status.yaw_deg = degrees(yaw_rad);
+            _status.yaw_deg_absolute = NAN;
+            _gimbal_device.flags = payload.flags;
+            _gimbal_device.failure_flags = payload.failure_flags;
+            send_mountstatus = true;
+            // gimbal manager
+            // if we want to use preconfigured GD flags, we need to prevent this until GM_STATUS has been send
+            // else we need to allow this before GM_STATUS is sent
+            if (!_preconfigured_gimbal_device_flags || (_gimbal_manager.status_time_last > 0)) {
+                update_gimbal_manager_flags_from_gimbal_device_flags(_gimbal_device.flags);
+            }
+            _gimbal_manager.gimbal_device_att_status_received = true; //inform gimbal manager
+            }break;
+    }
+
+    if (send_mountstatus) {
+        //forward to other links, to make MissionPlanner happy
+        send_mount_status_to_channels();
+    }
+}
+
+
+// -1: nothing to do, >= 0: send COMMAND_ACK with MAV_RESULT
+int8_t BP_Mount_STorM32_MAVLink::handle_gimbal_manager_msg(const mavlink_message_t &msg)
+{
+    if (!_is_gimbalmanager) return -1;
+
     switch (msg.msgid) {
         case MAVLINK_MSG_ID_COMMAND_LONG: { //76
-            if (!_is_gimbalmanager) break;
             mavlink_command_long_t payload;
             mavlink_msg_command_long_decode( &msg, &payload );
             switch (payload.command) {
 
-                case MAV_CMD_REQUEST_MESSAGE: {
+                case MAV_CMD_REQUEST_MESSAGE: { //76-512
                     uint32_t param1 = payload.param1;
                     if (param1 ==  MAVLINK_MSG_ID_GIMBAL_MANAGER_INFORMATION) {
                         if (_gimbal_manager.gimbal_device_info_received) {
                             send_gimbal_manager_information();
+                            return MAV_RESULT_ACCEPTED;
                         } else {
                             //we can't do it, we need to send an CMD_ACK
+                            return MAV_RESULT_TEMPORARILY_REJECTED;
                         }
                     }
-                    }break;
+                    }return MAV_RESULT_DENIED;
 
-                case MAV_CMD_DO_GIMBAL_MANAGER_ATTITUDE: {
+                case MAV_CMD_DO_GIMBAL_MANAGER_ATTITUDE: { //76-1000
                     uint8_t gimbal_device_id = payload.param7;
-                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) break; //not for our gimbal manager
+                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) return MAV_RESULT_DENIED; //not for our gimbal manager
+
                     float tilt_angle_deg = payload.param3;
                     float pan_angle_deg = payload.param4;
 
                     _gimbal_manager.active_cmd = MAV_CMD_DO_GIMBAL_MANAGER_ATTITUDE;
                     update_gimbal_manager_flags(payload.param5);
 
-                    if ((tilt_angle_deg == NAN) || (pan_angle_deg == NAN)) break;
+                    if ((tilt_angle_deg == NAN) || (pan_angle_deg == NAN)) return MAV_RESULT_ACCEPTED;
                     _angle_ef_target_rad.x = 0.0f; //roll
                     _angle_ef_target_rad.y = radians(tilt_angle_deg);
                     _angle_ef_target_rad.z = radians(pan_angle_deg);
-                    }break;
+                    }return MAV_RESULT_ACCEPTED;
 
-                case MAV_CMD_DO_GIMBAL_MANAGER_TRACK_POINT: {
+                case MAV_CMD_DO_GIMBAL_MANAGER_TRACK_POINT: { //76-1001
                     uint8_t gimbal_device_id = payload.param7;
-                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) break; //not for our gimbal manager
+                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) return MAV_RESULT_DENIED; //not for our gimbal manager
 
                     if (_gimbal_manager.capability_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_TRACKING_POINT) {
                         _gimbal_manager.active_cmd = MAV_CMD_DO_GIMBAL_MANAGER_TRACK_POINT;
                     } else {
-                        //we can't do it, we need to send an CMD_ACK
+                        return MAV_RESULT_DENIED; // we can't do it
                     }
-                    }break;
+                    }return MAV_RESULT_ACCEPTED;
 
-                case MAV_CMD_DO_GIMBAL_MANAGER_TRACK_RECTANGLE: {
+                case MAV_CMD_DO_GIMBAL_MANAGER_TRACK_RECTANGLE: { //76-1002
                     uint8_t gimbal_device_id = payload.param7;
-                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) break; //not for our gimbal manager
+                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) return MAV_RESULT_DENIED; //not for our gimbal manager
 
                     if (_gimbal_manager.capability_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_TRACKING_RECTANGLE) {
                         _gimbal_manager.active_cmd = MAV_CMD_DO_GIMBAL_MANAGER_TRACK_RECTANGLE;
                     } else {
-                        //we can't do it, we need to send an CMD_ACK
+                        return MAV_RESULT_DENIED; // we can't do it
                     }
-                    }break;
+                    }return MAV_RESULT_ACCEPTED;
 
-                case MAV_CMD_DO_SET_ROI_LOCATION: {
+                case MAV_CMD_DO_SET_ROI_LOCATION: { //76-195
                     uint8_t gimbal_device_id = payload.param1;
-                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) break; //not for our gimbal manager
+                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) return MAV_RESULT_DENIED; //not for our gimbal manager
 
                     if (_gimbal_manager.capability_flags & GIMBAL_MANAGER_CAP_FLAGS_CAN_POINT_LOCATION_LOCAL) {
                         _gimbal_manager.active_cmd = MAV_CMD_DO_SET_ROI_LOCATION;
@@ -273,43 +384,42 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
                     if (_gimbal_manager.capability_flags & GIMBAL_MANAGER_CAP_FLAGS_CAN_POINT_LOCATION_GLOBAL) {
                         _gimbal_manager.active_cmd = MAV_CMD_DO_SET_ROI_LOCATION;
                     } else {
-                        //we can't do it, we need to send an CMD_ACK
+                        return MAV_RESULT_DENIED; // we can't do it
                     }
-                    }break;
+                    }return MAV_RESULT_ACCEPTED;
 
-                case MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET: {
+                case MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET: { //76-196
                     uint8_t gimbal_device_id = payload.param1;
-                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) break; //not for our gimbal manager
+                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) return MAV_RESULT_DENIED; //not for our gimbal manager
 
                     if (_gimbal_manager.capability_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_ROI_WPNEXT_OFFSET) {
                         _gimbal_manager.active_cmd = MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET;
                     } else {
-                        //we can't do it, we need to send an CMD_ACK
+                        return MAV_RESULT_DENIED; // we can't do it
                     }
-                    }break;
+                    }return MAV_RESULT_ACCEPTED;
 
-                case MAV_CMD_DO_SET_ROI_SYSID: {
+                case MAV_CMD_DO_SET_ROI_SYSID: { //76-198
                     uint8_t gimbal_device_id = payload.param2;
-                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) break; //not for our gimbal manager
+                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) return MAV_RESULT_DENIED; //not for our gimbal manager
 
                     if (_gimbal_manager.capability_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_ROI_SYSID) {
                         _gimbal_manager.active_cmd = MAV_CMD_DO_SET_ROI_SYSID;
                     } else {
-                        //we can't do it, we need to send an CMD_ACK
+                        return MAV_RESULT_DENIED; // we can't do it
                     }
-                    }break;
+                    }return MAV_RESULT_ACCEPTED;
 
-                case MAV_CMD_DO_SET_ROI_NONE: {
+                case MAV_CMD_DO_SET_ROI_NONE: { //76-197
                     uint8_t gimbal_device_id = payload.param1;
-                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) break; //not for our gimbal manager
+                    if ((gimbal_device_id != _compid) && (gimbal_device_id > 0)) return MAV_RESULT_DENIED; //not for our gimbal manager
 
                     _gimbal_manager.active_cmd = 0;
-                    }break;
+                    }return MAV_RESULT_ACCEPTED;
             }
-            }break; //end of case MAVLINK_MSG_ID_COMMAND_LONG
+            }return MAV_RESULT_UNSUPPORTED; //end of case MAVLINK_MSG_ID_COMMAND_LONG
 
         case MAVLINK_MSG_ID_GIMBAL_MANAGER_SET_ATTITUDE: { //282
-            if (!_is_gimbalmanager) break;
             mavlink_gimbal_manager_set_attitude_t payload;
             mavlink_msg_gimbal_manager_set_attitude_decode( &msg, &payload );
             if ((payload.gimbal_device_id != _compid) && (payload.gimbal_device_id > 0)) break; //not for our gimbal manager
@@ -339,90 +449,27 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             }break;
     }
 
-    if ((msg.sysid != _sysid) || (msg.compid != _compid)) { //this msg is not from our gimbal
-        return;
-    }
-
-    bool send_mountstatus = false;
-
-    switch (msg.msgid) {
-        case MAVLINK_MSG_ID_HEARTBEAT: {
-            mavlink_heartbeat_t payload;
-            mavlink_msg_heartbeat_decode( &msg, &payload );
-            _armed = is_normal_state(payload.custom_mode & 0xFF);
-            if( !(payload.custom_mode & 0x80000000) ){ //we don't follow all changes, but just toggle it to true once
-                _prearmchecks_ok = true;
-            }
-            }break;
-
-        case MAVLINK_MSG_ID_ATTITUDE: { //30
-            mavlink_attitude_t payload;
-            mavlink_msg_attitude_decode( &msg, &payload );
-            _status.pitch_deg = degrees(payload.pitch);
-            _status.roll_deg = degrees(payload.roll);
-            _status.yaw_deg = degrees(payload.yaw);
-            _status.yaw_deg_absolute = NAN;
-            send_mountstatus = true;
-            _gimbal_device.flags = -1;
-            }break;
-
-        case MAVLINK_MSG_ID_MOUNT_STATUS: { //158
-            mavlink_mount_status_t payload;
-            mavlink_msg_mount_status_decode( &msg, &payload );
-            _status.pitch_deg = (float)payload.pointing_a * 0.01f;
-            _status.roll_deg = (float)payload.pointing_b * 0.01f;
-            _status.yaw_deg = (float)payload.pointing_c * 0.01f;
-            _status.yaw_deg_absolute = NAN;
-            send_mountstatus = true;
-            _gimbal_device.flags = -1;
-            }break;
-
-        case MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION: { //283
-            if (!_is_gimbalmanager) break;
-            mavlink_gimbal_device_information_t payload;
-            mavlink_msg_gimbal_device_information_decode( &msg, &payload );
-            _gimbal_device.capability_flags = payload.cap_flags;
-            _gimbal_device.tilt_deg_min = degrees(payload.tilt_min); //hopefully handles also NAN correctly
-            _gimbal_device.tilt_deg_max = degrees(payload.tilt_max);
-            _gimbal_device.pan_deg_min = degrees(payload.pan_min);
-            _gimbal_device.pan_deg_max = degrees(payload.pan_max);
-            // copy gimbal device capability flags into gimbal manager capability flags
-            _gimbal_manager.capability_flags &=~ 0x0000FFFF; //clear
-            _gimbal_manager.capability_flags |= _gimbal_device.capability_flags; //set
-            _gimbal_manager.gimbal_device_info_received = true; //inform gimbal manager
-            }break;
-
-        case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS: { //285
-            if (!_use_protocolv2) break;
-            mavlink_gimbal_device_attitude_status_t payload;
-            mavlink_msg_gimbal_device_attitude_status_decode( &msg, &payload );
-            float roll_rad, pitch_rad, yaw_rad;
-            Quaternion quat(payload.q[0], payload.q[1], payload.q[2], payload.q[3]);
-            quat.to_euler(roll_rad, pitch_rad, yaw_rad);
-            _status.roll_deg = degrees(roll_rad);
-            _status.pitch_deg = degrees(pitch_rad);
-            _status.yaw_deg = degrees(yaw_rad);
-            _status.yaw_deg_absolute = NAN;
-            send_mountstatus = true;
-            _gimbal_device.flags = payload.flags;
-            _gimbal_device.failure_flags = payload.failure_flags;
-            // copy gimbal device flags into gimbal manager flags
-            _gimbal_manager.flags &=~ 0x0000FFFF; //clear
-            _gimbal_manager.flags |= (uint16_t)_gimbal_device.flags; //set
-            _gimbal_manager.gimbal_device_status_received = true; //inform gimbal manager
-            }break;
-    }
-
-    if (send_mountstatus) {
-        //forward to other links, to make MissionPlanner happy
-        send_mount_status_to_channels();
-    }
+    return -1;
 }
 
 
 bool BP_Mount_STorM32_MAVLink::pre_arm_checks(void)
 {
     return _prearmchecks_ok;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::is_rc_failsafe(void)
+{
+    const RC_Channel *roll_ch = rc().channel(_state._roll_rc_in - 1);
+    const RC_Channel *tilt_ch = rc().channel(_state._tilt_rc_in - 1);
+    const RC_Channel *pan_ch = rc().channel(_state._pan_rc_in - 1);
+
+    if ((roll_ch != nullptr) && (roll_ch->get_radio_in() < 700)) return true;
+    if ((tilt_ch != nullptr) && (tilt_ch->get_radio_in() < 700)) return true;
+    if ((pan_ch != nullptr) && (pan_ch->get_radio_in() < 700)) return true;
+
+    return false;
 }
 
 
@@ -525,24 +572,9 @@ void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal(void)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::is_rc_failsafe(void)
-{
-    const RC_Channel *roll_ch = rc().channel(_state._roll_rc_in - 1);
-    const RC_Channel *tilt_ch = rc().channel(_state._tilt_rc_in - 1);
-    const RC_Channel *pan_ch = rc().channel(_state._pan_rc_in - 1);
-
-    if ((roll_ch != nullptr) && (roll_ch->get_radio_in() < 700)) return true;
-    if ((tilt_ch != nullptr) && (tilt_ch->get_radio_in() < 700)) return true;
-    if ((pan_ch != nullptr) && (pan_ch->get_radio_in() < 700)) return true;
-
-    return false;
-}
-
-
 void BP_Mount_STorM32_MAVLink::set_target_angles_v2(void)
 {
     if (!_is_gimbalmanager) return;
-    if (!_gimbal_manager.gimbal_device_status_received) return;
 
     if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_RETRACT) {
         const Vector3f &target = _state._retract_angles.get();
@@ -569,16 +601,43 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_v2(void)
 }
 
 
+// is called by task loop at 20 Hz
 void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal_v2(void)
 {
     if (!_is_gimbalmanager) return;
-    if (!_gimbal_manager.gimbal_device_status_received) return;
+    if (!_gimbal_manager.gimbal_device_att_status_received) return;
 
-    //this converts gimbal manager flags to gimbal device flags, as these are the lower uni16_t
-    uint16_t gimbaldevice_flags = _gimbal_manager.flags;
+    uint16_t gimbaldevice_flags = _gimbal_manager.flags; // convert GM flags to GD device flags
     send_gimbal_device_set_attitude_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags);
 }
 
+
+void BP_Mount_STorM32_MAVLink::update_gimbal_manager_flags_from_gimbal_device_flags(uint16_t gimbal_device_flags)
+{
+    _gimbal_manager.flags &=~ 0x0000FFFF; //clear
+    _gimbal_manager.flags |= (uint16_t)gimbal_device_flags; //set
+
+    // this currently doesn't modify/affect gimbal manager flags, so nothing else to do
+}
+
+
+void BP_Mount_STorM32_MAVLink::update_gimbal_manager_flags(uint32_t flags)
+{
+    _gimbal_manager.flags = flags;
+
+    if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_NONE) {
+        _gimbal_manager.active_cmd = 0;
+        _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_NONE;
+    }
+
+/*
+    //check for
+
+    _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_OVERRIDE;
+
+    _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_OVERRIDE | GIMBAL_MANAGER_FLAGS_NUDGE); //clear them
+*/
+}
 
 
 //------------------------------------------------------
@@ -587,6 +646,8 @@ void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal_v2(void)
 
 void BP_Mount_STorM32_MAVLink::send_mount_status_to_channels(void)
 {
+    // space is checked by send_to_channels()
+
     mavlink_mount_status_t msg = {
         pointing_a : (int32_t)(_status.pitch_deg*100.0f),
         pointing_b : (int32_t)(_status.roll_deg*100.0f),
@@ -600,9 +661,6 @@ void BP_Mount_STorM32_MAVLink::send_mount_status_to_channels(void)
 
 void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, enum MAV_MOUNT_MODE mode)
 {
-    //it doesn't matter if not _initalised, it will then send out zeros
-    // also: if not initialized it normally wouldn't be called since checked in update_fast()
-
     if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
         return;
     }
@@ -615,16 +673,16 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control_to_gimbal(float roll_de
     //this is send out with _sysid, _compid as target
     // so it can be differentiated by the STorM32 controller from routed commands/messages by looking at source and target
     mavlink_msg_command_long_send(
-            _chan,
-            _sysid,
-            _compid,
-            MAV_CMD_DO_MOUNT_CONTROL,
-            0,        // confirmation of zero means this is the first time this message has been sent
-            pitch_deg,
-            roll_deg,
-            yaw_deg,
-            0, 0, 0,  // param4 ~ param6 unused
-            mode);
+        _chan,
+        _sysid,
+        _compid,
+        MAV_CMD_DO_MOUNT_CONTROL,
+        0,        // confirmation of zero means this is the first time this message has been sent
+        pitch_deg,
+        roll_deg,
+        yaw_deg,
+        0, 0, 0,  // param4 ~ param6 unused
+        mode);
 }
 
 
@@ -634,72 +692,16 @@ void BP_Mount_STorM32_MAVLink::send_rc_channels_to_gimbal(void)
         return;
     }
 
+    #define RCIN(ch_index)  hal.rcin->read(ch_index)
+
     mavlink_msg_rc_channels_send(
-            _chan,
-            AP_HAL::millis(),
-            16,
-            _rcin_read(0), _rcin_read(1), _rcin_read(2), _rcin_read(3),
-            _rcin_read(4), _rcin_read(5), _rcin_read(6), _rcin_read(7),
-            _rcin_read(8), _rcin_read(9), _rcin_read(10), _rcin_read(11),
-            _rcin_read(12),_rcin_read(13), _rcin_read(14), _rcin_read(15),
-            0, 0,
-            0);
-}
-
-
-void BP_Mount_STorM32_MAVLink::update_gimbal_manager_flags(uint32_t flags)
-{
-
-//XX    _gimbal_manager.flags = (flags & 0xFFFF0000) | (_gimbal_manager.flags & 0x0000FFFF); //don't modify the gimbal device part
-
-    _gimbal_manager.flags = flags;
-
-    if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_NONE) {
-        _gimbal_manager.active_cmd = 0;
-        _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_NONE;
-    }
-
-/*
-    //check for
-
-    _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_OVERRIDE;
-
-    uint32_t gimbal_manager_flags = payload.param5;
-    if (gimbal_manager_flags & GIMBAL_MANAGER_FLAGS_NONE) { _gimbal_manager.active_cmd = 0; break; }
-    _gimbal_manager.active_cmd = MAV_CMD_DO_GIMBAL_MANAGER_ATTITUDE;
-
-
-    if (gimbal_manager_flags & GIMBAL_MANAGER_FLAGS_NONE) _gimbal_manager.active_cmd = 0;
-
-    _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_OVERRIDE | GIMBAL_MANAGER_FLAGS_NUDGE); //clear them
-*/
-}
-
-
-//the interface is that of do_mount_control, to make it simpler for the moment, so we internally convert
-void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t flags)
-{
-    if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
-        return;
-    }
-
-//XX    flags |= GIMBAL_DEVICE_FLAGS_PITCH_LOCK | GIMBAL_DEVICE_FLAGS_ROLL_LOCK;
-//XX    flags &=~ GIMBAL_DEVICE_FLAGS_YAW_LOCK;
-
-    Quaternion quat;
-    quat.from_euler( radians(roll_deg), radians(pitch_deg), radians(yaw_deg) );
-    float q[4];
-    q[0] = quat.q1;
-    q[1] = quat.q2;
-    q[2] = quat.q3;
-    q[3] = quat.q4;
-
-    mavlink_msg_gimbal_device_set_attitude_send(
-            _chan,
-            _sysid, _compid,
-            flags,
-            q,
-            NAN, NAN, NAN);
+        _chan,
+        AP_HAL::millis(),
+        16,
+        RCIN(0), RCIN(1), RCIN(2), RCIN(3), RCIN(4), RCIN(5), RCIN(6), RCIN(7),
+        RCIN(8), RCIN(9), RCIN(10), RCIN(11), RCIN(12), RCIN(13), RCIN(14), RCIN(15),
+        0, 0,
+        0);
 }
 
 
@@ -746,19 +748,45 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
     }
 
     mavlink_msg_autopilot_state_for_gimbal_device_send(
-            _chan,
-            AP_HAL::micros64(),
-            _sysid, _compid,
-            q,
-            0, // uint32_t q_estimated_delay_us,
-            vel.x, vel.y, vel.z,
-            0, // uint32_t v_estimated_delay_us,
-            yawrate);
+        _chan,
+        AP_HAL::micros64(),
+        _sysid, _compid,
+        q,
+        0, // uint32_t q_estimated_delay_us,
+        vel.x, vel.y, vel.z,
+        0, // uint32_t v_estimated_delay_us,
+        yawrate);
+}
+
+
+//the interface is that of do_mount_control, to make it simpler for the moment, so we internally convert
+void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t flags)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
+        return;
+    }
+
+    Quaternion quat;
+    quat.from_euler( radians(roll_deg), radians(pitch_deg), radians(yaw_deg) );
+    float q[4];
+    q[0] = quat.q1;
+    q[1] = quat.q2;
+    q[2] = quat.q3;
+    q[3] = quat.q4;
+
+    mavlink_msg_gimbal_device_set_attitude_send(
+        _chan,
+        _sysid, _compid,
+        flags,
+        q,
+        NAN, NAN, NAN);
 }
 
 
 void BP_Mount_STorM32_MAVLink::send_gimbal_manager_status(uint32_t flags)
 {
+    // space is checked by send_to_channels()
+
     mavlink_gimbal_manager_status_t msg = {
         time_boot_ms : AP_HAL::millis(),
         flags : flags,
@@ -770,6 +798,8 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_manager_status(uint32_t flags)
 
 void BP_Mount_STorM32_MAVLink::send_gimbal_manager_information(void)
 {
+    // space is checked by send_to_channels()
+
     mavlink_gimbal_manager_information_t msg = {
         time_boot_ms : AP_HAL::millis(),
         cap_flags : _gimbal_manager.capability_flags,
@@ -785,8 +815,26 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_manager_information(void)
 }
 
 
+void BP_Mount_STorM32_MAVLink::send_request_gimbal_device_information_to_gimbal(void)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
+        return;
+    }
+
+    mavlink_msg_command_long_send(
+        _chan,
+        _sysid,
+        _compid,
+        MAV_CMD_REQUEST_MESSAGE,
+        0,          // confirmation of zero means this is the first time this message has been sent
+        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION,
+        0,0,0,0,0,  // param2 ~ param6 unused
+        0);         // target address for requested message = irrelevant here
+}
+
+
 //------------------------------------------------------
-// helper
+// MAVLink send helper
 //------------------------------------------------------
 
 // this is essentially GCS::send_to_active_channels(uint32_t msgid, const char *pkt)
