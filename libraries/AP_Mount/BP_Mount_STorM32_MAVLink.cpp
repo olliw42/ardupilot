@@ -74,9 +74,16 @@ void BP_Mount_STorM32_MAVLink::update_fast()
     // this is not totally correct, it seems the loop is slower than 100 Hz, but just a bit?
     // should I use 9 ms, or better use micros64(), and something like 9900 us? (with 10 ms it might be easy to miss a 400 Hz tick)
     // each message is send at 20 Hz i.e. 50 ms, for 5 task slots => 10 ms per task slot
+
+    // OMG: plane's SCHED_LOOP_RATE is set to 50 Hz, which makes that this loop is also called at just 50 Hz ...
+    // do I have to move to 25 Hz ????
+    // so, we divide 50 Hz into 4 slots, sand send STorM32Link data at 25 Hz, and gimbal data and rc_channels at 12.5 Hz
+
     uint32_t now_us = AP_HAL::micros();
     if ((now_us - _task_time_last) >= 10000) {
-        _task_time_last = now_us;
+//        _task_time_last = now_us;
+        _task_time_last += 10000;
+        if ((now_us - _task_time_last) > 5000) _task_time_last = now_us;
 
         switch (_task_counter) {
             case TASK_SLOT0:
@@ -84,27 +91,21 @@ void BP_Mount_STorM32_MAVLink::update_fast()
                 break;
 
             case TASK_SLOT1:
-                // trigger live data
-                // handle docamera
-                break;
-
-            case TASK_SLOT2:
                 set_target_angles_bymountmode();
                 send_target_angles_to_gimbal();
                 break;
 
-            case TASK_SLOT3:
-                //send_cmd_setinputs(); //2.4ms
-                send_rc_channels_to_gimbal();
+            case TASK_SLOT2:
+                send_cmd_storm32link_v2(); //2.3ms
                 break;
 
-            case TASK_SLOT4:
-                // receive live data
+            case TASK_SLOT3:
+                send_rc_channels_to_gimbal();
                 break;
         }
 
         _task_counter++;
-        if (_task_counter >= TASK_SLOTNUMBER) _task_counter = 0;
+        if (_task_counter > TASK_SLOT3) _task_counter = 0;
     }
 }
 
