@@ -143,14 +143,19 @@ void BP_Mount_STorM32_MAVLink::update_fast()
         return;
     }
 
+    #define PERIOD_US   10000 //10000  //for some reason 10000 gives ca 18Hz
+
     //slow down everything to 100 Hz
     // we can't use update(), since 50 Hz isn't compatible with the desired 20 Hz STorM32Link rate
     // this is not totally correct, it seems the loop is slower than 100 Hz, but just a bit?
     // should I use 9 ms, or better use micros64(), and something like 9900 us? (with 10 ms it might be easy to miss a 400 Hz tick)
     // each message is send at 20 Hz i.e. 50 ms, for 5 task slots => 10 ms per task slot
     uint32_t now_us = AP_HAL::micros();
-    if ((now_us - _task_time_last) >= 10000) {
-        _task_time_last = now_us;
+    if ((now_us - _task_time_last) >= PERIOD_US) {
+        //_task_time_last = now_us;
+        //this gives MUCH higher precision!!!
+        _task_time_last += PERIOD_US;
+        if ((now_us - _task_time_last) > 5000) _task_time_last = now_us; //we got out of sync, so get back in sync
 
         switch (_task_counter) {
             case TASK_SLOT0:
