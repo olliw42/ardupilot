@@ -97,38 +97,6 @@ void STorM32_MAVLink_class::send_cmd_storm32link_v2(void)
 }
 
 
-void STorM32_MAVLink_class::send_cmd_setinputs(void)
-{
-    if (!_tx_hasspace(sizeof(tSTorM32CmdSetInputs))) {
-        return;
-    }
-
-    uint8_t status = 0;
-
-    tSTorM32CmdSetInputs t;
-    t.channel0 = _rcin_read(0);
-    t.channel1 = _rcin_read(1);
-    t.channel2 = _rcin_read(2);
-    t.channel3 = _rcin_read(3);
-    t.channel4 = _rcin_read(4);
-    t.channel5 = _rcin_read(5);
-    t.channel6 = _rcin_read(6);
-    t.channel7 = _rcin_read(7);
-    t.channel8 = _rcin_read(8);
-    t.channel9 = _rcin_read(9);
-    t.channel10 = _rcin_read(10);
-    t.channel11 = _rcin_read(11);
-    t.channel12 = _rcin_read(12);
-    t.channel13 = _rcin_read(13);
-    t.channel14 = _rcin_read(14);
-    t.channel15 = _rcin_read(15);
-    t.status = status;
-    storm32_finalize_CmdSetInputs(&t);
-
-    _write( (uint8_t*)(&t), sizeof(tSTorM32CmdSetInputs) );
-}
-
-
 void STorM32_MAVLink_class::send_cmd_sethomelocation(void)
 {
     if (!_tx_hasspace(sizeof(tSTorM32CmdSetHomeTargetLocation))) {

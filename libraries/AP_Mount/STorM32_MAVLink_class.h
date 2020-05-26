@@ -22,14 +22,12 @@ public:
 
     // functions for sending to the STorM32, using RCcmds
     void send_cmd_storm32link_v2(void);
-    void send_cmd_setinputs(void);
     void send_cmd_sethomelocation(void);
     void send_cmd_settargetlocation(void);
 
     // it is easier to provide them in a child class, as the y need chan etc.
     virtual bool _tx_hasspace(const size_t size) = 0;
     virtual size_t _write(const uint8_t* buffer, size_t size) = 0;
-    virtual uint16_t _rcin_read(uint8_t ch_index){ return 0; };
 
 protected:
     uint8_t _storm32link_seq;
