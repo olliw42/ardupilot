@@ -9,7 +9,9 @@
 
 #include "AP_Mount.h"
 #include "AP_Mount_Backend.h"
-#include "STorM32_MAVLink_class.h"
+#include <GCS_MAVLink/include/mavlink/v2.0/checksum.h>
+#include <AP_Mount/STorM32_lib.h>
+
 
 #define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
@@ -23,7 +25,7 @@
 
 
 // that's the main class
-class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend, public STorM32_MAVLink_class
+class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend
 {
 public:
     // Constructor
@@ -184,6 +186,12 @@ private:
         MAV_TUNNEL_PAYLOAD_TYPE_STORM32_CHANNEL2_OUT, //MAV_TUNNEL_PAYLOAD_TYPE_STORM32_RESERVED3
     };
 
-    bool _tx_hasspace(const size_t size) override;
-    size_t _write(const uint8_t* buffer, size_t size) override;
+    // STorM32_MAVLink_class
+    uint8_t _storm32link_seq;
+    void send_cmd_storm32link_v2(void);
+    bool is_normal_state(uint16_t state);
+    void send_cmd_sethomelocation(void);
+    void send_cmd_settargetlocation(void);
+    bool _tx_hasspace(const size_t size);
+    size_t _write(const uint8_t* buffer, size_t size);
 };
