@@ -794,6 +794,27 @@ uint32_t flags_last;
             _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE | GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE);
         }
 
+        if ((flags & GIMBAL_MANAGER_FLAGS_RC_OVERRIDE) && //companion wants to set RC override
+            !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE) && //companion has priority
+            (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE) && //mission has priority
+            !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE)) { //gcs has priority
+
+            _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_RC_OVERRIDE;
+            _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_NUDGE;
+            _override_last = now_ms;
+        } else
+        if (flags & GIMBAL_MANAGER_FLAGS_RC_NUDGE) { //companion wants to set RC nudging
+            if (!(flags_last & GIMBAL_MANAGER_FLAGS_RC_NUDGE)) {
+                _rc_nudge.pitch_rad = _rc_nudge.yaw_rad = 0.0f;
+            }
+            _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_OVERRIDE;
+            _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_RC_NUDGE;
+            _rc_nudge.last = now_ms;
+        } else {
+            // release
+            _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_RC_OVERRIDE | GIMBAL_MANAGER_FLAGS_RC_NUDGE);
+        }
+
     } else
     if (client == CLIENT_MISSION) {
 
@@ -842,28 +863,29 @@ uint32_t flags_last;
         } else {
             // release
             _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE | GIMBAL_MANAGER_FLAGS_GCS_NUDGE);
+        }
 
-            if ((flags & GIMBAL_MANAGER_FLAGS_RC_OVERRIDE) && //GCS wants to set RC override
-                !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE) && //companion has priority
-                (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE)) { //mission has priority
-                // set
-                _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_RC_OVERRIDE;
-                _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_NUDGE;
-                _override_last = now_ms;
-            } else
-            if (flags & GIMBAL_MANAGER_FLAGS_RC_NUDGE) { //GCS wants to set RC nudging
-                //has it been enabled?
-                if (!(flags_last & GIMBAL_MANAGER_FLAGS_RC_NUDGE)) {
-                    _rc_nudge.pitch_rad = _rc_nudge.yaw_rad = 0.0f;
-                }
-                // set
-                _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_OVERRIDE;
-                _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_RC_NUDGE;
-                _rc_nudge.last = now_ms;
-            } else {
-                // release
-                _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_RC_OVERRIDE | GIMBAL_MANAGER_FLAGS_RC_NUDGE);
+        if ((flags & GIMBAL_MANAGER_FLAGS_RC_OVERRIDE) && //GCS wants to set RC override
+            !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE) && //companion has priority
+            (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE) && //mission has priority
+            !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE)) { //gcs has priority
+            // set
+            _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_RC_OVERRIDE;
+            _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_NUDGE;
+            _override_last = now_ms;
+        } else
+        if (flags & GIMBAL_MANAGER_FLAGS_RC_NUDGE) { //GCS wants to set RC nudging
+            //has it been enabled?
+            if (!(flags_last & GIMBAL_MANAGER_FLAGS_RC_NUDGE)) {
+                _rc_nudge.pitch_rad = _rc_nudge.yaw_rad = 0.0f;
             }
+            // set
+            _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_OVERRIDE;
+            _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_RC_NUDGE;
+            _rc_nudge.last = now_ms;
+        } else {
+            // release
+            _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_RC_OVERRIDE | GIMBAL_MANAGER_FLAGS_RC_NUDGE);
         }
 
     } else {
@@ -978,6 +1000,10 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_rc(void)
         float roll_rad = _angle_ef_target_rad.x;
         float pitch_rad = _angle_ef_target_rad.y;
         float yaw_rad = _angle_ef_target_rad.z;
+
+        _angle_ef_target_rad.x = 0.0f;
+        _angle_ef_target_rad.y = _rc_nudge.pitch_rad;
+        _angle_ef_target_rad.z = _rc_nudge.yaw_rad;
 
         update_targets_from_rc();
         if (is_rc_failsafe()) {
