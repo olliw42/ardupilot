@@ -10,6 +10,7 @@
 #include <GCS_MAVLink/GCS.h>
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_GPS/AP_GPS.h>
+#include <AP_RTC/AP_RTC.h>
 #include "BP_Mount_STorM32_MAVLink.h"
 
 extern const AP_HAL::HAL& hal;
@@ -125,6 +126,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
+    _send_system_time_last = 0;
 
     _target.mode_last = MAV_MOUNT_MODE_RETRACT;
 
@@ -259,6 +261,10 @@ void BP_Mount_STorM32_MAVLink::update_fast()
 
             case TASK_SLOT4:
                 //old: receive live data
+                if ((now_us - _send_system_time_last) >= 5000000) { //every 5 sec is really plenty
+                    _send_system_time_last = now_us;
+                    send_system_time_to_gimbal();
+                }
                 break;
         }
 
@@ -1204,6 +1210,24 @@ void BP_Mount_STorM32_MAVLink::send_request_gimbal_device_information_to_gimbal(
         MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION,
         0,0,0,0,0,  // param2 ~ param6 unused
         0);         // target address for requested message = irrelevant here
+}
+
+
+void BP_Mount_STorM32_MAVLink::send_system_time_to_gimbal(void)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, SYSTEM_TIME)) {
+        return;
+    }
+
+    uint64_t time_unix = 0;
+    AP::rtc().get_utc_usec(time_unix); // may fail, leaving time_unix at 0
+
+    if (!time_unix) return; // no unix time available, so no reason to send
+
+    mavlink_msg_system_time_send(
+        _chan,
+        time_unix,
+        AP_HAL::millis());
 }
 
 

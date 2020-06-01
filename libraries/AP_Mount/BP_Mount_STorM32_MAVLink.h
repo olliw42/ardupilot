@@ -147,6 +147,10 @@ private:
     void send_gimbal_manager_information(void);
     void send_request_gimbal_device_information_to_gimbal(void);
 
+    // system time
+    uint32_t _send_system_time_last;
+    void send_system_time_to_gimbal(void);
+
     // helper
     void send_to_channels(uint32_t msgid, const char *pkt, bool except_gimbal = false);
 
