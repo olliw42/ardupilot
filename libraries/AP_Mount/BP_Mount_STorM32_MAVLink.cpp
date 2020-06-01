@@ -175,11 +175,17 @@ void BP_Mount_STorM32_MAVLink::update()
         return;
     }
 
+    uint32_t now_ms = AP_HAL::millis();
+
+    if ((now_ms - _send_system_time_last) >= 5000) { //every 5 sec is really plenty
+        _send_system_time_last = now_ms;
+        send_system_time_to_gimbal();
+    }
+
+    //now just gimbal manager stuff
     if (!_is_gimbalmanager) return;
 
     _gimbal_manager_do();
-
-    uint32_t now_ms = AP_HAL::millis();
 
     // we request it for indefinite, until received
     if (!_gimbal_manager.gimbal_device_info_received) {
@@ -215,6 +221,7 @@ void BP_Mount_STorM32_MAVLink::update_fast()
         return;
     }
 
+/*
     #define PERIOD_US   10000 //10000
 
     //slow down everything to 100 Hz
@@ -270,6 +277,56 @@ void BP_Mount_STorM32_MAVLink::update_fast()
 
         _task_counter++;
         if (_task_counter > TASK_SLOT4) _task_counter = 0;
+    }
+*/
+
+    //we originally wanted to slow down everything to 100 Hz,
+    // so that updates are at 20 Hz, especially for STorM32-Link
+    // however, sadly, plane runs at 50 Hz only, so we update at 25 Hz and 12.5 Hz respectively
+    // not soo nice
+    // not clear what it does for STorM32Link, probably not too bad, maybe even good
+
+    #define PERIOD_US   20000
+
+    uint32_t now_us = AP_HAL::micros();
+    if ((now_us - _task_time_last) >= PERIOD_US) {
+        //_task_time_last = now_us;
+        //this gives MUCH higher precision!!!
+        _task_time_last += PERIOD_US;
+        if ((now_us - _task_time_last) > 5000) _task_time_last = now_us; //we got out of sync, so get back in sync
+
+        switch (_task_counter) {
+            case TASK_SLOT0:
+            case TASK_SLOT2:
+                if (_use_protocolv2) {
+                    send_autopilot_state_for_gimbal_device_to_gimbal();
+                } else {
+                    send_cmd_storm32link_v2(); //2.3ms
+                }
+                break;
+
+            case TASK_SLOT1:
+                if (_use_protocolv2) {
+                    if (_is_gimbalmanager) { // 2
+                        _update_gimbal_manager_rc();
+                    }
+                    if (!_sendonly) { // 1 or 2 but not 3
+                        _set_target_angles_v2();
+                        send_target_angles_to_gimbal_v2();
+                    }
+                } else {
+                    set_target_angles();
+                    send_target_angles_to_gimbal();
+                }
+                break;
+
+            case TASK_SLOT3:
+                send_rc_channels_to_gimbal();
+                break;
+        }
+
+        _task_counter++;
+        if (_task_counter > TASK_SLOT3) _task_counter = 0;
     }
 }
 
