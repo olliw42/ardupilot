@@ -16,9 +16,6 @@
 extern const AP_HAL::HAL& hal;
 
 
-//#define FLAG_USENEWGIMBALMESSAGES   0x01
-//#define FLAG_ISGIMBALMANAGER        0x02
-
 #define USE_NEWGIMBALMESSAGES  1
 #define USE_GIMBALMANAGER      2
 #define USE_ONLYSEND           3
@@ -180,6 +177,8 @@ void BP_Mount_STorM32_MAVLink::update()
 
     if (!_is_gimbalmanager) return;
 
+    _gimbal_manager_do();
+
     uint32_t now_ms = AP_HAL::millis();
 
     // we request it for indefinite, until received
@@ -192,15 +191,18 @@ void BP_Mount_STorM32_MAVLink::update()
 
     // send gimbal manager status, if allowed
     if (_gimbal_manager.gimbal_device_att_status_received) {
+/*//XX
         uint32_t rate_ms = GIMBAL_MANAGER_STATUS_RATE_MS;
         if (_gimbal_manager.status_fast_rate) {
             rate_ms = GIMBAL_MANAGER_STATUS_FAST_RATE_MS;
             if (_gimbal_manager.status_fast_rate >= GIMBAL_MANAGER_STATUS_FAST_RATE_CNT-1) rate_ms = 0; //immediate response
         }
+*/
+        uint32_t rate_ms = 1000;
         if ((now_ms - _gimbal_manager.status_time_last) >= rate_ms) {
             _gimbal_manager.status_time_last = now_ms;
             if (_gimbal_manager.status_fast_rate) _gimbal_manager.status_fast_rate--;
-            send_gimbal_manager_status( _gimbal_manager.flags);
+            send_gimbal_manager_status(_gimbal_manager.flags);
         }
     }
 }
@@ -213,7 +215,7 @@ void BP_Mount_STorM32_MAVLink::update_fast()
         return;
     }
 
-    #define PERIOD_US   10000 //10000  //for some reason 10000 gives ca 18Hz
+    #define PERIOD_US   10000 //10000
 
     //slow down everything to 100 Hz
     // we can't use update(), since 50 Hz isn't compatible with the desired 20 Hz STorM32Link rate
@@ -237,17 +239,18 @@ void BP_Mount_STorM32_MAVLink::update_fast()
                 break;
 
             case TASK_SLOT1:
-                //old: trigger live data
-                //old: handle docamera
-                if (_is_gimbalmanager) _update_gimbal_manager_rc();
+                if (_is_gimbalmanager) {
+                    _update_gimbal_manager_rc();
+                }
                 break;
 
             case TASK_SLOT2:
                 if (_use_protocolv2) {
                     if (!_sendonly) {
-                        set_target_angles_v2();
+                        _gimbal_manager_set_angles();
                         send_target_angles_to_gimbal_v2();
                     }
+                    //TODO: case 1 is broken
                 } else {
                     set_target_angles();
                     send_target_angles_to_gimbal();
@@ -255,12 +258,10 @@ void BP_Mount_STorM32_MAVLink::update_fast()
                 break;
 
             case TASK_SLOT3:
-                //old: send_cmd_setinputs(); //2.4ms
                 send_rc_channels_to_gimbal();
                 break;
 
             case TASK_SLOT4:
-                //old: receive live data
                 if ((now_us - _send_system_time_last) >= 5000000) { //every 5 sec is really plenty
                     _send_system_time_last = now_us;
                     send_system_time_to_gimbal();
@@ -269,7 +270,7 @@ void BP_Mount_STorM32_MAVLink::update_fast()
         }
 
         _task_counter++;
-        if (_task_counter >= TASK_SLOTNUMBER) _task_counter = 0;
+        if (_task_counter > TASK_SLOT4) _task_counter = 0;
     }
 }
 
@@ -359,7 +360,8 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             _gimbal_device.pan_deg_max = degrees(payload.pan_max);
             // gimbal manager
             // copy gimbal device capability flags into gimbal manager capability flags
-            _copy_gimbal_device_flags(_gimbal_device.capability_flags);
+            _gimbal_manager.capability_flags &=~ 0x0000FFFF; //clear
+            _gimbal_manager.capability_flags |= _gimbal_device.capability_flags; //set
             _gimbal_manager.gimbal_device_info_received = true; //inform gimbal manager
             }break;
 
@@ -380,9 +382,9 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             // gimbal manager
             // if we want to use preconfigured GD flags, we need to prevent this until GM_STATUS has been send
             // else we need to allow this before GM_STATUS is sent
-            if (!_preconfigured_gimbal_device_flags || (_gimbal_manager.status_time_last > 0)) {
+//XX            if (!_preconfigured_gimbal_device_flags || (_gimbal_manager.status_time_last > 0)) {
                 _update_gimbal_manager_flags_from_gimbal_device_flags(_gimbal_device.flags);
-            }
+//XX            }
             _gimbal_manager.gimbal_device_att_status_received = true; //inform gimbal manager
             }break;
     }
@@ -540,6 +542,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_manager_msg(const mavlink_message_t
             if ((payload.gimbal_device_id != _compid) && (payload.gimbal_device_id > 0)) break; //not for our gimbal manager
 
             uint8_t client = _determine_client(msg.sysid, msg.compid);
+            if (client == CLIENT_UNKNOWN) break;
 
             _update_gimbal_manager_flags(payload.flags, client);
 
@@ -759,12 +762,16 @@ uint32_t flags_last;
     // set, with considering rules of priority
     // we chose the priority as COMPANION > GCS > MISSION > RC
     // we allow the GCS to set the RC_OVERRIDE
-    // we allow only the overriding client to set gimbal device flags
+    // we currently do not allow to set gimbal device flags
 
     // !!! we currently allow ANYONE to send a cmd and therefore behave as MISSION client!!!
     // this is not quite correct
     // we should distinguish if this is called from a MISSION (i.e. autopilot)(which is currently not supported)
     // or if it was received from a link, i.e. send from another client
+
+    // every client can nudge, but there needs to be at least one overriding client
+
+    uint32_t now_ms = AP_HAL::millis();
 
     if (client == CLIENT_COMPANION) {
 
@@ -772,8 +779,7 @@ uint32_t flags_last;
             // set
             _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE;
             _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE;
-            // copy over gimbal device flags
-            _copy_gimbal_device_flags(flags);
+            _override_last = now_ms;
         } else
         if (flags & GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE) { //companion wants to nudge
             //has it been enabled?
@@ -783,21 +789,21 @@ uint32_t flags_last;
             // set
             _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE;
             _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE;
+            _companion_nudge.last = now_ms;
         } else {
             // release
             _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE | GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE);
         }
 
     } else
-    if ((client == CLIENT_MISSION) &&
-        !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE)) { //companion has priority
+    if (client == CLIENT_MISSION) {
 
-        if (!(flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE)) { //mission wants override power
+        if (!(flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE) && //mission wants override power
+            !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE)) { //companion has priority
             // set
             _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE;
             _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_MISSION_NUDGE;
-            // copy over gimbal device flags
-            _copy_gimbal_device_flags(flags);
+            _override_last = now_ms;
         } else
         if (flags & GIMBAL_MANAGER_FLAGS_MISSION_NUDGE) { //mission wants to nudge
             //has it been enabled?
@@ -807,6 +813,7 @@ uint32_t flags_last;
             // set
             _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE;
             _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_MISSION_NUDGE;
+            _mission_nudge.last = now_ms;
         } else {
             // release
             _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE;
@@ -814,16 +821,15 @@ uint32_t flags_last;
         }
 
     } else
-    if ((client == CLIENT_GCS) &&
-        !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE) && //companion has priority
-        (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE)) { //mission has priority
+    if (client == CLIENT_GCS) {
 
-        if (flags & GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE) { //gcs wants override power
+        if ((flags & GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE) && //gcs wants override power
+            !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE) && //companion has priority
+            (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE)) { //mission has priority
             // set
             _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE;
             _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_GCS_NUDGE;
-            // copy over gimbal device flags
-            _copy_gimbal_device_flags(flags);
+            _override_last = now_ms;
         } else
         if (flags & GIMBAL_MANAGER_FLAGS_GCS_NUDGE) { //gcs wants to nudge
             //has it been enabled?
@@ -833,14 +839,18 @@ uint32_t flags_last;
             // set
             _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE;
             _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_GCS_NUDGE;
+            _gcs_nudge.last = now_ms;
         } else {
             // release
             _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE | GIMBAL_MANAGER_FLAGS_GCS_NUDGE);
 
-            if (flags & GIMBAL_MANAGER_FLAGS_RC_OVERRIDE) { //GCS wants to set RC
+            if ((flags & GIMBAL_MANAGER_FLAGS_RC_OVERRIDE) && //GCS wants to set RC override
+                !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE) && //companion has priority
+                (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE)) { //mission has priority
                 // set
                 _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_RC_OVERRIDE;
                 _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_NUDGE;
+                _override_last = now_ms;
             } else
             if (flags & GIMBAL_MANAGER_FLAGS_RC_NUDGE) { //GCS wants to set RC nudging
                 //has it been enabled?
@@ -850,6 +860,7 @@ uint32_t flags_last;
                 // set
                 _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_OVERRIDE;
                 _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_RC_NUDGE;
+                _rc_nudge.last = now_ms;
             } else {
                 // release
                 _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_RC_OVERRIDE | GIMBAL_MANAGER_FLAGS_RC_NUDGE);
@@ -884,7 +895,17 @@ uint32_t flags_last;
         _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_NUDGE;
     }
 
-    // we probably want to clear overriding flags if no update was obtained for e.g. 5 secs
+    //check that there is at least one overriding client if soem client wants to nudge
+    if (!(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE) &&
+        (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE) &&
+        !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE) &&
+        !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_RC_OVERRIDE)) {
+        _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE | GIMBAL_MANAGER_FLAGS_MISSION_NUDGE |
+                                   GIMBAL_MANAGER_FLAGS_GCS_NUDGE | GIMBAL_MANAGER_FLAGS_RC_NUDGE);
+    }
+
+    // set gimbal device flags
+    // we currently can't set them !!!
 
     // check for any changes
     if (_gimbal_manager.flags != flags_last) {
@@ -894,49 +915,50 @@ uint32_t flags_last;
 
 
 // is called by task loop at 20 Hz
-void BP_Mount_STorM32_MAVLink::set_target_angles_v2(void)
+void BP_Mount_STorM32_MAVLink::_gimbal_manager_set_angles(void)
 {
     if (!_is_gimbalmanager) return;
 
-    float nudge_pitch_rad = 0.0f;
-    float nudge_yaw_rad = 0.0f;
+    float roll_rad = _angle_ef_target_rad.x;
+    float pitch_rad = _angle_ef_target_rad.y;
+    float yaw_rad = _angle_ef_target_rad.z;
 
     if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_RETRACT) {
         const Vector3f &target = _state._retract_angles.get();
-        _angle_ef_target_rad.x = radians(target.x);
-        _angle_ef_target_rad.y = radians(target.y);
-        _angle_ef_target_rad.z = radians(target.z);
+        roll_rad = radians(target.x);
+        pitch_rad = radians(target.y);
+        yaw_rad = radians(target.z);
     } else
     if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_NEUTRAL) {
         const Vector3f &target = _state._retract_angles.get();
-        _angle_ef_target_rad.x = radians(target.x);
-        _angle_ef_target_rad.y = radians(target.y);
-        _angle_ef_target_rad.z = radians(target.z);
+        roll_rad = radians(target.x);
+        pitch_rad = radians(target.y);
+        yaw_rad = radians(target.z);
     } else {
         //MISSION, GCS, COMPANION overrides had been already set
 
         // it should have been sorted out before that only those in non override can nudge
         if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NUDGE) {
-            nudge_pitch_rad += _mission_nudge.pitch_rad;
-            nudge_yaw_rad += _mission_nudge.yaw_rad;
+            pitch_rad += _mission_nudge.pitch_rad;
+            yaw_rad += _mission_nudge.yaw_rad;
         }
         if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_GCS_NUDGE) {
-            nudge_pitch_rad += _gcs_nudge.pitch_rad;
-            nudge_yaw_rad += _gcs_nudge.yaw_rad;
+            pitch_rad += _gcs_nudge.pitch_rad;
+            yaw_rad += _gcs_nudge.yaw_rad;
         }
         if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE) {
-            nudge_pitch_rad += _companion_nudge.pitch_rad;
-            nudge_yaw_rad += _companion_nudge.yaw_rad;
+            pitch_rad += _companion_nudge.pitch_rad;
+            yaw_rad += _companion_nudge.yaw_rad;
         }
         if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_RC_NUDGE) {
-            nudge_pitch_rad += _rc_nudge.pitch_rad;
-            nudge_yaw_rad += _rc_nudge.yaw_rad;
+            pitch_rad += _rc_nudge.pitch_rad;
+            yaw_rad += _rc_nudge.yaw_rad;
         }
     }
 
-    _target.roll_deg = degrees(_angle_ef_target_rad.x);
-    _target.pitch_deg = degrees(_angle_ef_target_rad.y + nudge_pitch_rad);
-    _target.yaw_deg = degrees(_angle_ef_target_rad.z + nudge_yaw_rad);
+    _target.roll_deg = degrees(roll_rad);
+    _target.pitch_deg = degrees(pitch_rad);
+    _target.yaw_deg = degrees(yaw_rad);
 
     //should we respect some ranges??
 }
@@ -953,9 +975,9 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_rc(void)
     }else
     if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_RC_NUDGE) {
         //we need to fake it here
-        float roll = _angle_ef_target_rad.x;
-        float pitch = _angle_ef_target_rad.y;
-        float yaw = _angle_ef_target_rad.z;
+        float roll_rad = _angle_ef_target_rad.x;
+        float pitch_rad = _angle_ef_target_rad.y;
+        float yaw_rad = _angle_ef_target_rad.z;
 
         update_targets_from_rc();
         if (is_rc_failsafe()) {
@@ -965,14 +987,14 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_rc(void)
         _rc_nudge.pitch_rad = _angle_ef_target_rad.y;
         _rc_nudge.yaw_rad = _angle_ef_target_rad.z;
 
-        _angle_ef_target_rad.x = roll;
-        _angle_ef_target_rad.y = pitch;
-        _angle_ef_target_rad.z = yaw;
+        _angle_ef_target_rad.x = roll_rad;
+        _angle_ef_target_rad.y = pitch_rad;
+        _angle_ef_target_rad.z = yaw_rad;
     }else{
         _rc_nudge.pitch_rad = _rc_nudge.yaw_rad = 0.0f;
     }
 
-    //set_target_angles_v2(); //is called in task loop
+    _gimbal_manager_set_angles();
 }
 
 
@@ -983,7 +1005,7 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_override(float roll_rad, f
     _angle_ef_target_rad.y = pitch_rad;
     _angle_ef_target_rad.z = yaw_rad;
 
-    //set_target_angles_v2(); //is called in task loop
+    _gimbal_manager_set_angles();
 }
 
 
@@ -1003,6 +1025,33 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_nudge(float pitch_rad, flo
     _companion_nudge.yaw_rad = yaw_rad;
   }
 
+  _gimbal_manager_set_angles();
+}
+
+
+//is called at 50 Hz
+void BP_Mount_STorM32_MAVLink::_gimbal_manager_do(void)
+{
+  uint32_t now_ms = AP_HAL::millis();
+
+  if ((now_ms - _override_last) >= GIMBAL_MANAGER_OVERRIDE_TMO_MS) {
+    _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE;
+    _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE | GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE |
+                               GIMBAL_MANAGER_FLAGS_RC_OVERRIDE );
+  }
+
+  if ((now_ms - _companion_nudge.last) >= GIMBAL_MANAGER_NUDGE_TMO_MS) {
+    _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE;
+  }
+  if ((now_ms - _mission_nudge.last) >= GIMBAL_MANAGER_NUDGE_TMO_MS) {
+    _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_MISSION_NUDGE;
+  }
+  if ((now_ms - _gcs_nudge.last) >= GIMBAL_MANAGER_NUDGE_TMO_MS) {
+    _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_GCS_NUDGE;
+  }
+  if ((now_ms - _rc_nudge.last) >= GIMBAL_MANAGER_NUDGE_TMO_MS) {
+    _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_NUDGE;
+  }
 }
 
 

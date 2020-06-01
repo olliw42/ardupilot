@@ -17,6 +17,10 @@
 #define GIMBAL_MANAGER_STATUS_FAST_RATE_MS      250
 #define GIMBAL_MANAGER_STATUS_FAST_RATE_CNT     4
 
+#define GIMBAL_MANAGER_OVERRIDE_TMO_MS          15000
+#define GIMBAL_MANAGER_NUDGE_TMO_MS             10000
+
+
 
 // that's the main class
 class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend, public STorM32_MAVLink_class
@@ -111,15 +115,20 @@ private:
         uint16_t current_mission_cmd; //0 = none set
     } _gimbal_manager;
 
+
+    uint32_t _override_last;
+
     struct NUDGE {
-        float pitch_rad, yaw_rad;
+        float pitch_rad;
+        float yaw_rad;
+        uint32_t last;
     };
     struct NUDGE _companion_nudge;
     struct NUDGE _mission_nudge;
     struct NUDGE _gcs_nudge;
     struct NUDGE _rc_nudge;
 
-    void set_target_angles_v2();
+    void _gimbal_manager_set_angles();
     void send_target_angles_to_gimbal_v2(void);
 
     enum CLIENTENUM {
@@ -137,6 +146,7 @@ private:
     void _update_gimbal_manager_rc(void);
     void _update_gimbal_manager_override(float roll_rad, float pitch_rad, float yaw_rad);
     void _update_gimbal_manager_nudge(float pitch_rad, float yaw_rad, uint8_t client);
+    void _gimbal_manager_do(void);
 
     int8_t handle_gimbal_manager_cmd(const mavlink_command_long_t &payload, uint8_t client);
     void handle_gimbal_manager_msg(const mavlink_message_t &msg);
