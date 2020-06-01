@@ -173,7 +173,6 @@ private:
         TASK_SLOT2,
         TASK_SLOT3,
         TASK_SLOT4,
-        TASK_SLOTNUMBER,
     };
     uint32_t _task_time_last;
     uint16_t _task_counter;
