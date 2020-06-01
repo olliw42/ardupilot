@@ -247,10 +247,9 @@ void BP_Mount_STorM32_MAVLink::update_fast()
             case TASK_SLOT2:
                 if (_use_protocolv2) {
                     if (!_sendonly) {
-                        _gimbal_manager_set_angles();
+                        _set_target_angles_v2();
                         send_target_angles_to_gimbal_v2();
                     }
-                    //TODO: case 1 is broken
                 } else {
                     set_target_angles();
                     send_target_angles_to_gimbal();
@@ -382,9 +381,9 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             // gimbal manager
             // if we want to use preconfigured GD flags, we need to prevent this until GM_STATUS has been send
             // else we need to allow this before GM_STATUS is sent
-//XX            if (!_preconfigured_gimbal_device_flags || (_gimbal_manager.status_time_last > 0)) {
+            if (!_preconfigured_gimbal_device_flags || (_gimbal_manager.status_time_last > 0)) {
                 _update_gimbal_manager_flags_from_gimbal_device_flags(_gimbal_device.flags);
-//XX            }
+            }
             _gimbal_manager.gimbal_device_att_status_received = true; //inform gimbal manager
             }break;
     }
@@ -895,13 +894,16 @@ uint32_t flags_last;
         _gimbal_manager.flags &=~ GIMBAL_MANAGER_FLAGS_RC_NUDGE;
     }
 
-    //check that there is at least one overriding client if soem client wants to nudge
+    //check that there is at least one overriding client if some client wants to nudge
     if (!(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE) &&
         (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE) &&
         !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE) &&
         !(_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_RC_OVERRIDE)) {
+
         _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE | GIMBAL_MANAGER_FLAGS_MISSION_NUDGE |
                                    GIMBAL_MANAGER_FLAGS_GCS_NUDGE | GIMBAL_MANAGER_FLAGS_RC_NUDGE);
+
+        _angle_ef_target_rad.x = _angle_ef_target_rad.y = _angle_ef_target_rad.z = 0.0f;
     }
 
     // set gimbal device flags
@@ -915,10 +917,8 @@ uint32_t flags_last;
 
 
 // is called by task loop at 20 Hz
-void BP_Mount_STorM32_MAVLink::_gimbal_manager_set_angles(void)
+void BP_Mount_STorM32_MAVLink::_set_target_angles_v2(void)
 {
-    if (!_is_gimbalmanager) return;
-
     float roll_rad = _angle_ef_target_rad.x;
     float pitch_rad = _angle_ef_target_rad.y;
     float yaw_rad = _angle_ef_target_rad.z;
@@ -994,7 +994,7 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_rc(void)
         _rc_nudge.pitch_rad = _rc_nudge.yaw_rad = 0.0f;
     }
 
-    _gimbal_manager_set_angles();
+    //_set_target_angles_v2(); //done in loop
 }
 
 
@@ -1005,7 +1005,7 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_override(float roll_rad, f
     _angle_ef_target_rad.y = pitch_rad;
     _angle_ef_target_rad.z = yaw_rad;
 
-    _gimbal_manager_set_angles();
+    //_set_target_angles_v2(); //done in loop
 }
 
 
@@ -1025,7 +1025,7 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_nudge(float pitch_rad, flo
     _companion_nudge.yaw_rad = yaw_rad;
   }
 
-  _gimbal_manager_set_angles();
+  //_set_target_angles_v2(); //done in loop
 }
 
 
@@ -1038,6 +1038,7 @@ void BP_Mount_STorM32_MAVLink::_gimbal_manager_do(void)
     _gimbal_manager.flags |= GIMBAL_MANAGER_FLAGS_MISSION_NOTOVERRIDE;
     _gimbal_manager.flags &=~ (GIMBAL_MANAGER_FLAGS_COMPANION_OVERRIDE | GIMBAL_MANAGER_FLAGS_GCS_OVERRIDE |
                                GIMBAL_MANAGER_FLAGS_RC_OVERRIDE );
+    _angle_ef_target_rad.x = _angle_ef_target_rad.y = _angle_ef_target_rad.z = 0.0f;
   }
 
   if ((now_ms - _companion_nudge.last) >= GIMBAL_MANAGER_NUDGE_TMO_MS) {
@@ -1059,8 +1060,7 @@ void BP_Mount_STorM32_MAVLink::_gimbal_manager_do(void)
 // finally sends out target angles
 void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal_v2(void)
 {
-    if (!_is_gimbalmanager) return;
-    if (!_gimbal_manager.gimbal_device_att_status_received) return;
+    if (_is_gimbalmanager && !_gimbal_manager.gimbal_device_att_status_received) return;
 
     uint16_t gimbaldevice_flags = _gimbal_manager.flags; // convert GM flags to GD device flags
     send_gimbal_device_set_attitude_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags);

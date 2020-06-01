@@ -130,7 +130,7 @@ private:
     struct NUDGE _gcs_nudge;
     struct NUDGE _rc_nudge;
 
-    void _gimbal_manager_set_angles();
+    void _set_target_angles_v2();
     void send_target_angles_to_gimbal_v2(void);
 
     enum CLIENTENUM {
