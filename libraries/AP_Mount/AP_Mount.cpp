@@ -211,6 +211,10 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
     // 24 is AVAILABLE
 
+//OW
+    AP_GROUPINFO("_ZFLAGS", 20, AP_Mount, state[0]._zflags, 0),
+//OWEND
+
 #if AP_MOUNT_MAX_INSTANCES > 1
     // @Param: 2_DEFLT_MODE
     // @DisplayName: Mount default operating mode
