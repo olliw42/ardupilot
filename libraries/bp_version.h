@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION " v045rc39"
+#define BETAPILOTVERSION " v045rc45"
 
 /*
 search for //OW to find all changes
@@ -22,4 +22,9 @@ WPNAV_SPEED
 ACCEL_Z CAPACITY TYPE
 
 RC_CHANNELS_OVERRIDE
+
+SYSTEM_TIME
+
+STATUSTEXT
+
 */
