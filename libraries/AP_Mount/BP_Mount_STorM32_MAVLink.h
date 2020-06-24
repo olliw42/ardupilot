@@ -145,9 +145,9 @@ private:
     void _copy_gimbal_device_flags(uint16_t gimbal_device_flags);
     void _update_gimbal_manager_flags_from_gimbal_device_flags(uint16_t gimbal_device_flags);
     void _update_gimbal_manager_flags(uint32_t flags, uint8_t client);
-    void _update_gimbal_manager_rc(void);
     void _update_gimbal_manager_override(float roll_rad, float pitch_rad, float yaw_rad);
     void _update_gimbal_manager_nudge(float pitch_rad, float yaw_rad, uint8_t client);
+    void _update_gimbal_manager_rc(void);
     void _gimbal_manager_do(void);
 
     int8_t handle_gimbal_manager_cmd(const mavlink_command_long_t &payload, uint8_t client);

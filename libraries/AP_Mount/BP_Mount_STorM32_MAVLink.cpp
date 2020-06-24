@@ -1043,7 +1043,38 @@ void BP_Mount_STorM32_MAVLink::_set_target_angles_v2(void)
 }
 
 
-//we call that periodically
+//called from msg or cmdlong
+void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_override(float roll_rad, float pitch_rad, float yaw_rad)
+{
+    _angle_ef_target_rad.x = roll_rad;
+    _angle_ef_target_rad.y = pitch_rad;
+    _angle_ef_target_rad.z = yaw_rad;
+
+    //_set_target_angles_v2(); //done in loop
+}
+
+
+//called from msg or cmdlong
+void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_nudge(float pitch_rad, float yaw_rad, uint8_t client)
+{
+  if ((client == CLIENT_MISSION) && (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NUDGE)) {
+    _mission_nudge.pitch_rad = pitch_rad;
+    _mission_nudge.yaw_rad = yaw_rad;
+  }
+  if ((client == CLIENT_GCS) && (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_GCS_NUDGE)) {
+      _gcs_nudge.pitch_rad = pitch_rad;
+      _gcs_nudge.yaw_rad = yaw_rad;
+  }
+  if ((client == CLIENT_COMPANION) && (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE)) {
+    _companion_nudge.pitch_rad = pitch_rad;
+    _companion_nudge.yaw_rad = yaw_rad;
+  }
+
+  //_set_target_angles_v2(); //done in loop
+}
+
+
+//we call this periodically
 void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_rc(void)
 {
     if (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_RC_OVERRIDE) {
@@ -1078,37 +1109,6 @@ void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_rc(void)
     }
 
     //_set_target_angles_v2(); //done in loop
-}
-
-
-//called from msg or cmdlong
-void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_override(float roll_rad, float pitch_rad, float yaw_rad)
-{
-    _angle_ef_target_rad.x = roll_rad;
-    _angle_ef_target_rad.y = pitch_rad;
-    _angle_ef_target_rad.z = yaw_rad;
-
-    //_set_target_angles_v2(); //done in loop
-}
-
-
-//called from msg or cmdlong
-void BP_Mount_STorM32_MAVLink::_update_gimbal_manager_nudge(float pitch_rad, float yaw_rad, uint8_t client)
-{
-  if ((client == CLIENT_MISSION) && (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_MISSION_NUDGE)) {
-    _mission_nudge.pitch_rad = pitch_rad;
-    _mission_nudge.yaw_rad = yaw_rad;
-  }
-  if ((client == CLIENT_GCS) && (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_GCS_NUDGE)) {
-      _gcs_nudge.pitch_rad = pitch_rad;
-      _gcs_nudge.yaw_rad = yaw_rad;
-  }
-  if ((client == CLIENT_COMPANION) && (_gimbal_manager.flags & GIMBAL_MANAGER_FLAGS_COMPANION_NUDGE)) {
-    _companion_nudge.pitch_rad = pitch_rad;
-    _companion_nudge.yaw_rad = yaw_rad;
-  }
-
-  //_set_target_angles_v2(); //done in loop
 }
 
 
@@ -1259,6 +1259,22 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
         vel.x = vel.y = vel.z = NAN;
     }
 
+/* landed state
+GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
+Copter has it: GCS_MAVLINK_Copter::landed_state()
+Plane does NOT have it ????
+we can identify this be MAV_LANDED_STATE_UNDEFINED as value
+we probably want to also take into account the arming state to mock something up
+but it is protected, so we can't use it, need to redo it anyways
+ugly as we will have vehicle dependency here
+*/
+/* estimator status
+no support by ArduPilot whatsoever
+*/
+
+    uint16_t estimator_status = 0;
+    uint8_t _landed_state = MAV_LANDED_STATE_UNDEFINED;
+
     mavlink_msg_autopilot_state_for_gimbal_device_send(
         _chan,
         AP_HAL::micros64(),
@@ -1267,7 +1283,8 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
         0, // uint32_t q_estimated_delay_us,
         vel.x, vel.y, vel.z,
         0, // uint32_t v_estimated_delay_us,
-        yawrate);
+        yawrate,
+        estimator_status, _landed_state);
 }
 
 

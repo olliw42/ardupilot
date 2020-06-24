@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION " v045rc45"
+#define BETAPILOTVERSION " v046rc02"
 
 /*
 search for //OW to find all changes
@@ -26,5 +26,8 @@ RC_CHANNELS_OVERRIDE
 SYSTEM_TIME
 
 STATUSTEXT
+
+ESTIMATOR_STATUS
+EXTENDED_SYS_STATE
 
 */
