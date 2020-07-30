@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION " v046rc02"
+#define BETAPILOTVERSION " v046rc10"
 
 /*
 search for //OW to find all changes
@@ -29,5 +29,8 @@ STATUSTEXT
 
 ESTIMATOR_STATUS
 EXTENDED_SYS_STATE
+
+MAV_CMD_DO_SET_ROI
+MAV_CMD_DO_MOUNT_CONTROL
 
 */

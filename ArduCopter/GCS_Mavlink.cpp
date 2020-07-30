@@ -605,7 +605,7 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_mount(const mavlink_command_long_t
             copter.flightmode->auto_yaw.set_fixed_yaw(
 //OW this is a serious bug!
 // however, a proper solution needs quite some changes, someone really screwed this up heavily
-//we don't correct it however since we useCMD_DO_MOUNT_CONTROL
+//we don't correct it however since we use CMD_DO_MOUNT_CONTROL
 //                (float)packet.param3 * 0.01f,
                 (float)packet.param3,
                 0.0f,
