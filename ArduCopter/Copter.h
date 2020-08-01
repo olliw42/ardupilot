@@ -600,9 +600,6 @@ private:
 
     bool standby_active;
 
-    // set when we are upgrading parameters from 3.4
-    bool upgrading_frame_params;
-
     static const AP_Scheduler::Task scheduler_tasks[];
     static const AP_Param::Info var_info[];
     static const struct LogStructure log_structure[];
@@ -773,7 +770,7 @@ private:
     void update_land_detector();
     void set_land_complete(bool b);
     void set_land_complete_maybe(bool b);
-    void update_throttle_thr_mix();
+    void update_throttle_mix();
 
     // landing_gear.cpp
     void landinggear_update();

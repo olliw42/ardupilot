@@ -15,6 +15,8 @@
 
 #define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
 
+#define USE_ZFLAGS 0
+
 
 // that's the main class
 class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend

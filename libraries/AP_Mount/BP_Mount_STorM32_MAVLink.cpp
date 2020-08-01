@@ -114,6 +114,9 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 
     _target.mode_last = MAV_MOUNT_MODE_RC_TARGETING;
 
+#if !USE_ZFLAGS
+    _state._zflags = 0;
+#endif
     _use_protocolv2 = false;    //true means mode 1, 2, 10
     _for_gimbalmanager = false; //true means mode 1
     _sendonly = false;          //true means mode 2
