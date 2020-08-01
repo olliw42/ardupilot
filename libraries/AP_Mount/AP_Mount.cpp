@@ -212,7 +212,9 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // 24 is AVAILABLE
 
 //OW
+#if USE_ZFLAGS
     AP_GROUPINFO("_ZFLAGS", 20, AP_Mount, state[0]._zflags, 0),
+#endif
 //OWEND
 
 #if AP_MOUNT_MAX_INSTANCES > 1
