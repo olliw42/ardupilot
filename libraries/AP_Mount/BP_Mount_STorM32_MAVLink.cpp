@@ -19,7 +19,7 @@ extern const AP_HAL::HAL& hal;
 /*
 0:  old behavior
     sends DO_MOUNT_CONTROL, DO_MOUNT_CONFIGURE for control, sends tunnel for STorM32-Link
-10: like 0, but using new gimbal device messages
+8:  like 0, but using new gimbal device messages
     sends GIMBAL_DEVICE_SET_ATTITUDE for control, sends AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
     this mode is for testing, not for regular use
 1:  for gimbal manager
@@ -32,6 +32,8 @@ extern const AP_HAL::HAL& hal;
     this mode could in principle be replaced by asking for the streams, but since AP isn't streaming reliably we don't
 
  in all modes sends MOUNT_STATUS, so that "old" things like MP etc can see the gimbal orientation
+
+128: prearming is always true
 */
 /*
  also sends SYSTEM_TIME to gimbal
@@ -102,7 +104,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 {
     _initialised = false;
     _armed = false;
-    _prearmchecks_ok = false; //if we don't find a gimbal, it stays false ! This might not always be the desired behavior
+    _prearmchecks_ok = true; //if we don't find a gimbal, it stays false ! This might not always be the desired behavior
 
     _sysid = 0;
     _compid = 0;
@@ -114,17 +116,20 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 
     _target.mode_last = MAV_MOUNT_MODE_RC_TARGETING;
 
-#if !USE_ZFLAGS
-    _state._zflags = 0;
-#endif
-    _use_protocolv2 = false;    //true means mode 1, 2, 10
+    if (_state._zflags & 0x80) {
+        _prearmchecks_ok = false; //enable prearm checks
+    }
+
+    _use_protocolv2 = false;    //true means mode 1, 2, 8
     _for_gimbalmanager = false; //true means mode 1
     _sendonly = false;          //true means mode 2
-    if (_state._zflags > 0) {
+#if !USE_GIMBAL_ZFLAGS
+    if (_state._zflags & 0x0F) {
         _use_protocolv2 = true;
-        if (_state._zflags == 1) _for_gimbalmanager = true;
-        if (_state._zflags == 2) _sendonly = true;
+        if (_state._zflags & 0x01) _for_gimbalmanager = true;
+        if (_state._zflags & 0x02) _sendonly = true;
     }
+#endif
 }
 
 
@@ -445,24 +450,34 @@ void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal(void)
 
 //my own gimbal manger flags
 typedef enum {
-  MYGIMBALMANAGER_SET_FLAGS_CONTROL          = (uint32_t)1 << 16,
-  MYGIMBALMANAGER_SET_FLAGS_NUDGE            = (uint32_t)1 << 17,
-  MYGIMBALMANAGER_SET_FLAGS_RC_CONTROL       = (uint32_t)1 << 18,
-  MYGIMBALMANAGER_SET_FLAGS_RC_NUDGE         = (uint32_t)1 << 19,
-  MYGIMBALMANAGER_SET_FLAGS_AUTOPILOT        = (uint32_t)1 << 20,
-  MYGIMBALMANAGER_SET_FLAGS_GCS              = (uint32_t)1 << 21,
-  MYGIMBALMANAGER_SET_FLAGS_COMPANION        = (uint32_t)1 << 22,
+    MYGIMBALMANAGER_SET_FLAGS_RC_ACTIVE       = (uint32_t)1 << 16,
+    MYGIMBALMANAGER_SET_FLAGS_CLIENT1_ACTIVE  = (uint32_t)1 << 17, //companion
+    MYGIMBALMANAGER_SET_FLAGS_CLIENT2_ACTIVE  = (uint32_t)1 << 18, //gcs
+    MYGIMBALMANAGER_SET_FLAGS_CLIENT3_ACTIVE  = (uint32_t)1 << 19, //autopilot
+    MYGIMBALMANAGER_SET_FLAGS_CLIENT4_ACTIVE  = (uint32_t)1 << 20,
+    MYGIMBALMANAGER_SET_FLAGS_CLIENT5_ACTIVE  = (uint32_t)1 << 21,
+    MYGIMBALMANAGER_SET_FLAGS_CONTROL         = (uint32_t)1 << 22,
+
+    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT1       = (uint32_t)1 << 23, //companion
+    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT2       = (uint32_t)1 << 24, //gcs
+    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT3       = (uint32_t)1 << 25, //autopilot
+    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT4       = (uint32_t)1 << 26,
+    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT5       = (uint32_t)1 << 27,
 } MYGIMBALMANAGERSETFLAGSENUM;
 
 typedef enum {
-  MYGIMBALMANAGER_FLAGS_RC_CONTROL           = (uint32_t)1 << 16,
-  MYGIMBALMANAGER_FLAGS_RC_NUDGE             = (uint32_t)1 << 17,
-  MYGIMBALMANAGER_FLAGS_AUTOPILOT_CONTROL    = (uint32_t)1 << 18,
-  MYGIMBALMANAGER_FLAGS_AUTOPILOT_NUDGE      = (uint32_t)1 << 19,
-  MYGIMBALMANAGER_FLAGS_GCS_CONTROL          = (uint32_t)1 << 20,
-  MYGIMBALMANAGER_FLAGS_GCS_NUDGE            = (uint32_t)1 << 21,
-  MYGIMBALMANAGER_FLAGS_COMPANION_CONTROL    = (uint32_t)1 << 22,
-  MYGIMBALMANAGER_FLAGS_COMPANION_NUDGE      = (uint32_t)1 << 23,
+    MYGIMBALMANAGER_FLAGS_RC_ISACTIVE         = (uint32_t)1 << 16,
+    MYGIMBALMANAGER_FLAGS_CLIENT1_ISACTIVE    = (uint32_t)1 << 17,
+    MYGIMBALMANAGER_FLAGS_CLIENT2_ISACTIVE    = (uint32_t)1 << 18,
+    MYGIMBALMANAGER_FLAGS_CLIENT3_ISACTIVE    = (uint32_t)1 << 19,
+    MYGIMBALMANAGER_FLAGS_CLIENT4_ISACTIVE    = (uint32_t)1 << 20,
+    MYGIMBALMANAGER_FLAGS_CLIENT5_ISACTIVE    = (uint32_t)1 << 21,
+
+    MYGIMBALMANAGER_FLAGS_CLIENT1_HASCONTROL  = (uint32_t)1 << 22,
+    MYGIMBALMANAGER_FLAGS_CLIENT2_HASCONTROL  = (uint32_t)1 << 23,
+    MYGIMBALMANAGER_FLAGS_CLIENT3_HASCONTROL  = (uint32_t)1 << 24,
+    MYGIMBALMANAGER_FLAGS_CLIENT4_HASCONTROL  = (uint32_t)1 << 25,
+    MYGIMBALMANAGER_FLAGS_CLIENT5_HASCONTROL  = (uint32_t)1 << 26,
 } MYGIMBALMANAGERFLAGSENUM;
 
 // is called by task loop at 20 Hz
@@ -481,11 +496,9 @@ uint16_t gimbaldevice_flags = GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAG
     }
 
     if (_for_gimbalmanager) {
-        uint32_t gimbalmanager_flags = MYGIMBALMANAGER_SET_FLAGS_AUTOPILOT | (uint32_t)gimbaldevice_flags;
+        uint32_t gimbalmanager_flags = MYGIMBALMANAGER_SET_FLAGS_ISCLIENT3 | (uint32_t)gimbaldevice_flags;
 
-        if (_target.mode != MAV_MOUNT_MODE_RC_TARGETING) {
-            gimbalmanager_flags |= MYGIMBALMANAGER_SET_FLAGS_CONTROL;
-        }
+        gimbalmanager_flags |= (MYGIMBALMANAGER_SET_FLAGS_CONTROL | MYGIMBALMANAGER_SET_FLAGS_CLIENT3_ACTIVE);
 
         send_gimbal_manager_set_attitude_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbalmanager_flags);
     } else {
