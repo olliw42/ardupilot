@@ -104,7 +104,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 {
     _initialised = false;
     _armed = false;
-    _prearmchecks_ok = true; //if we don't find a gimbal, it stays false ! This might not always be the desired behavior
+    _prearmchecks_ok = true; //true means it is not checked
 
     _sysid = 0;
     _compid = 0;
@@ -123,7 +123,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
     _use_protocolv2 = false;    //true means mode 1, 2, 8
     _for_gimbalmanager = false; //true means mode 1
     _sendonly = false;          //true means mode 2
-#if !USE_GIMBAL_ZFLAGS
+#if USE_GIMBAL_ZFLAGS
     if (_state._zflags & 0x0F) {
         _use_protocolv2 = true;
         if (_state._zflags & 0x01) _for_gimbalmanager = true;
