@@ -72,3 +72,29 @@
 //#define USERHOOK_SUPERSLOWLOOP userhook_SuperSlowLoop();  // for code to be run at 1hz
 //#define USERHOOK_AUXSWITCH ENABLED                        // for code to handle user aux switches
 //#define USER_PARAMS_ENABLED ENABLED                       // to enable user parameters
+
+
+//OW
+/*
+#define PROXIMITY_ENABLED     DISABLED            // disable proximity sensors
+#define AC_RALLY              DISABLED            // disable rally points library (must also disable terrain which relies on rally)
+#define AC_AVOID_ENABLED      DISABLED            // disable stop-at-fence library
+#define AC_OAPATHPLANNER_ENABLED DISABLED         // disable path planning around obstacles
+#define AC_TERRAIN            DISABLED            // disable terrain library
+#define PARACHUTE             DISABLED            // disable parachute release to save 1k of flash
+#define VISUAL_ODOMETRY_ENABLED DISABLED          // disable visual odometry to save 2K of flash space
+#define ADSB_ENABLED          DISABLED            // disable ADSB support
+#define PRECISION_LANDING     DISABLED            // disable precision landing using companion computer or IRLock sensor
+#define BEACON_ENABLED        DISABLED            // disable beacon support
+#define SPRAYER_ENABLED       DISABLED            // disable the crop sprayer feature (two ESC controlled pumps the speed of which depends upon the vehicle's horizontal velocity)
+#define WINCH_ENABLED         DISABLED            // disable winch support
+#define GRIPPER_ENABLED       DISABLED            // disable gripper support
+#define RPM_ENABLED           DISABLED            // disable rotations per minute sensor support
+
+#define MODE_FOLLOW_ENABLED   DISABLED            // disable follow mode support
+#define MODE_SMARTRTL_ENABLED DISABLED            // disable smartrtl mode support
+#define MODE_SYSTEMID_ENABLED DISABLED            // disable system ID mode support
+#define MODE_THROW_ENABLED    DISABLED            // disable throw mode support
+#define MODE_ZIGZAG_ENABLED   DISABLED            // disable zigzag mode support
+*/
+//OWEND
