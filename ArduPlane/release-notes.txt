@@ -1,8 +1,79 @@
+Release 4.0.6beta5, 25th August 2020
+------------------------------------
+
+This should be the final beta for 4.0.6. Several important fixes are
+included:
+
+ - fixed disable of throttle nudge during a RC failsafe
+
+ - added support for a wider range of DLVR airspeed sensors
+
+ - fixed RC input processing for out of range RC channels
+
+ - added THR_FAILSAFE=2 option for flying BVLOS with only GCS
+   failsafes enabled
+
+ - fixed reordering of compasses on boot based on compass priorities
+
+ - fixed use of minimum accuracy for GPS data in EKF2 and EKF3, fixing
+   an issue with RTK GPS modules that report overly optimistic
+   accuracy values
+
+ - fixed handling of RC_OPTION bit for disabling receiver failsafe
+   handling
+
+ - fixed LOITER_TO_ALT with terrain altitude target
+
+Happy flying!
+
+Release 4.0.6beta4, 27th July 2020
+----------------------------------
+
+This is a minor change over beta3
+
+ - fixed an issue with swapping UAVCAN compasses and calibration
+
+ - fixed use of VTOL quadplane missions (where the plane flies as a
+   multi-rotor for auto waypoints)
+
+ - fixed legacy parsing of some lightware i2c lidars when beyond max
+   range
+
+Happy flying!
+
+
+Release 4.0.6beta3, 7th July 2020
+----------------------------------
+
+This is a minor change over beta2
+
+ - fixed RTL_AUTOLAND with MIS_RESTART=1
+ - enable more compasses on low flash boards
+ - HAL erase storage fix for flash storage boards
+
+Happy flying!
+
+Release 4.0.6beta2, 23rd June 2020
+----------------------------------
+
+This is a minor change over beta1
+
+ - prevent jump to circle mode in TAKEOFF if flying for less than 10s
+ - fixed handling of out of range on LightwareI2C Lidar
+ - fixed init of HoTT telemetry
+ - added support for mRo Pixracer Pro, Holybro Pix32v5
+ - added arming check for terrain data healthy if needed
+ - fixed compass ordering bug
+ - increased monitor thread size to 768
+
+Happy flying!
+
 Release 4.0.6beta1, 23rd May 2020
 ---------------------------------
 
 This is a major release with a significant number of new features and
-bug fixes.
+bug fixes. You should read the list of changes and the information
+below carefully.
 
  - changed LED scripting API to allow more than 32 LEDs on a pin
  - added support for ProfiLED LEDs
@@ -39,6 +110,52 @@ bug fixes.
  - fixed forcing of safety off on IOMCU reset
  - increased maximum compass scale factor to 1.4
  - added RTL_CLIMB_MIN parameter for initial climb in RTL
+
+The key changes to existing behaviour to watch out for in this update
+are:
+
+USB IDs
+-------
+
+ArduPilot has now switched to it's own USB IDs for all boards. For
+most users this won't cause any change, except they may notice the
+drop down list of devices in MissionPlanner will have the ArduPilot
+flight controllers labelled more usefully as "ArduPilot" instead of
+just "STM32". If you hit issues on windows please try reinstalling the
+device drivers from this URL:
+https://firmware.ardupilot.org/Tools/MissionPlanner/driver.msi
+
+Terrain
+-------
+
+A bug fix in the format ArduPilot uses to store terrain data means
+that your flight controller will need to re-download the terrain data
+onto the sdcard via your GCS. If you fly without a GCS and you use
+terrain data then please re-download the terrain data you need by
+setting up a mission when you have internet access and allowing your
+flight controller to request terrain data from your GCS.
+
+Pressure Altitude Compensation
+------------------------------
+
+This release adds in the missing hook for the VTOL motor controller on
+a quadplane to compensate the VTOL gains using your pressure
+altitude. For most people this will not have a noticible effect, but
+some users that have tuned their aircraft for high locations may
+notice a tuning change.
+
+Compass Ordering
+----------------
+
+The new compass ordering system in this release gives a lot more
+flexibility and should preseve existing configurations and
+calibrations. If you hit issues then please have a look at the new
+compass ordering user interface in recent beta releases of
+MissionPlanner.
+
+Many thanks to everyone who contributed to and tested this release!
+
+Happy flying!
 
 
 Release 4.0.5, 4th March 2020
