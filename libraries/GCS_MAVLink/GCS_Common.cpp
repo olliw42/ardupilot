@@ -3014,14 +3014,14 @@ void GCS_MAVLINK::handle_rc_channels_override(const mavlink_message_t &msg)
         packet.chan16_raw
     };
 
-
+    for (uint8_t i=0; i<ARRAY_SIZE(override_data); i++) {
+        // Per MAVLink spec a value of UINT16_MAX means to ignore this field.
 //OW
 // THIS IS A DAMED BUG!!!
 // per MAVLink spec 0 and UNIT16_MAX should not be considered for channels >= 8 !!!!!!
+//        if (override_data[i] != UINT16_MAX) {
+        if ((i < 8 || override_data[i]) && override_data[i] != UINT16_MAX) {
 //OWEND
-    for (uint8_t i=0; i<ARRAY_SIZE(override_data); i++) {
-        // Per MAVLink spec a value of UINT16_MAX means to ignore this field.
-        if (override_data[i] != UINT16_MAX) {
             RC_Channels::set_override(i, override_data[i], tnow);
         }
     }
