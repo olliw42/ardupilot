@@ -7,6 +7,7 @@
 #include "ap_version.h"
 
 #define THISFIRMWARE "ArduCopter V4.0.4"
+
 //OW
 #undef THISFIRMWARE
 #include "../libraries/bp_version.h"
