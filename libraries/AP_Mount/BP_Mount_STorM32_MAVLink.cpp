@@ -452,10 +452,8 @@ uint16_t gimbaldevice_flags = MAV_STORM32_GIMBAL_DEVICE_FLAGS_ROLL_LOCK | MAV_ST
 
     if (_for_gimbalmanager) {
         uint16_t gimbalmanager_flags;
-
         //we do not attempt to claim supervision nor activity, we thus leave it to other components, e.g. a gcs, to set this
         gimbalmanager_flags = 0;
-
         send_storm32_gimbal_manager_control_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags, gimbalmanager_flags);
     } else {
         send_storm32_gimbal_device_control_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags);
@@ -655,7 +653,7 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(flo
         _chan,
         _sysid, _compid,
         _compid, //gimbal_device_id
-        MAV_STORM32_GIMBAL_MANAGER_CLIENTS_AUTOPILOT,
+        MAV_STORM32_GIMBAL_MANAGER_CLIENT_AUTOPILOT,
         device_flags, manager_flags,
         q,
         NAN, NAN, NAN);
