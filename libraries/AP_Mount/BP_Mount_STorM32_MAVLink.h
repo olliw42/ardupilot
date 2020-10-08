@@ -2,7 +2,7 @@
 //OW
 // (c) olliw, www.olliw.eu, GPL3
 // STorM32 mount backend class
-// uses 100% MAVlink
+// uses 100% MAVlink + storm32.xml
 //*****************************************************
 
 #pragma once
@@ -86,23 +86,16 @@ private:
     void send_mount_status_to_channels(void);
     void send_cmd_do_mount_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, enum MAV_MOUNT_MODE mode);
 
-    // gimbal protocol v2
+    // storm32 gimbal protocol v2
     bool _use_protocolv2;
     bool _sendonly;
     bool _for_gimbalmanager;
 
-    struct {
-        uint16_t capability_flags;
-        float tilt_deg_min, tilt_deg_max, pan_deg_min, pan_deg_max;
-        uint16_t flags;
-        uint32_t failure_flags;
-    } _gimbal_device;
-
     void send_target_angles_to_gimbal_v2(void);
 
     void send_autopilot_state_for_gimbal_device_to_gimbal(void);
-    void send_gimbal_device_set_attitude_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t flags);
-    void send_gimbal_manager_set_attitude_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint32_t flags);
+    void send_storm32_gimbal_device_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t flags);
+    void send_storm32_gimbal_manager_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t device_flags, uint16_t manager_flags);
 
     // system time
     uint32_t _send_system_time_last;
