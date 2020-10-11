@@ -2,7 +2,7 @@
 //OW
 // (c) olliw, www.olliw.eu, GPL3
 // STorM32 mount backend class
-// uses 100% MAVlink
+// uses 100% MAVlink + storm32.xml
 //*****************************************************
 
 #include <AP_HAL/AP_HAL.h>
@@ -290,30 +290,17 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             send_mountstatus = true;
             }break;
 
-        case MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION: { //283
+        case MAVLINK_MSG_ID_STORM32_GIMBAL_DEVICE_STATUS: { //62001
             if (!_use_protocolv2) break;
-            mavlink_gimbal_device_information_t payload;
-            mavlink_msg_gimbal_device_information_decode( &msg, &payload );
-            _gimbal_device.capability_flags = payload.cap_flags;
-            _gimbal_device.tilt_deg_min = degrees(payload.tilt_min); //hopefully handles also NAN correctly
-            _gimbal_device.tilt_deg_max = degrees(payload.tilt_max);
-            _gimbal_device.pan_deg_min = degrees(payload.pan_min);
-            _gimbal_device.pan_deg_max = degrees(payload.pan_max);
-            }break;
-
-        case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS: { //285
-            if (!_use_protocolv2) break;
-            mavlink_gimbal_device_attitude_status_t payload;
-            mavlink_msg_gimbal_device_attitude_status_decode( &msg, &payload );
+            mavlink_storm32_gimbal_device_status_t payload;
+            mavlink_msg_storm32_gimbal_device_status_decode( &msg, &payload );
             float roll_rad, pitch_rad, yaw_rad;
             GimbalQuaternion quat(payload.q[0], payload.q[1], payload.q[2], payload.q[3]);
             quat.to_gimbal_euler(roll_rad, pitch_rad, yaw_rad);
             _status.roll_deg = degrees(roll_rad);
             _status.pitch_deg = degrees(pitch_rad);
             _status.yaw_deg = degrees(yaw_rad);
-            _status.yaw_deg_absolute = NAN;
-            _gimbal_device.flags = payload.flags;
-            _gimbal_device.failure_flags = payload.failure_flags;
+            _status.yaw_deg_absolute = degrees(payload.yaw_absolute);
             send_mountstatus = true;
             }break;
     }
@@ -386,7 +373,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles(void)
             // NO!!: clear yaw since if has_pan == false the copter will yaw, so we must not forward it to the gimbal
             if (!has_pan_control()) {
                 const Vector3f &target = _state._neutral_angles.get();
-                _angle_ef_target_rad.z = radians(target.z);
+                _angle_ef_target_rad.z = radians(target.z); //clear yaw
             }
             set_target = true;
             break;
@@ -445,40 +432,8 @@ void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal(void)
 
 
 //------------------------------------------------------
-// private functions, protocol v2
+// private functions, storm32 gimbal protocol v2
 //------------------------------------------------------
-
-//my own gimbal manger flags
-typedef enum {
-    MYGIMBALMANAGER_SET_FLAGS_RC_ACTIVE       = (uint32_t)1 << 16,
-    MYGIMBALMANAGER_SET_FLAGS_CLIENT1_ACTIVE  = (uint32_t)1 << 17, //companion
-    MYGIMBALMANAGER_SET_FLAGS_CLIENT2_ACTIVE  = (uint32_t)1 << 18, //gcs
-    MYGIMBALMANAGER_SET_FLAGS_CLIENT3_ACTIVE  = (uint32_t)1 << 19, //autopilot
-    MYGIMBALMANAGER_SET_FLAGS_CLIENT4_ACTIVE  = (uint32_t)1 << 20,
-    MYGIMBALMANAGER_SET_FLAGS_CLIENT5_ACTIVE  = (uint32_t)1 << 21,
-    MYGIMBALMANAGER_SET_FLAGS_CONTROL         = (uint32_t)1 << 22,
-
-    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT1       = (uint32_t)1 << 23, //companion
-    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT2       = (uint32_t)1 << 24, //gcs
-    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT3       = (uint32_t)1 << 25, //autopilot
-    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT4       = (uint32_t)1 << 26,
-    MYGIMBALMANAGER_SET_FLAGS_ISCLIENT5       = (uint32_t)1 << 27,
-} MYGIMBALMANAGERSETFLAGSENUM;
-
-typedef enum {
-    MYGIMBALMANAGER_FLAGS_RC_ISACTIVE         = (uint32_t)1 << 16,
-    MYGIMBALMANAGER_FLAGS_CLIENT1_ISACTIVE    = (uint32_t)1 << 17,
-    MYGIMBALMANAGER_FLAGS_CLIENT2_ISACTIVE    = (uint32_t)1 << 18,
-    MYGIMBALMANAGER_FLAGS_CLIENT3_ISACTIVE    = (uint32_t)1 << 19,
-    MYGIMBALMANAGER_FLAGS_CLIENT4_ISACTIVE    = (uint32_t)1 << 20,
-    MYGIMBALMANAGER_FLAGS_CLIENT5_ISACTIVE    = (uint32_t)1 << 21,
-
-    MYGIMBALMANAGER_FLAGS_CLIENT1_HASCONTROL  = (uint32_t)1 << 22,
-    MYGIMBALMANAGER_FLAGS_CLIENT2_HASCONTROL  = (uint32_t)1 << 23,
-    MYGIMBALMANAGER_FLAGS_CLIENT3_HASCONTROL  = (uint32_t)1 << 24,
-    MYGIMBALMANAGER_FLAGS_CLIENT4_HASCONTROL  = (uint32_t)1 << 25,
-    MYGIMBALMANAGER_FLAGS_CLIENT5_HASCONTROL  = (uint32_t)1 << 26,
-} MYGIMBALMANAGERFLAGSENUM;
 
 // is called by task loop at 20 Hz
 // finally sends out target angles
@@ -486,23 +441,22 @@ typedef enum {
 
 void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal_v2(void)
 {
-uint16_t gimbaldevice_flags = GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
+uint16_t gimbaldevice_flags = MAV_STORM32_GIMBAL_DEVICE_FLAGS_ROLL_LOCK | MAV_STORM32_GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
 
     if (_target.mode == MAV_MOUNT_MODE_RETRACT) {
-        gimbaldevice_flags = GIMBAL_DEVICE_FLAGS_RETRACT;
+        gimbaldevice_flags = MAV_STORM32_GIMBAL_DEVICE_FLAGS_RETRACT;
     }
     if (_target.mode == MAV_MOUNT_MODE_NEUTRAL) {
-        gimbaldevice_flags = GIMBAL_DEVICE_FLAGS_NEUTRAL;
+        gimbaldevice_flags = MAV_STORM32_GIMBAL_DEVICE_FLAGS_NEUTRAL;
     }
 
     if (_for_gimbalmanager) {
-        uint32_t gimbalmanager_flags = MYGIMBALMANAGER_SET_FLAGS_ISCLIENT3 | (uint32_t)gimbaldevice_flags;
-
-        gimbalmanager_flags |= (MYGIMBALMANAGER_SET_FLAGS_CONTROL | MYGIMBALMANAGER_SET_FLAGS_CLIENT3_ACTIVE);
-
-        send_gimbal_manager_set_attitude_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbalmanager_flags);
+        uint16_t gimbalmanager_flags;
+        //we do not attempt to claim supervision nor activity, we thus leave it to other components, e.g. a gcs, to set this
+        gimbalmanager_flags = 0;
+        send_storm32_gimbal_manager_control_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags, gimbalmanager_flags);
     } else {
-        send_gimbal_device_set_attitude_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags);
+        send_storm32_gimbal_device_control_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags);
     }
 }
 
@@ -599,24 +553,6 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
     }
 
     const AP_AHRS_NavEKF &ahrs = AP::ahrs_navekf();
-
-    Quaternion quat;
-    quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
-    float q[4] = { quat.q1, quat.q2, quat.q3, quat.q4 }; //figure out how to do it correctly
-
-    Vector3f vel;
-    // ahrs.get_velocity_NED(vel) returns a bool, so it's a good idea to consider it
-    if (!ahrs.get_velocity_NED(vel)) { vel.x = vel.y = vel.z = 0.0f; }
-
-    float yawrate = NAN; //0.0f;
-
-    //TODO: this are the statuses from using storm32link_v2, we need to somehow use and mimic them
-    // we need to figure out the proper/best way
-    // STorM32 currently exploits only
-    //   STORM32LINK_FCSTATUS_AP_AHRSHEALTHY: => Q ok
-    //   STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED: => vz ok
-    // let's mimic it here by NANs, but this makes it all very unfortunate dependent, MAVLInk could be nicer
-
     const AP_GPS &gps = AP::gps();
     const AP_Notify &notify = AP::notify();
 
@@ -630,16 +566,23 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
     if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
     if (notify.flags.armed) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
 
-    if (!(status & STORM32LINK_FCSTATUS_AP_AHRSHEALTHY)) {
-        q[0] = q[1] = q[2] = q[3] = NAN;
-    }
-    if (!(status & STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED)) {
-        vel.x = vel.y = vel.z = NAN;
-    }
+    Quaternion quat;
+    quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
+    float q[4] = { quat.q1, quat.q2, quat.q3, quat.q4 }; //figure out how to do it correctly
+
+    Vector3f vel;
+    // ahrs.get_velocity_NED(vel) returns a bool, so it's a good idea to consider it
+    if (!ahrs.get_velocity_NED(vel)) { vel.x = vel.y = vel.z = 0.0f; }
+
+    float yawrate = NAN; //0.0f;
 
 /* estimator status
 no support by ArduPilot whatsoever
 */
+    uint16_t _estimator_status = 0;
+    if (status & STORM32LINK_FCSTATUS_AP_AHRSHEALTHY) _estimator_status |= ESTIMATOR_ATTITUDE;
+    if (status & STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED) _estimator_status |= ESTIMATOR_VELOCITY_VERT;
+
 /* landed state
 GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
 Copter has it: GCS_MAVLINK_Copter::landed_state()
@@ -649,26 +592,28 @@ we can identify this be MAV_LANDED_STATE_UNDEFINED as value
 we probably want to also take into account the arming state to mock something up
 ugly as we will have vehicle dependency here
 */
-    uint16_t _estimator_status = 0;
     uint8_t _landed_state = MAV_LANDED_STATE_UNDEFINED;
 
     mavlink_msg_autopilot_state_for_gimbal_device_send(
         _chan,
-        AP_HAL::micros64(),
         _sysid, _compid,
+        AP_HAL::micros64(),
         q,
         0, // uint32_t q_estimated_delay_us,
         vel.x, vel.y, vel.z,
         0, // uint32_t v_estimated_delay_us,
         yawrate,
         _estimator_status, _landed_state);
+        //uint64_t time_boot_us, const float *q, uint32_t q_estimated_delay_us,
+        //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
+        //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
 }
 
 
 //the interface is similar to that of do_mount_control, to make it simpler for the moment, so we internally convert
-void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t flags)
+void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_device_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t flags)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
+    if (!HAVE_PAYLOAD_SPACE(_chan, STORM32_GIMBAL_DEVICE_CONTROL)) {
         return;
     }
 
@@ -680,19 +625,22 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude_to_gimbal(float r
     q[2] = quat.q3;
     q[3] = quat.q4;
 
-    mavlink_msg_gimbal_device_set_attitude_send(
+    mavlink_msg_storm32_gimbal_device_control_send(
         _chan,
         _sysid, _compid,
         flags,
         q,
         NAN, NAN, NAN);
+        //uint16_t flags,
+        //const float *q,
+        //float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
 }
 
 
 //the interface is similar to that of do_mount_control, to make it simpler for the moment, so we internally convert
-void BP_Mount_STorM32_MAVLink::send_gimbal_manager_set_attitude_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint32_t flags)
+void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, uint16_t device_flags, uint16_t manager_flags)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_MANAGER_SET_ATTITUDE)) {
+    if (!HAVE_PAYLOAD_SPACE(_chan, STORM32_GIMBAL_MANAGER_CONTROL)) {
         return;
     }
 
@@ -704,13 +652,16 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_manager_set_attitude_to_gimbal(float 
     q[2] = quat.q3;
     q[3] = quat.q4;
 
-    mavlink_msg_gimbal_manager_set_attitude_send(
+    mavlink_msg_storm32_gimbal_manager_control_send(
         _chan,
         _sysid, _compid,
-        flags,
-        _compid, //gimbal_device_id,
+        _compid, //gimbal_device_id
+        MAV_STORM32_GIMBAL_MANAGER_CLIENT_AUTOPILOT,
+        device_flags, manager_flags,
         q,
         NAN, NAN, NAN);
+        //uint8_t gimbal_device_id, uint8_t client, uint16_t device_flags, uint16_t manager_flags,
+        //const float *q, float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
 }
 
 
@@ -754,6 +705,11 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
     if (now_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
         _initialised = false; //should be already false, but it can't hurt to ensure that
         return;
+    }
+#else
+    const AP_Notify &notify = AP::notify();
+    if (notify.flags.armed) {
+        return; //do not search if armed
     }
 #endif
 
@@ -860,14 +816,14 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
     if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
     if (notify.flags.armed) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
 
-    int16_t yawrate = 0;
-
     Quaternion quat;
     quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
 
     Vector3f vel;
     // ahrs.get_velocity_NED(vel) returns a bool, so it's a good idea to consider it
     if (!ahrs.get_velocity_NED(vel)) { vel.x = vel.y = vel.z = 0.0f; }
+
+    int16_t yawrate = 0;
 
     tSTorM32LinkV2 t;
     t.seq = _storm32link_seq; _storm32link_seq++; //this is not really used
