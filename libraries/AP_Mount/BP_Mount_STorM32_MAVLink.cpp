@@ -373,7 +373,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles(void)
             // NO!!: clear yaw since if has_pan == false the copter will yaw, so we must not forward it to the gimbal
             if (!has_pan_control()) {
                 const Vector3f &target = _state._neutral_angles.get();
-                _angle_ef_target_rad.z = radians(target.z);
+                _angle_ef_target_rad.z = radians(target.z); //clear yaw
             }
             set_target = true;
             break;
@@ -596,14 +596,17 @@ ugly as we will have vehicle dependency here
 
     mavlink_msg_autopilot_state_for_gimbal_device_send(
         _chan,
-        AP_HAL::micros64(),
         _sysid, _compid,
+        AP_HAL::micros64(),
         q,
         0, // uint32_t q_estimated_delay_us,
         vel.x, vel.y, vel.z,
         0, // uint32_t v_estimated_delay_us,
         yawrate,
         _estimator_status, _landed_state);
+        //uint64_t time_boot_us, const float *q, uint32_t q_estimated_delay_us,
+        //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
+        //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
 }
 
 
@@ -659,7 +662,6 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(flo
         NAN, NAN, NAN);
         //uint8_t gimbal_device_id, uint8_t client, uint16_t device_flags, uint16_t manager_flags,
         //const float *q, float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
-
 }
 
 
