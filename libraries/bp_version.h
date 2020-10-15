@@ -1,12 +1,12 @@
 #pragma once
 
-#define BETAPILOTVERSION " v046"
+#define BETAPILOTVERSION " v047"
 
 /*
 search for //OW to find all changes
 
-2020.10.03:
- upgraded to Copter4.0.4
+2020.10.15:
+ upgraded to Copter4.0.5rc2
 
 ArduCopter specific
 - APM_Config.h:         1x
