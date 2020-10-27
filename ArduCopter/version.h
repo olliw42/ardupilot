@@ -6,18 +6,18 @@
 
 #include "ap_version.h"
 
-#define THISFIRMWARE "ArduCopter V4.0.5-rc2"
+#define THISFIRMWARE "ArduCopter V4.0.5"
 
 //OW
 #undef THISFIRMWARE
 #include "../libraries/bp_version.h"
-#define THISFIRMWARE "BetaCopter V4.0.5-rc2" BETAPILOTVERSION "m20200916"
+#define THISFIRMWARE "BetaCopter V4.0.5" BETAPILOTVERSION "20201027"
 //OWEND
 
 // the following line is parsed by the autotest scripts
-#define FIRMWARE_VERSION 4,0,5,FIRMWARE_VERSION_TYPE_RC
+#define FIRMWARE_VERSION 4,0,5,FIRMWARE_VERSION_TYPE_OFFICIAL
 
 #define FW_MAJOR 4
 #define FW_MINOR 0
 #define FW_PATCH 5
-#define FW_TYPE FIRMWARE_VERSION_TYPE_RC
+#define FW_TYPE FIRMWARE_VERSION_TYPE_OFFICIAL
