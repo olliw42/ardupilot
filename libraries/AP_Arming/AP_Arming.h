@@ -167,6 +167,10 @@ protected:
 
     bool fence_checks(bool report);
 
+//OW
+    bool mount_checks(bool report);
+//OWEND
+
     bool camera_checks(bool display_failure);
 
     bool osd_checks(bool display_failure) const;

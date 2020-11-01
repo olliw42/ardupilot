@@ -248,6 +248,9 @@ void GCS_MAVLINK::send_battery_status(const uint8_t instance) const
     } else {
         consumed_wh = -1;
     }
+//OW
+    uint16_t voltages_ext[4] = {0};
+//OWEND
     mavlink_msg_battery_status_send(chan,
                                     instance, // id
                                     MAV_BATTERY_FUNCTION_UNKNOWN, // function
@@ -259,7 +262,7 @@ void GCS_MAVLINK::send_battery_status(const uint8_t instance) const
                                     consumed_wh,  // consumed energy in hJ (hecto-Joules)
                                     battery.capacity_remaining_pct(instance),
                                     0, // time remaining, seconds (not provided)
-                                    MAV_BATTERY_CHARGE_STATE_UNDEFINED);
+                                    MAV_BATTERY_CHARGE_STATE_UNDEFINED, voltages_ext, 0,0); //OW
 }
 
 // returns true if all battery instances were reported
@@ -1353,6 +1356,10 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
         // e.g. enforce-sysid says we shouldn't look at this packet
         return;
     }
+//OW
+    AP_Mount *mount = AP::mount();
+    if (mount != nullptr) mount->handle_msg(msg);
+//OWEND
     handleMessage(msg);
 }
 
@@ -2160,7 +2167,7 @@ void GCS_MAVLINK::handle_set_mode(const mavlink_message_t &msg)
     // exist, but if it did we'd probably be acking something
     // completely unrelated to setting modes.
     if (HAVE_PAYLOAD_SPACE(chan, COMMAND_ACK)) {
-        mavlink_msg_command_ack_send(chan, MAVLINK_MSG_ID_SET_MODE, result);
+        mavlink_msg_command_ack_send(chan, MAVLINK_MSG_ID_SET_MODE, result, 255,0,0,0); //OW
     }
 }
 
@@ -2681,7 +2688,7 @@ MAV_RESULT GCS_MAVLINK::handle_preflight_reboot(const mavlink_command_long_t &pa
     }
 
     // send ack before we reboot
-    mavlink_msg_command_ack_send(chan, packet.command, MAV_RESULT_ACCEPTED);
+    mavlink_msg_command_ack_send(chan, packet.command, MAV_RESULT_ACCEPTED, 255,0,0,0); //OW
 
     // when packet.param1 == 3 we reboot to hold in bootloader
     const bool hold_in_bootloader = is_equal(packet.param1, 3.0f);
@@ -3110,7 +3117,12 @@ void GCS_MAVLINK::handle_rc_channels_override(const mavlink_message_t &msg)
 
     for (uint8_t i=0; i<ARRAY_SIZE(override_data); i++) {
         // Per MAVLink spec a value of UINT16_MAX means to ignore this field.
-        if (override_data[i] != UINT16_MAX) {
+//OW
+// THIS IS A DAMED BUG!!!
+// per MAVLink spec 0 and UNIT16_MAX should not be considered for channels >= 8 !!!!!!
+//        if (override_data[i] != UINT16_MAX) {
+        if ((i < 8 || override_data[i]) && override_data[i] != UINT16_MAX) {
+//OWEND
             RC_Channels::set_override(i, override_data[i], tnow);
         }
     }
@@ -4024,7 +4036,7 @@ void GCS_MAVLINK::handle_command_long(const mavlink_message_t &msg)
     const MAV_RESULT result = handle_command_long_packet(packet);
 
     // send ACK or NAK
-    mavlink_msg_command_ack_send(chan, packet.command, result);
+    mavlink_msg_command_ack_send(chan, packet.command, result, 255,0,0,0); //OW
 
     // log the packet:
     mavlink_command_int_t packet_int;
@@ -4200,7 +4212,7 @@ void GCS_MAVLINK::handle_command_int(const mavlink_message_t &msg)
     const MAV_RESULT result = handle_command_int_packet(packet);
 
     // send ACK or NAK
-    mavlink_msg_command_ack_send(chan, packet.command, result);
+    mavlink_msg_command_ack_send(chan, packet.command, result, 255,0,0,0); //OW
 
     AP::logger().Write_Command(packet, result);
 
