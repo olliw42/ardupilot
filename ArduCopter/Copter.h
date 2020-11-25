@@ -641,6 +641,10 @@ private:
     bool start_takeoff(float alt) override;
     bool set_target_location(const Location& target_loc) override;
     bool set_target_velocity_NED(const Vector3f& vel_ned) override;
+//OW
+    bool set_target_velocity_NED_yaw_rate_degs(const Vector3f& vel_ned, float yaw_rate_degs) override;
+    bool set_target_dest_vel_NED_yaw_rate_degs(const Vector3f& dest, const Vector3f& vel_ned, float yaw_rate_degs) override;
+//OWEND
     bool set_target_angle_and_climbrate(float roll_deg, float pitch_deg, float yaw_deg, float climb_rate_ms, bool use_yaw_rate, float yaw_rate_degs) override;
     void rc_loop();
     void throttle_loop();

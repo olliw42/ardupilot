@@ -595,7 +595,13 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
     }
     _qshot.mode_last = _qshot.mode;
 
-    if (_xshot.mode == UINT8_MAX) return; //is in hold, don't send
+    if (_script.control) {
+        _target.roll_deg = 0.0f;
+        _target.pitch_deg = _script.set_pitch_deg;
+        _target.yaw_deg = _script.set_yaw_deg;
+    }
+
+    if (_qshot.mode == UINT8_MAX) return; //is in hold, don't send
 
     if (_for_gimbalmanager) {
         // when not active, don't send, this reduces traffic
@@ -612,6 +618,40 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
     } else {
         send_storm32_gimbal_device_control_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags);
     }
+}
+
+
+//------------------------------------------------------
+// script bindings
+//------------------------------------------------------
+
+bool BP_Mount_STorM32_MAVLink::take_control(void)
+{
+    _script.control = true;
+    return true; //we assume only one script trying this, so KIS
+}
+
+
+bool BP_Mount_STorM32_MAVLink::give_control(void)
+{
+    _script.control = false;
+    return true; //we assume only one script trying this, so KIS
+}
+
+
+//can be called to set angles even if not in script control
+// this allows to set a defined angle before control is taken
+
+bool BP_Mount_STorM32_MAVLink::set_pitchyaw_deg(float pitch_deg, float yaw_deg)
+{
+    _script.set_pitch_deg = pitch_deg;
+    _script.set_yaw_deg = yaw_deg;
+
+    if (!_script.control) {
+        return false;
+    }
+
+    return true;
 }
 
 

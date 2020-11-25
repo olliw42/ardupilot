@@ -166,6 +166,10 @@ void ModeGuided::vel_control_start()
 
     // initialise velocity controller
     pos_control->init_vel_controller_xyz();
+
+//OW
+    _block_rc_yaw_cntrl = false;
+//OWEND
 }
 
 // initialise guided mode's posvel controller
@@ -193,6 +197,10 @@ void ModeGuided::posvel_control_start()
 
     // pilot always controls yaw
     auto_yaw.set_mode(AUTO_YAW_HOLD);
+
+//OW
+    _block_rc_yaw_cntrl = false;
+//OWEND
 }
 
 bool ModeGuided::is_taking_off() const
@@ -304,12 +312,19 @@ bool ModeGuided::set_destination(const Location& dest_loc, bool use_yaw, float y
 }
 
 // guided_set_velocity - sets guided mode's target velocity
-void ModeGuided::set_velocity(const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw, bool log_request)
+//OW
+//void ModeGuided::set_velocity(const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw, bool log_request)
+void ModeGuided::set_velocity(const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw, bool log_request, bool block_rc_yaw)
+//OWEND
 {
     // check we are in velocity control mode
     if (guided_mode != Guided_Velocity) {
         vel_control_start();
     }
+
+//OW
+    _block_rc_yaw_cntrl = block_rc_yaw;
+//OWEND
 
     // set yaw state
     set_yaw_state(use_yaw, yaw_cd, use_yaw_rate, yaw_rate_cds, relative_yaw);
@@ -325,7 +340,10 @@ void ModeGuided::set_velocity(const Vector3f& velocity, bool use_yaw, float yaw_
 }
 
 // set guided mode posvel target
-bool ModeGuided::set_destination_posvel(const Vector3f& destination, const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw)
+//OW
+//bool ModeGuided::set_destination_posvel(const Vector3f& destination, const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw)
+bool ModeGuided::set_destination_posvel(const Vector3f& destination, const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw, bool block_rc_yaw)
+//OWEND
 {
 #if AC_FENCE == ENABLED
     // reject destination if outside the fence
@@ -341,6 +359,10 @@ bool ModeGuided::set_destination_posvel(const Vector3f& destination, const Vecto
     if (guided_mode != Guided_PosVel) {
         posvel_control_start();
     }
+
+//OW
+    _block_rc_yaw_cntrl = block_rc_yaw;
+//OWEND
 
     // set yaw state
     set_yaw_state(use_yaw, yaw_cd, use_yaw_rate, yaw_rate_cds, relative_yaw);
@@ -452,7 +474,10 @@ void ModeGuided::vel_control_run()
 {
     // process pilot's yaw input
     float target_yaw_rate = 0;
-    if (!copter.failsafe.radio) {
+//OW
+//    if (!copter.failsafe.radio) {
+    if (!copter.failsafe.radio && !_block_rc_yaw_cntrl) {
+//OWEND
         // get pilot's desired yaw rate
         target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
         if (!is_zero(target_yaw_rate)) {
@@ -516,7 +541,10 @@ void ModeGuided::posvel_control_run()
     // process pilot's yaw input
     float target_yaw_rate = 0;
 
-    if (!copter.failsafe.radio) {
+//OW
+//    if (!copter.failsafe.radio) {
+    if (!copter.failsafe.radio && !_block_rc_yaw_cntrl) {
+//OWEND
         // get pilot's desired yaw rate
         target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
         if (!is_zero(target_yaw_rate)) {

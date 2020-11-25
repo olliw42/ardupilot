@@ -16,6 +16,9 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Param/AP_Param.h>
+//OW
+#include <GCS_MAVLink/GCS_MAVLink.h>
+//OWEND
 
 // allow buttons for up to 4 pins
 #define AP_BUTTON_NUM_PINS 4
@@ -44,6 +47,15 @@ public:
     // get state of a button
     // used by scripting
     bool get_button_state(uint8_t number);
+
+//OW
+    // mavlink message handling
+    void handle_message(mavlink_channel_t chan, const mavlink_message_t &msg);
+
+    // used by scripting
+    bool get_mavlink_button_state(uint8_t number);
+    void reset_mavlink_button_state(uint8_t number);
+//OWEND
 
 private:
 
@@ -81,6 +93,10 @@ private:
 
     // setup pins as pullup input
     void setup_pins();
+
+//OW
+    uint8_t mavlink_mask;
+//OWEND
 };
 
 namespace AP {

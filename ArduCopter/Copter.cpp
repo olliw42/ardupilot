@@ -312,6 +312,51 @@ bool Copter::set_target_velocity_NED(const Vector3f& vel_ned)
     return true;
 }
 
+//OW
+bool Copter::set_target_velocity_NED_yaw_rate_degs(const Vector3f& vel_ned, float yaw_rate_degs)
+{
+    // exit if vehicle is not in Guided mode or Auto-Guided mode
+    if (!flightmode->in_guided_mode()) {
+        return false;
+    }
+
+    // convert vector to neu in cm
+    const Vector3f vel_neu_cms(vel_ned.x * 100.0f, vel_ned.y * 100.0f, -vel_ned.z * 100.0f);
+    //mode_guided.set_velocity(vel_neu_cms);
+
+//void set_velocity(const Vector3f& velocity, bool use_yaw = false, float yaw_cd = 0.0,
+//                  bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false,
+//                  bool log_request = true, bool block_rc_yaw = false);
+//relative_yaw doesn't matter if use_yaw false
+
+    const float yaw_rate_cds = yaw_rate_degs * 100.0f;
+    const bool block_rc_yaw = true;
+    mode_guided.set_velocity(vel_neu_cms, false, 0.0f, true, yaw_rate_cds, false, true, block_rc_yaw);
+    return true;
+}
+
+bool Copter::set_target_dest_vel_NED_yaw_rate_degs(const Vector3f& dest, const Vector3f& vel_ned, float yaw_rate_degs)
+{
+    // exit if vehicle is not in Guided mode or Auto-Guided mode
+    if (!flightmode->in_guided_mode()) {
+        return false;
+    }
+
+    // convert vector to neu in cm
+    const Vector3f vel_neu_cms(vel_ned.x * 100.0f, vel_ned.y * 100.0f, -vel_ned.z * 100.0f);
+
+//bool set_destination_posvel(const Vector3f& destination, const Vector3f& velocity,
+//    bool use_yaw = false, float yaw_cd = 0.0,
+//    bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false, bool block_rc_yaw = false);
+//relative_yaw doesn't matter if use_yaw false
+
+    const float yaw_rate_cds = yaw_rate_degs * 100.0f;
+    const bool block_rc_yaw = true;
+    mode_guided.set_destination_posvel(dest, vel_neu_cms, false, 0.0f, true, yaw_rate_cds, false, block_rc_yaw);
+    return true;
+}
+//OWEND
+
 bool Copter::set_target_angle_and_climbrate(float roll_deg, float pitch_deg, float yaw_deg, float climb_rate_ms, bool use_yaw_rate, float yaw_rate_degs)
 {
     // exit if vehicle is not in Guided mode or Auto-Guided mode

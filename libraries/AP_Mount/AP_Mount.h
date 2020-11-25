@@ -159,6 +159,14 @@ public:
 
     // pre arm checks
     bool pre_arm_checks(void);
+
+    // used by scripting
+    float get_roll_deg(void);
+    float get_pitch_deg(void);
+    float get_yaw_deg(void);
+    bool take_control(void);
+    bool give_control(void);
+    bool set_pitchyaw_deg(float pitch_deg, float yaw_deg);
 //OWEND
 
 protected:

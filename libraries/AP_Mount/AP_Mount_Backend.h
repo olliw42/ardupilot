@@ -89,6 +89,14 @@ public:
 
     // pre arm checks
     virtual bool pre_arm_checks(void) { return true; }
+
+    // used by scripting
+    virtual float get_roll_deg(void) { return 0.0f; }
+    virtual float get_pitch_deg(void) { return 0.0f; }
+    virtual float get_yaw_deg(void) { return 0.0f; }
+    virtual bool take_control(void) { return false; }
+    virtual bool give_control(void) { return false; }
+    virtual bool set_pitchyaw_deg(float pitch_deg, float yaw_deg) { return false; }
 //OWEND
 
 protected:

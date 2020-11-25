@@ -3373,6 +3373,17 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_OSD_PARAM_SHOW_CONFIG:
         handle_osd_param_config(msg);
         break;
+//OW
+    case MAVLINK_MSG_ID_BUTTON_CHANGE:
+        //this should go in an extra handle_button_change_message() method, but we are too lazy
+        //unfortunately gcs().sysid_this_mav() is protected, so we play foul and assume > 200 for non-systems
+        if (msg.sysid < 200) {
+            break; // only accept from a gcs
+        }
+        AP_Button &button = AP::button();
+        button.handle_message(chan, msg);
+        break;
+//OWEND
     }
 
 }

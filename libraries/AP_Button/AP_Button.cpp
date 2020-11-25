@@ -195,6 +195,44 @@ void AP_Button::setup_pins(void)
     }
 }
 
+//OW
+void AP_Button::handle_message(mavlink_channel_t chan, const mavlink_message_t &msg)
+{
+    switch (msg.msgid) {
+    case MAVLINK_MSG_ID_BUTTON_CHANGE:
+        mavlink_button_change_t packet;
+        mavlink_msg_button_change_decode(&msg, &packet);
+        mavlink_mask = packet.state;
+        break;
+    default:
+        break;
+    }
+}
+
+// used by scripting
+bool AP_Button::get_mavlink_button_state(uint8_t number)
+{
+    // pins params are 1 indexed not zero
+    if (number == 0 || number > 8) {
+        return false;
+    }
+    //bool state = ((1 << (number - 1)) & mavlink_mask) != 0;
+    //mavlink_mask &=~ (1 << (number - 1)); //clear it after it was called
+    //return state;
+    return ((1 << (number - 1)) & mavlink_mask) != 0;
+};
+
+
+void AP_Button::reset_mavlink_button_state(uint8_t number)
+{
+    // pins params are 1 indexed not zero
+    if (number == 0 || number > 8) {
+        return;
+    }
+    mavlink_mask &=~ (1 << (number - 1)); //clear it after it was called
+};
+//OWEND
+
 namespace AP {
 
 AP_Button &button()

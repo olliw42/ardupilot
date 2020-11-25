@@ -280,3 +280,22 @@ singleton AP_RPM method get_rpm boolean uint8_t 0 RPM_MAX_INSTANCES float'Null
 include AP_Button/AP_Button.h
 singleton AP_Button alias button
 singleton AP_Button method get_button_state boolean uint8_t 1 AP_BUTTON_NUM_PINS
+
+
+-- //OW
+singleton AP_Vehicle method set_target_velocity_NED_yaw_rate_degs boolean Vector3f float -FLT_MAX FLT_MAX
+singleton AP_Vehicle method set_target_dest_vel_NED_yaw_rate_degs boolean Vector3f Vector3f float -FLT_MAX FLT_MAX
+
+singleton AP_Button method get_mavlink_button_state boolean uint8_t 1 8
+singleton AP_Button method reset_mavlink_button_state void uint8_t 1 8
+
+include AP_Mount/AP_Mount.h
+
+singleton AP_Mount alias mount
+singleton AP_Mount method get_roll_deg float
+singleton AP_Mount method get_pitch_deg float
+singleton AP_Mount method get_yaw_deg float
+singleton AP_Mount method take_control boolean
+singleton AP_Mount method give_control boolean
+singleton AP_Mount method set_pitchyaw_deg boolean float'Null float'Null
+-- //OWEND

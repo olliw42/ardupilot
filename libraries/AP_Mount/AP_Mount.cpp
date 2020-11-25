@@ -783,6 +783,60 @@ bool AP_Mount::pre_arm_checks(void)
     }
     return res;
 }
+
+float AP_Mount::get_roll_deg(void)
+{
+    if (!check_primary()) {
+        return 0.0f;
+    }
+
+    return _backends[_primary]->get_roll_deg();
+}
+
+float AP_Mount::get_pitch_deg(void)
+{
+    if (!check_primary()) {
+        return 0.0f;
+    }
+
+    return _backends[_primary]->get_pitch_deg();
+}
+
+float AP_Mount::get_yaw_deg(void)
+{
+    if (!check_primary()) {
+        return 0.0f;
+    }
+
+    return _backends[_primary]->get_yaw_deg();
+}
+
+bool AP_Mount::take_control(void)
+{
+    if (!check_primary()) {
+        return false;
+    }
+
+    return _backends[_primary]->take_control();
+}
+
+bool AP_Mount::give_control(void)
+{
+    if (!check_primary()) {
+        return false;
+    }
+
+    return _backends[_primary]->give_control();
+}
+
+bool AP_Mount::set_pitchyaw_deg(float pitch_deg, float yaw_deg)
+{
+    if (!check_primary()) {
+        return false;
+    }
+
+    return _backends[_primary]->set_pitchyaw_deg(pitch_deg, yaw_deg);
+}
 //OWEND
 
 // singleton instance
