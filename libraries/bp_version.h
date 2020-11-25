@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION " v048-13 "
+#define BETAPILOTVERSION " v049-14 "
 
 #define ISV41 1  // flag to swap some code pieces in mode handling which are different for V40 and V41
 
