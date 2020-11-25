@@ -83,14 +83,20 @@ private:
     void set_target_angles(void);
     void send_target_angles_to_gimbal(void);
 
-    void send_mount_status_to_channels(void);
+    void send_mount_status_to_ground(void);
     void send_cmd_do_mount_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, enum MAV_MOUNT_MODE mode);
 
-    // storm32 gimbal protocol v2
+    // storm32 gimbal protocol
     bool _use_protocolv2;
     bool _sendonly;
     bool _for_gimbalmanager;
+    bool _is_active;                // true when autopilot client is active
+    struct {
+        uint8_t mode;
+        uint8_t mode_last;
+    } _qshot;
 
+    void set_target_angles_qshot(void);
     void send_target_angles_to_gimbal_v2(void);
 
     void send_autopilot_state_for_gimbal_device_to_gimbal(void);
@@ -102,7 +108,7 @@ private:
     void send_system_time_to_gimbal(void);
 
     // helper
-    void send_to_channels(uint32_t msgid, const char *pkt, bool except_gimbal = false);
+    void send_to_ground(uint32_t msgid, const char *pkt);
 
     // internal task variables
     enum TASKENUM {
