@@ -119,8 +119,8 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
     _target.mode_last = MAV_MOUNT_MODE_RC_TARGETING;
 
     _is_active = true;
-    _xshot.mode = MAV_XSHOT_MANAGER_MODE_UNDEFINED; //as soon as it becomes undefined, we switch to using xshot instead of mount_mode
-    _xshot.mode_last = _xshot.mode;
+    _qshot.mode = MAV_QSHOT_MODE_UNDEFINED; //as soon as it becomes undefined, we switch to using xshot instead of mount_mode
+    _qshot.mode_last = _qshot.mode;
 
     if (_state._zflags & 0x80) {
         _prearmchecks_ok = false; //enable prearm checks
@@ -206,10 +206,10 @@ void BP_Mount_STorM32_MAVLink::update_fast()
             case TASK_SLOT1:
                 if (_sendonly) break; //don't send any control messages
                 if (_use_protocolv2) {
-                    if (_xshot.mode == MAV_XSHOT_MANAGER_MODE_UNDEFINED) {
+                    if (_qshot.mode == MAV_QSHOT_MODE_UNDEFINED) {
                         set_target_angles();
                     } else {
-                        set_target_angles_xshot();
+                        set_target_angles_qshot();
                     }
                     send_target_angles_to_gimbal_v2();
                 } else {
@@ -264,7 +264,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
     // comment: we do not bother with sending/handling CMD_ACK momentarily
     // this is dirty, should go to GCS_MAVLINK, GCS, etc., but we don't want to pollute and infect, hence here in dirty ways
 
-    // listen to the xshot commands and messages to track changes in xshot mode
+    // listen to the xshot commands and messages to track changes in qshot mode
     // this may come from anywhere
     switch (msg.msgid) {
         case MAVLINK_MSG_ID_COMMAND_LONG: { //76
@@ -272,21 +272,21 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             mavlink_command_long_t payload;
             mavlink_msg_command_long_decode( &msg, &payload );
             switch (payload.command) {
-                case MAV_CMD_XSHOT_DO_MANAGER_CONFIGURE: //62020
+                case MAV_CMD_QSHOT_DO_CONFIGURE: //62020
                     uint8_t new_mode = payload.param1;
-                    if (new_mode == MAV_XSHOT_MANAGER_MODE_UNDEFINED) _xshot.mode = MAV_XSHOT_MANAGER_MODE_UNDEFINED;
-                    if (new_mode != _xshot.mode) {
-                        _xshot.mode = UINT8_MAX; //mode change requested, so put it into hold, must be acknowledged by status
+                    if (new_mode == MAV_QSHOT_MODE_UNDEFINED) _qshot.mode = MAV_QSHOT_MODE_UNDEFINED;
+                    if (new_mode != _qshot.mode) {
+                        _qshot.mode = UINT8_MAX; //mode change requested, so put it into hold, must be acknowledged by qshot status
                     }
                 break;
             }
             }break;
 
-        case MAVLINK_MSG_ID_XSHOT_MANAGER_STATUS: { //62020
+        case MAVLINK_MSG_ID_QSHOT_STATUS: { //62020
             if (!_use_protocolv2) break;
-            mavlink_xshot_manager_status_t payload;
-            mavlink_msg_xshot_manager_status_decode( &msg, &payload );
-            _xshot.mode = payload.mode;
+            mavlink_qshot_status_t payload;
+            mavlink_msg_qshot_status_decode( &msg, &payload );
+            _qshot.mode = payload.mode;
             }break;
     }
 
@@ -502,13 +502,13 @@ void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal(void)
 // private functions, storm32 gimbal protocol
 //------------------------------------------------------
 
-void BP_Mount_STorM32_MAVLink::set_target_angles_xshot(void)
+void BP_Mount_STorM32_MAVLink::set_target_angles_qshot(void)
 {
-    switch (_xshot.mode) {
-        case MAV_XSHOT_MANAGER_MODE_UNDEFINED:
+    switch (_qshot.mode) {
+        case MAV_QSHOT_MODE_UNDEFINED:
             return;
 
-        case MAV_XSHOT_MANAGER_MODE_GIMBAL_RETRACT: {
+        case MAV_QSHOT_MODE_GIMBAL_RETRACT: {
             // we don't really have to do anything since handled by flags, but hey, why not clear it
             const Vector3f &target = _state._retract_angles.get();
             _angle_ef_target_rad.x = radians(target.x);
@@ -516,7 +516,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_xshot(void)
             _angle_ef_target_rad.z = radians(target.z);
             }break;
 
-        case MAV_XSHOT_MANAGER_MODE_GIMBAL_NEUTRAL: {
+        case MAV_QSHOT_MODE_GIMBAL_NEUTRAL: {
             // we don't really have to do anything since handled by flags, but hey, why not clear it
             const Vector3f &target = _state._neutral_angles.get();
             _angle_ef_target_rad.x = radians(target.x);
@@ -524,14 +524,14 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_xshot(void)
             _angle_ef_target_rad.z = radians(target.z);
             }break;
 
-        case MAV_XSHOT_MANAGER_MODE_GIMBAL_RC_CONTROL:
+        case MAV_QSHOT_MODE_GIMBAL_RC_CONTROL:
             update_targets_from_rc();
             if (is_rc_failsafe()) {
                 _angle_ef_target_rad.y = _angle_ef_target_rad.x = _angle_ef_target_rad.z = 0.0f;
             }
             break;
 
-        case MAV_XSHOT_MANAGER_MODE_POI_TARGETING:
+        case MAV_QSHOT_MODE_POI_TARGETING:
 #if ISV41
             if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true)) return;
 #else
@@ -542,7 +542,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_xshot(void)
             break;
 
 #if ISV41
-        case MAV_XSHOT_MANAGER_MODE_SYSID_TARGETING:
+        case MAV_QSHOT_MODE_SYSID_TARGETING:
             if (!calc_angle_to_sysid_target(_angle_ef_target_rad, true, true)) return;
             break;
 #endif
@@ -574,7 +574,7 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
     // we set these flags here!!
     gimbaldevice_flags = MAV_STORM32_GIMBAL_DEVICE_FLAGS_ROLL_LOCK | MAV_STORM32_GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
 
-    if (_xshot.mode == MAV_XSHOT_MANAGER_MODE_UNDEFINED) {
+    if (_qshot.mode == MAV_QSHOT_MODE_UNDEFINED) {
 
         if (_target.mode == MAV_MOUNT_MODE_RETRACT) {
             gimbaldevice_flags = MAV_STORM32_GIMBAL_DEVICE_FLAGS_RETRACT;
@@ -585,15 +585,15 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
 
     } else {
 
-        if (_xshot.mode == MAV_XSHOT_MANAGER_MODE_GIMBAL_RETRACT) {
+        if (_qshot.mode == MAV_QSHOT_MODE_GIMBAL_RETRACT) {
             gimbaldevice_flags = MAV_STORM32_GIMBAL_DEVICE_FLAGS_RETRACT;
         }
-        if (_xshot.mode == MAV_XSHOT_MANAGER_MODE_GIMBAL_NEUTRAL) {
+        if (_qshot.mode == MAV_QSHOT_MODE_GIMBAL_NEUTRAL) {
             gimbaldevice_flags = MAV_STORM32_GIMBAL_DEVICE_FLAGS_NEUTRAL;
         }
 
     }
-    _xshot.mode_last = _xshot.mode;
+    _qshot.mode_last = _qshot.mode;
 
     if (_xshot.mode == UINT8_MAX) return; //is in hold, don't send
 
@@ -612,6 +612,40 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
     } else {
         send_storm32_gimbal_device_control_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags);
     }
+}
+
+
+//------------------------------------------------------
+// discovery functions
+//------------------------------------------------------
+
+void BP_Mount_STorM32_MAVLink::find_gimbal(void)
+{
+#if FIND_GIMBAL_MAX_SEARCH_TIME_MS
+    uint32_t now_ms = AP_HAL::millis();
+
+    if (now_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
+        _initialised = false; //should be already false, but it can't hurt to ensure that
+        return;
+    }
+#else
+    const AP_Notify &notify = AP::notify();
+    if (notify.flags.armed) {
+        return; //do not search if armed
+    }
+#endif
+
+    //TODO: this I think only allows one MAVLink gimbal
+    // find_by_mavtype()  finds a gimbal and also sets _sysid, _compid, _chan
+    //TODO: should we double check that gimbal sysid == autopilot sysid?
+    if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
+        _initialised = true;
+    }
+
+    //proposal:
+    // change this function to allow an index, like find_by_mavtype(index, ....)
+    // we then can call it repeatedly until it returns false, whereby increasing index as 0,1,...
+    // we then can define that the first mavlink mount is that with lowest ID, and so on
 }
 
 
@@ -846,40 +880,6 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
         }
         c.send_message(pkt, entry);
     }
-}
-
-
-//------------------------------------------------------
-// discovery functions
-//------------------------------------------------------
-
-void BP_Mount_STorM32_MAVLink::find_gimbal(void)
-{
-#if FIND_GIMBAL_MAX_SEARCH_TIME_MS
-    uint32_t now_ms = AP_HAL::millis();
-
-    if (now_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
-        _initialised = false; //should be already false, but it can't hurt to ensure that
-        return;
-    }
-#else
-    const AP_Notify &notify = AP::notify();
-    if (notify.flags.armed) {
-        return; //do not search if armed
-    }
-#endif
-
-    //TODO: this I think only allows one MAVLink gimbal
-    // find_by_mavtype()  finds a gimbal and also sets _sysid, _compid, _chan
-    //TODO: should we double check that gimbal sysid == autopilot sysid?
-    if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
-        _initialised = true;
-    }
-
-    //proposal:
-    // change this function to allow an index, like find_by_mavtype(index, ....)
-    // we then can call it repeatedly until it returns false, whereby increasing index as 0,1,...
-    // we then can define that the first mavlink mount is that with lowest ID, and so on
 }
 
 

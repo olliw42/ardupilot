@@ -94,9 +94,9 @@ private:
     struct {
         uint8_t mode;
         uint8_t mode_last;
-    } _xshot;
+    } _qshot;
 
-    void set_target_angles_xshot(void);
+    void set_target_angles_qshot(void);
     void send_target_angles_to_gimbal_v2(void);
 
     void send_autopilot_state_for_gimbal_device_to_gimbal(void);

@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <!-- 
   STORM32 and OLLIW additions
-  30. Okt. 2020
+  25. Nov. 2020
   All messages are technically WIP, but some are quite stable now. See comment to each. 
   The classification is "quite stable", "wip", "very wip".
 -->
 <mavlink>
   <!-- For ArduPilot, comment this, and include storm32.xml in ardupilotmega.xml (common.xml doesn't yet work)
     This makes it possible that ArduPilot's build system can handle it without modifications. -->
-  <!--<include>C:\Users\Olli\Documents\GitHub\mavlink\message_definitions\v1.0\ardupilotmega.xml</include>-->
+  <!-- <include>C:\Users\Olli\Documents\GitHub\mavlink\message_definitions\v1.0\ardupilotmega.xml</include> -->
   <!-- For OpentTx, uncomment this -->
   <!-- <include>mavlink\message_definitions\v1.0\ardupilotmega.xml</include> -->
   <!-- For EasyMavlink, uncomment this -->
@@ -23,6 +23,7 @@
     STORM32 tunnel enum, this is merely a redefinition for convennience 
     *************************** -->
     <enum name="MAV_STORM32_TUNNEL_PAYLOAD_TYPE">
+      <!-- Stable -->
       <entry value="200" name="MAV_STORM32_TUNNEL_PAYLOAD_TYPE_STORM32_CH1_IN">
         <description>Registered for STorM32 gimbal controller.</description>
       </entry>
@@ -178,10 +179,10 @@
       <!-- WIP -->
       <description>Gimbal manager capability flags.</description>
       <entry value="1" name="MAV_STORM32_GIMBAL_MANAGER_CAP_FLAGS_HAS_PROFILES">
-        <description>The gimbal manager supports tseveral profiles.</description>
+        <description>The gimbal manager supports several profiles.</description>
       </entry>
-      <entry value="2" name="MAV_STORM32_GIMBAL_MANAGER_CAP_FLAGS_SUPPORTS_CHANGING">
-        <description>The gimbal manager supports the protocol for changing a gimbal manager during run time.</description>
+      <entry value="2" name="MAV_STORM32_GIMBAL_MANAGER_CAP_FLAGS_SUPPORTS_CHANGE">
+        <description>The gimbal manager supports changing the gimbal manager during run time, i.e. can be enabled/disabled.</description>
       </entry>
     </enum>
     <enum name="MAV_STORM32_GIMBAL_MANAGER_FLAGS" bitmask="true">
@@ -297,40 +298,40 @@
         <description>Trigger the gimbal device to run a calibration.</description>
       </entry>
       <entry value="3" name="MAV_STORM32_GIMBAL_ACTION_DISCOVER_MANAGER">
-        <description>Trigger gimbal device to (re)discover the gimbal manager.</description>
+        <description>Trigger gimbal device to (re)discover the gimbal manager during run time.</description>
       </entry>
     </enum>
     <!-- ***************************
-    OLLIW shot manager mode enums 
+    QSHOT manager mode enums 
     *************************** -->
-    <enum name="MAV_XSHOT_MANAGER_MODE">
+    <enum name="MAV_QSHOT_MODE">
       <!-- Quite stable, will grow however -->
-      <description>Enumeration of possible super modes. WIP: This is work-in-progress and it can therefore change.</description>
-      <entry value="0" name="MAV_XSHOT_MANAGER_MODE_UNDEFINED">
-        <description>Undefined shot mode. Can be used to determine if x shot should be used or not.</description>
+      <description>Enumeration of possible shot modes.</description>
+      <entry value="0" name="MAV_QSHOT_MODE_UNDEFINED">
+        <description>Undefined shot mode. Can be used to determine if qshots should be used or not.</description>
       </entry>
-      <entry value="1" name="MAV_XSHOT_MANAGER_MODE_DEFAULT">
+      <entry value="1" name="MAV_QSHOT_MODE_DEFAULT">
         <description>Start normal gimbal operation. Is usally used to return back from a shot.</description>
       </entry>
-      <entry value="2" name="MAV_XSHOT_MANAGER_MODE_GIMBAL_RETRACT">
+      <entry value="2" name="MAV_QSHOT_MODE_GIMBAL_RETRACT">
         <description>Load and keep safe gimbal position and stop stabilization.</description>
       </entry>
-      <entry value="3" name="MAV_XSHOT_MANAGER_MODE_GIMBAL_NEUTRAL">
+      <entry value="3" name="MAV_QSHOT_MODE_GIMBAL_NEUTRAL">
         <description>Load neutral gimbal position and keep it while stabilizing.</description>
       </entry>
-      <entry value="4" name="MAV_XSHOT_MANAGER_MODE_GIMBAL_MISSION">
+      <entry value="4" name="MAV_QSHOT_MODE_GIMBAL_MISSION">
         <description>Start mission with gimbal control.</description>
       </entry>
-      <entry value="5" name="MAV_XSHOT_MANAGER_MODE_GIMBAL_RC_CONTROL">
+      <entry value="5" name="MAV_QSHOT_MODE_GIMBAL_RC_CONTROL">
         <description>Start RC gimbal control.</description>
       </entry>
-      <entry value="6" name="MAV_XSHOT_MANAGER_MODE_POI_TARGETING">
-        <description>Start gimbal tracking the point specified by Lat,Lon,Alt.</description>
+      <entry value="6" name="MAV_QSHOT_MODE_POI_TARGETING">
+        <description>Start gimbal tracking the point specified by Lat, Lon, Alt.</description>
       </entry>
-      <entry value="7" name="MAV_XSHOT_MANAGER_MODE_SYSID_TARGETING">
+      <entry value="7" name="MAV_QSHOT_MODE_SYSID_TARGETING">
         <description>Start gimbal tracking the system with specified system ID.</description>
       </entry>
-      <entry value="8" name="MAV_XSHOT_MANAGER_MODE_CABLECAM_2POINT">
+      <entry value="8" name="MAV_QSHOT_MODE_CABLECAM_2POINT">
         <description>Start 2-point cable cam quick shot.</description>
       </entry>
     </enum>
@@ -354,8 +355,8 @@
       <entry value="62010" name="MAV_CMD_STORM32_DO_GIMBAL_MANAGER_SETUP" hasLocation="false" isDestination="false">
         <!-- WIP -->
         <description>Command to configure a gimbal manager. A gimbal device is never to react to this command. The selected profile is reported in the STORM32_GIMBAL_MANAGER_STATUS message.</description>
-        <param index="1" label="Setup flags" enum="MAV_STORM32_GIMBAL_MANAGER_SETUP_FLAGS">Gimbal manager setup flags (0 = none).</param>
-        <param index="2" label="Profile" enum="MAV_STORM32_GIMBAL_MANAGER_PROFILE">Gimbal manager profile (0 = default).</param>
+        <param index="1" label="Profile" enum="MAV_STORM32_GIMBAL_MANAGER_PROFILE">Gimbal manager profile (0 = default).</param>
+        <param index="2" label="Setup flags" enum="MAV_STORM32_GIMBAL_MANAGER_SETUP_FLAGS">Gimbal manager setup flags (0 = none).</param>
         <param index="7" label="Gimbal ID">Gimbal ID of the gimbal manager to address (component ID or 1-6 for non-MAVLink gimbal, 0 for all gimbals). Send command multiple times for more than one but not all gimbals.</param>
       </entry>
       <entry value="62011" name="MAV_CMD_STORM32_DO_GIMBAL_ACTION" hasLocation="false" isDestination="false">
@@ -364,11 +365,11 @@
         <param index="1" label="Action" enum="MAV_STORM32_GIMBAL_ACTION">Gimbal action to initiate (0 = none).</param>
         <param index="7" label="Gimbal ID">Gimbal ID of the gimbal to address (component ID or 1-6 for non-MAVLink gimbal, 0 for all gimbals). Send command multiple times for more than one but not all gimbals.</param>
       </entry>
-      <entry value="62020" name="MAV_CMD_XSHOT_DO_MANAGER_CONFIGURE" hasLocation="false" isDestination="false">
+      <entry value="62020" name="MAV_CMD_QSHOT_DO_CONFIGURE" hasLocation="false" isDestination="false">
         <!-- very WIP -->
         <description>Command to set the shot manager mode.</description>
-        <param index="1" label="Mode" enum="MAV_XSHOT_MANAGER_MODE">Set shot manager mode.</param>
-        <param index="2" label="Shot state">Set shot state. The allowed states are specific to the selected shot mode.</param>
+        <param index="1" label="Mode" enum="MAV_QSHOT_MODE">Set shot mode.</param>
+        <param index="2" label="Shot state or command">Set shot state or command. The allowed values are specific to the selected shot mode.</param>
       </entry>
     </enum>
   </enums>
@@ -475,17 +476,18 @@
       <field type="uint8_t" name="gimbal_id" instance="true">Gimbal ID of the gimbal manager to address (component ID or 1-6 for non-MAVLink gimbal, 0 for all gimbals, send command multiple times for more than one but not all gimbals).</field>
       <field type="uint8_t" name="profile" enum="MAV_STORM32_GIMBAL_MANAGER_PROFILE">Profile to be applied (0 = default).</field>
       <field type="uint8_t[8]" name="priorities">Priorities for custom profile.</field>
+      <field type="uint8_t" name="profile_flags">Profile flags for custom profile (0 = default).</field>
       <field type="uint8_t" name="rc_timeout">Rc timeouts for custom profile (0 = infinite, in uints of 100 ms).</field>
       <field type="uint8_t[8]" name="timeouts">Timeouts for custom profile (0 = infinite, in uints of 100 ms).</field>
     </message>
     <!-- ***************************
-    OLLIW shot manager messages 
+    QSHOT manager messages 
     *************************** -->
-    <message id="62020" name="XSHOT_MANAGER_STATUS">
+    <message id="62020" name="QSHOT_STATUS">
       <!-- very WIP -->
-      <description>Information about the shot manager operation.</description>
-      <field type="uint16_t" name="mode" enum="MAV_XSHOT_MANAGER_MODE">Current shot manager mode.</field>
-      <field type="uint16_t" name="shot_state">Current state in the quick shot. States are specific to the selected shot mode.</field>
+      <description>Information about the shot operation.</description>
+      <field type="uint16_t" name="mode" enum="MAV_QSHOT_MODE">Current shot mode.</field>
+      <field type="uint16_t" name="shot_state">Current state in the shot. States are specific to the selected shot mode.</field>
     </message>
   </messages>
 </mavlink>
