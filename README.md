@@ -7,7 +7,7 @@ I use it for developing new features, mainly related to the [STorM32 gimbal cont
 
 ## Usage and Release Notes ##
 
-Please see http://www.olliw.eu/storm32bgc-wiki/Using_STorM32_with_ArduPilot for information on the usage and features of BetaPilot (BetaCopter/BetaPlane).
+Please see http://www.olliw.eu/storm32bgc-wiki/Using_STorM32_with_BetaPilot for information on the usage and features of BetaPilot (BetaCopter/BetaPlane).
 
 
 ## Build, Compile Notes ##
