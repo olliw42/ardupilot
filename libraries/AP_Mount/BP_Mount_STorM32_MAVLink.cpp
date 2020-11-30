@@ -373,6 +373,19 @@ bool BP_Mount_STorM32_MAVLink::pre_arm_checks(void)
 }
 
 
+void BP_Mount_STorM32_MAVLink::send_banner(void)
+{
+    if (_initialised) {
+        char s[50];
+        s[0] = '\0';
+        if (is_primary()) strcpy(s, ", is primary");
+        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u%s", _instance+1, _compid, s); // %u vs %d ???
+    } else {
+        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: no gimbal yet", _instance+1);
+    }
+}
+
+
 bool BP_Mount_STorM32_MAVLink::is_rc_failsafe(void)
 {
     const RC_Channel *roll_ch = rc().channel(_state._roll_rc_in - 1);

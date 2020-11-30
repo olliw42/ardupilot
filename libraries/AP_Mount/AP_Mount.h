@@ -142,6 +142,9 @@ public:
 
     // pre arm checks
     bool pre_arm_checks(void);
+
+    // send banner
+    void send_banner(void);
 //OWEND
 
 protected:

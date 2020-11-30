@@ -47,6 +47,9 @@ public:
     // pre arm checks
     bool pre_arm_checks(void) override;
 
+    // send banner
+    void send_banner(void) override;
+
 private:
     // internal variables
     bool _initialised;              // true once the driver has been fully initialised

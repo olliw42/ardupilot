@@ -733,6 +733,15 @@ bool AP_Mount::pre_arm_checks(void)
     }
     return res;
 }
+
+void AP_Mount::send_banner(void)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->send_banner();
+        }
+    }
+}
 //OWEND
 
 // singleton instance
