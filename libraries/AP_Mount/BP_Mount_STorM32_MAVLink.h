@@ -13,7 +13,8 @@
 #include <AP_Mount/STorM32_lib.h>
 
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+#define USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //90000 //AP's startup has become quite slow, so give it plenty of time
 
 #define USE_GIMBAL_ZFLAGS  1
 

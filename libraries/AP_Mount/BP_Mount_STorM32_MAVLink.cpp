@@ -634,7 +634,7 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
 
 void BP_Mount_STorM32_MAVLink::find_gimbal(void)
 {
-#if FIND_GIMBAL_MAX_SEARCH_TIME_MS
+#if USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS
     uint32_t now_ms = AP_HAL::millis();
 
     if (now_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
@@ -644,13 +644,15 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
 #else
     const AP_Notify &notify = AP::notify();
     if (notify.flags.armed) {
-        return; //do not search if armed
+        return; //do not search if armed, this implies we are going to fly soon
     }
 #endif
 
+    //TODO: should we double check that gimbal sysid == autopilot sysid?
+    // yes, we should, but we don't bother, and consider it user error LOL
+
     //TODO: this I think only allows one MAVLink gimbal
     // find_by_mavtype()  finds a gimbal and also sets _sysid, _compid, _chan
-    //TODO: should we double check that gimbal sysid == autopilot sysid?
     if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
         _initialised = true;
     }
@@ -666,6 +668,7 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
 // MAVLink send functions
 //------------------------------------------------------
 
+// forward a MOUNT_STATUS message to ground, this is only to make MissionPlanner and alike happy
 void BP_Mount_STorM32_MAVLink::send_mount_status_to_ground(void)
 {
     // space is checked by send_to_ground()

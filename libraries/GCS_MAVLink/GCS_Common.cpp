@@ -3023,7 +3023,7 @@ void GCS_MAVLINK::handle_rc_channels_override(const mavlink_message_t &msg)
 // THIS IS A DAMED BUG!!!
 // per MAVLink spec 0 and UNIT16_MAX should not be considered for channels >= 8 !!!!!!
 //        if (override_data[i] != UINT16_MAX) {
-        if ((i < 8 || override_data[i]) && override_data[i] != UINT16_MAX) {
+        if ((i < 8 || override_data[i]) && (override_data[i] != UINT16_MAX)) {
 //OWEND
             RC_Channels::set_override(i, override_data[i], tnow);
         }
