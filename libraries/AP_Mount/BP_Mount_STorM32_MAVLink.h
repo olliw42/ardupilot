@@ -63,6 +63,7 @@ private:
     mavlink_channel_t _chan;        // mavlink channel used to communicate with gimbal
 
     void find_gimbal(void);
+    void find_gimbal_oneonly(void);
 
     // rc channels
     bool is_rc_failsafe(void);

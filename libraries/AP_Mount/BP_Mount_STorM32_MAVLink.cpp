@@ -360,8 +360,9 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             }break;
     }
 
-    if (send_mountstatus) {
-        // forward a MOUNT_STATUS message to ground, to make MissionPlanner and alike happy
+    // forward a MOUNT_STATUS message to ground, this is only to make MissionPlanner and alike happy
+    // do it only for the primary gimbal
+    if (send_mountstatus && is_primary()) {
         send_mount_status_to_ground();
     }
 }
@@ -632,7 +633,9 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
 // discovery functions
 //------------------------------------------------------
 
-void BP_Mount_STorM32_MAVLink::find_gimbal(void)
+// is periodically called for as long as _initialised = false
+// that's the old method, we use it as fallback
+void BP_Mount_STorM32_MAVLink::find_gimbal_oneonly(void)
 {
 #if USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS
     uint32_t now_ms = AP_HAL::millis();
@@ -655,12 +658,59 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
     // find_by_mavtype()  finds a gimbal and also sets _sysid, _compid, _chan
     if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
         _initialised = true;
+        send_banner();
     }
 
     //proposal:
     // change this function to allow an index, like find_by_mavtype(index, ....)
     // we then can call it repeatedly until it returns false, whereby increasing index as 0,1,...
     // we then can define that the first mavlink mount is that with lowest ID, and so on
+}
+
+
+void BP_Mount_STorM32_MAVLink::find_gimbal(void)
+{
+    // we only have one instance at max
+#if AP_MOUNT_MAX_INSTANCES <= 1
+    find_gimbal_oneonly();
+#else
+
+    // we allow several instances, but do have only one
+    if (num_instances() <= 1) {
+        find_gimbal_oneonly();
+        return;
+    }
+
+    // so, we have several instances
+
+#if USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS
+    uint32_t now_ms = AP_HAL::millis();
+
+    if (now_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
+        _initialised = false; //should be already false, but it can't hurt to ensure that
+        return;
+    }
+#else
+    const AP_Notify &notify = AP::notify();
+    if (notify.flags.armed) {
+        return; //do not search if armed, this implies we are going to fly soon
+    }
+#endif
+
+    //TODO: should we double check that gimbal sysid == autopilot sysid?
+    // yes, we should, but we don't bother, and consider it user error LOL
+
+    // we expect that instance 0 has compid = GIMBAL, instance 1 has compid = GIMBAL2, instance 2 has compid = GIMBAL3, ...
+    uint8_t mycompid = (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance-1);
+
+    // search routed gimbals
+    if (GCS_MAVLINK::find_by_mavtype_and_compid(MAV_TYPE_GIMBAL, mycompid, _sysid, _chan)) {
+        _compid = mycompid;
+        _initialised = true;
+        send_banner();
+        return;
+    }
+#endif
 }
 
 

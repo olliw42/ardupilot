@@ -395,6 +395,10 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Values: 0:None, 1:Servo, 2:3DR Solo, 3:Alexmos Serial, 4:SToRM32 MAVLink, 5:SToRM32 Serial
     // @User: Standard
     AP_GROUPINFO("2_TYPE",           42, AP_Mount, state[1]._type, 0),
+
+//OW
+    AP_GROUPINFO("2_ZFLAGS", 43, AP_Mount, state[1]._zflags, 0),
+//OWEND
 #endif // AP_MOUNT_MAX_INSTANCES > 1
 
     AP_GROUPEND
@@ -477,16 +481,23 @@ void AP_Mount::init()
             _num_instances++;
 //OWEND
         }
-
         // init new instance
         if (_backends[instance] != nullptr) {
-            _backends[instance]->init();
+//OW // don't yet init
+//            _backends[instance]->init();
+//OWEND
             if (!primary_set) {
                 _primary = instance;
                 primary_set = true;
             }
         }
     }
+//OW
+    // init each instance, do it after all instances were created, so that all know frontend things like num_instances and primary
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) _backends[instance]->init();
+    }
+//OWEND
 }
 
 // update - give mount opportunity to update servos.  should be called at 10hz or higher
