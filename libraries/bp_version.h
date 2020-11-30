@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION " v049rc00 "
+#define BETAPILOTVERSION " v049rc03 "
 
 #define ISV41 0
 
@@ -14,9 +14,8 @@ search for //OW to find all changes
  upgraded to storm32_lib.h v 17. Nov. 2020
 
 ArduCopter specific
-- APM_Config.h:         1x
 - compassmot.cpp:       1x
-- GCS_Mavlink.cpp:      2x
+- GCS_Mavlink.cpp:      (+ 2 comments, no change)
 - mode_guided.cpp:      1x  (just a debug log, commented out, not relevant)
 - version.h:            1x
 
@@ -25,9 +24,12 @@ Libraries:
 - AP_Arming.h:          1x
 - AP_Mount_Backend.cpp: (+ 3 comments, no change)
 - AP_Mount_Backend.h:   1x  (+1 comment, no change)
-- AP_Mount.cpp:         4x  (+1 comment, no change)
+- AP_Mount.cpp:         7x  (+1 comment, no change)
 - AP_Mount.h:           5x
-- GCS_Common.cpp:       8x
+- GCS_Common.cpp:       9x
+- GCS.h:                1x
+- MAVLink_routing.cpp:  1x
+- MAVLink_routing.h:    1x
 
 Additional Files in library:
 - bp_version.h
@@ -73,5 +75,7 @@ MAV_CMD_DO_SET_ROI
 MAV_CMD_DO_MOUNT_CONTROL
 
 BUTTON_CHANGE MANUAL_CONTROL
+
+MAV_CMD_DO_SEND_BANNER
 
 */
