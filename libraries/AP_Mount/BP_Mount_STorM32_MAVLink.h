@@ -47,7 +47,7 @@ public:
     // pre arm checks
     bool pre_arm_checks(void) override;
 
-    // used by scripting
+    // for scripts
     float get_roll_deg(void) override { return _status.roll_deg; }
     float get_pitch_deg(void) override { return _status.pitch_deg; }
     float get_yaw_deg(void) override { return _status.yaw_deg; }
@@ -115,7 +115,7 @@ private:
     uint32_t _send_system_time_last;
     void send_system_time_to_gimbal(void);
 
-    // scripts
+    // for scripts
     struct {
         bool control;
         float set_pitch_deg;

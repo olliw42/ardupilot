@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION " v049-14 "
+#define BETAPILOTVERSION " v049-16 "
 
 #define ISV41 1  // flag to swap some code pieces in mode handling which are different for V40 and V41
 
@@ -25,7 +25,7 @@ Libraries:
 - AP_Mount.h:           5x
 - GCS_Common.cpp:       8x
 
-xshot:
+qshot:
 - Copter.cpp:           1x
 - Copter.h:             1x
 - AP_Button.cpp:        1x
@@ -108,5 +108,9 @@ singleton AP_Vehicle method set_target_velocity_NED boolean Vector3f -> mode_gui
 singleton AP_Vehicle method set_target_angle_and_climbrate boolean float -180 180 float -90 90 float -360 360 float -FLT_MAX FLT_MAX boolean float -FLT_MAX FLT_MAX
 singleton AP_Vehicle method set_steering_and_throttle boolean float -1 1 float -1 1
 
+
+
+set_target_velocity_NED_yaw_rate_degs
+get_yaw
 
 */

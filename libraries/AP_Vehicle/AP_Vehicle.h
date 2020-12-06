@@ -180,6 +180,7 @@ public:
     virtual bool set_target_angle_and_climbrate(float roll_deg, float pitch_deg, float yaw_deg, float climb_rate_ms, bool use_yaw_rate, float yaw_rate_degs) { return false; }
 //OW
     virtual bool set_target_velocity_NED_yaw_rate_degs(const Vector3f& vel_ned, float yaw_rate_degs) { return false; }
+    virtual bool set_target_velocity_NED_yaw_deg(const Vector3f& vel_ned, float yaw_deg) { return false; }
     virtual bool set_target_dest_vel_NED_yaw_rate_degs(const Vector3f& dest, const Vector3f& vel_ned, float yaw_rate_degs) { return false; }
 //OWEND
 
